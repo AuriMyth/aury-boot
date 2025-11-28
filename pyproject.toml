@@ -9,7 +9,9 @@ dependencies = [
     "alembic>=1.16.5",
     "apscheduler>=3.11.0",
     "asyncpg>=0.30.0",
+    "babel>=2.17.0",
     "dramatiq>=1.18.0",
+    "faker>=38.2.0",
     "fastapi>=0.118.0",
     "greenlet>=3.2.4",
     "httpx>=0.28.1",
@@ -20,8 +22,10 @@ dependencies = [
     "pydantic-settings>=2.11.0",
     "pyjwt>=2.10.1",
     "redis>=6.4.0",
+    "rich>=13.0.0",
     "sqlalchemy>=2.0.43",
     "tenacity>=9.0.0",
+    "typer>=0.12.0",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +38,9 @@ dev = [
     "mypy>=1.0.0",
 ]
 
+[project.scripts]
+aurimyth-migrate = "aurimyth.foundation_kit.commands.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -43,3 +50,75 @@ packages = ["aurimyth.foundation_kit"]
 
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[tool.ruff]
+# Ruff 配置 - 宽松但标准的规则集
+target-version = "py313"
+line-length = 120
+indent-width = 4
+
+# 排除的文件和目录
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.pyc",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+# 选择规则集
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "T20", # flake8-print (允许 print，但会警告)
+]
+
+# 忽略的规则（宽松但符合 Python 3.13 标准）
+ignore = [
+    "E501",  # 行长度（由 line-length 控制）
+    "E402",  # 模块级别导入不在文件顶部（有时需要）
+    "F401",  # 未使用的导入（有时需要保留用于类型检查）
+    "F841",  # 未使用的变量（有时需要保留用于调试）
+    "B008",  # 函数调用中的默认参数（某些情况下是合理的）
+    "B006",  # 可变默认参数（某些情况下是合理的）
+    "T201",  # print 语句（允许在脚本中使用）
+    "SIM108", # 使用三元表达式（有时 if-else 更清晰）
+    "B904",  # 异常处理中建议使用 raise ... from（某些情况下可以忽略）
+    "W293",  # 空行包含空白字符（自动修复）
+    # 注意：UP006, UP035, UP037 等 Python 3.13 规则必须启用，不能忽略
+]
+
+# 不允许自动修复的规则
+unfixable = [
+    "F401",  # 未使用的导入（可能需要保留）
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 按文件类型忽略规则
+"__init__.py" = ["F401"]  # 允许未使用的导入（用于 __all__）
+"tests/**/*.py" = ["T201", "F401", "F811"]  # 测试文件中允许 print 和未使用的导入
+"scripts/**/*.py" = ["T201"]  # 脚本中允许 print
+"migrations/**/*.py" = ["E501"]  # 迁移文件中允许长行
+
+[tool.ruff.lint.isort]
+# isort 配置
+known-first-party = ["aurimyth"]
+force-sort-within-sections = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.mccabe]
+# 圈复杂度（宽松设置）
+max-complexity = 15
