@@ -7,15 +7,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Generic, Optional, TypeVar
+from typing import ClassVar
 
-from pydantic import BaseModel, Field
-
-# 泛型类型变量
-T = TypeVar("T")
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class BaseResponse(BaseModel, Generic[T]):
+class BaseResponse[T](BaseModel):
     """基础响应模型。
     
     所有API响应的统一格式。
@@ -32,10 +29,10 @@ class BaseResponse(BaseModel, Generic[T]):
     data: T | None = Field(default=None, description="响应数据")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC), description="响应时间戳")
     
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(
+        ser_json_timedelta="float",
+        ser_json_bytes="utf8",
+    )
 
 
 class ErrorResponse(BaseResponse[None]):
@@ -71,7 +68,7 @@ class ErrorResponse(BaseResponse[None]):
         )
 
 
-class Pagination(BaseModel, Generic[T]):
+class Pagination[T](BaseModel):
     """分页数据模型。
     
     Attributes:
@@ -110,7 +107,7 @@ class Pagination(BaseModel, Generic[T]):
         return (self.page - 1) * self.size
 
 
-class PaginationResponse(BaseResponse[Pagination[T]]):
+class PaginationResponse[T](BaseResponse[Pagination[T]]):
     """分页响应模型。
     
     用于返回分页数据。
@@ -166,7 +163,7 @@ class ResponseBuilder:
     """
     
     @staticmethod
-    def success(
+    def success[T](
         message: str = "操作成功",
         data: T | None = None,
         code: int = 200,
@@ -216,12 +213,12 @@ class ResponseBuilder:
 
 __all__ = [
     "BaseResponse",
+    "CountResponse",
     "ErrorResponse",
+    "IDResponse",
     "Pagination",
     "PaginationResponse",
-    "SuccessResponse",
-    "IDResponse",
-    "CountResponse",
     "ResponseBuilder",
+    "SuccessResponse",
 ]
 

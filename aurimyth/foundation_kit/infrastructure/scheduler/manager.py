@@ -9,13 +9,27 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Optional
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from typing import TYPE_CHECKING, Any
 
 from aurimyth.foundation_kit.common.logging import logger
+
+# 延迟导入 apscheduler（可选依赖）
+try:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
+    _APSCHEDULER_AVAILABLE = True
+except ImportError:
+    _APSCHEDULER_AVAILABLE = False
+    # 创建占位符类型，避免类型检查错误
+    if TYPE_CHECKING:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
+    else:
+        AsyncIOScheduler = None
+        CronTrigger = None
+        IntervalTrigger = None
 
 
 class SchedulerManager:
@@ -60,6 +74,11 @@ class SchedulerManager:
     
     async def initialize(self) -> None:
         """初始化调度器。"""
+        if not _APSCHEDULER_AVAILABLE:
+            raise ImportError(
+                "apscheduler 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[scheduler-apscheduler]'"
+            )
+        
         if self._initialized:
             logger.warning("调度器已初始化，跳过")
             return
@@ -104,26 +123,38 @@ class SchedulerManager:
         if not self._initialized:
             raise RuntimeError("调度器未初始化")
         
-        # 构建触发器
-        if trigger == "interval":
+        # 使用函数式编程构建触发器
+        def build_interval_trigger() -> IntervalTrigger:
+            """构建间隔触发器。"""
             if seconds:
-                trigger_obj = IntervalTrigger(seconds=seconds)
-            elif minutes:
-                trigger_obj = IntervalTrigger(minutes=minutes)
-            elif hours:
-                trigger_obj = IntervalTrigger(hours=hours)
-            elif days:
-                trigger_obj = IntervalTrigger(days=days)
-            else:
-                raise ValueError("必须指定间隔时间")
+                return IntervalTrigger(seconds=seconds)
+            if minutes:
+                return IntervalTrigger(minutes=minutes)
+            if hours:
+                return IntervalTrigger(hours=hours)
+            if days:
+                return IntervalTrigger(days=days)
+            raise ValueError("必须指定间隔时间")
         
-        elif trigger == "cron":
+        def build_cron_trigger() -> CronTrigger:
+            """构建Cron触发器。"""
             if not cron:
                 raise ValueError("Cron触发器必须提供cron表达式")
-            trigger_obj = CronTrigger.from_crontab(cron)
+            return CronTrigger.from_crontab(cron)
         
-        else:
-            raise ValueError(f"不支持的触发器类型: {trigger}")
+        trigger_builders: dict[str, Callable[[], Any]] = {
+            "interval": build_interval_trigger,
+            "cron": build_cron_trigger,
+        }
+        
+        builder = trigger_builders.get(trigger)
+        if builder is None:
+            available = ", ".join(trigger_builders.keys())
+            raise ValueError(
+                f"不支持的触发器类型: {trigger}。可用类型: {available}"
+            )
+        
+        trigger_obj = builder()
         
         # 添加任务
         job_id = id or f"{func.__module__}.{func.__name__}"

@@ -3,12 +3,9 @@
 提供各种命令行接口。
 """
 
-from .cli import app, main
+from .migrate import app, main
 
 __all__ = [
     "app",
     "main",
 ]
-
-
-

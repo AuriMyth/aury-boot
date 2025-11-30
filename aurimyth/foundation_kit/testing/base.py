@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Optional
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession

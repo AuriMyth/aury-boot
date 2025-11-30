@@ -44,10 +44,10 @@
   - 参考 FastAPI Pagination 最佳实践
   - 支持游标分页（cursor-based pagination）
 
-- [ ] 8. 事务边界检查
-  - Python 3.13: 装饰器 + 类型提示
-  - `@requires_transaction` 装饰器
-  - 抛出 `TransactionRequiredError` 异常
+- [x] 8. 事务边界检查
+  - ✅ Python 3.13: 装饰器 + 类型提示
+  - ✅ `@requires_transaction` 装饰器（repository.py）
+  - ✅ 抛出 `TransactionRequiredError` 异常
 
 - [ ] 9. QueryInterceptor 接口
   - SQLAlchemy 2.0 Events: `before_cursor_execute`、`after_cursor_execute`
@@ -101,15 +101,15 @@
   - `@cache_result` 装饰器
   - 缓存键生成策略、失效策略（事件/TTL）
 
-- [ ] 19. 错误处理标准化
-  - `ServiceException` 基类
-  - 集成 `interfaces.errors`（现有错误系统）
-  - 业务异常自动转换
+- [x] 19. 错误处理标准化
+  - ✅ `ServiceException` 基类（core/exceptions.py）
+  - ✅ 集成 `interfaces.errors`（现有错误系统）
+  - ✅ 业务异常自动转换（ServiceErrorHandler）
 
-- [ ] 20. 性能监控装饰器
-  - 集成 Loguru（现有日志系统）
-  - `@monitor` 装饰器（执行时间、调用次数）
-  - 支持 Prometheus 格式导出（可选）
+- [x] 20. 性能监控装饰器
+  - ✅ 集成 Loguru（现有日志系统）
+  - ✅ `@monitor` 装饰器（执行时间、调用次数）
+  - ✅ 支持 Prometheus 格式导出（可选）
 
 ## 🟡 中优先级（配置管理）
 
@@ -139,7 +139,7 @@
 
 ---
 
-**进度**: 4/24 已完成 (16.7%)
+**进度**: 7/24 已完成 (29.2%)
 
 **技术栈**:
 - Python 3.13

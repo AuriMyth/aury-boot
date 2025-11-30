@@ -30,8 +30,8 @@ class StorageBackendError(StorageError):
 
 
 __all__ = [
+    "StorageBackendError",
     "StorageError",
     "StorageNotFoundError",
-    "StorageBackendError",
 ]
 

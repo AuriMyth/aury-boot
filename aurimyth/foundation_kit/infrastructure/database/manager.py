@@ -8,10 +8,9 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
-import asyncpg
 from sqlalchemy import text
+from sqlalchemy.exc import DisconnectionError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from aurimyth.foundation_kit.common.logging import logger
@@ -118,9 +117,16 @@ class DatabaseManager:
             db_pool_timeout = pool_timeout or self._config.pool_timeout
             db_pool_recycle = pool_recycle or self._config.pool_recycle
         else:
-            # 如果没有配置，使用环境变量或默认值
+            # 如果没有配置，使用环境变量
             import os
-            database_url = url or os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/aurimyth")
+            database_url = url or os.getenv("DATABASE_URL")
+            if not database_url:
+                raise ValueError(
+                    "数据库 URL 未配置。请通过以下方式之一提供："
+                    "1. 使用 DatabaseManager.configure() 设置配置"
+                    "2. 通过 initialize(url=...) 参数传入"
+                    "3. 设置环境变量 DATABASE_URL"
+                )
             db_echo = echo if echo is not None else os.getenv("DB_ECHO", "false").lower() == "true"
             db_pool_size = pool_size or int(os.getenv("DB_POOL_SIZE", "5"))
             db_max_overflow = max_overflow or int(os.getenv("DB_MAX_OVERFLOW", "10"))
@@ -169,6 +175,8 @@ class DatabaseManager:
     async def _check_session_connection(self, session: AsyncSession) -> None:
         """检查会话连接状态，必要时重连。
         
+        使用 SQLAlchemy 的通用异常类，支持所有数据库后端。
+        
         Args:
             session: 数据库会话
             
@@ -180,17 +188,20 @@ class DatabaseManager:
             try:
                 await session.execute(text("SELECT 1"))
                 return
-            except (asyncpg.exceptions.ConnectionDoesNotExistError,
-                    asyncpg.exceptions.InterfaceError) as exc:
+            except (DisconnectionError, OperationalError) as exc:
                 logger.warning(f"数据库连接丢失，剩余重试次数: {retries}, 错误: {exc}")
                 retries -= 1
                 if retries == 0:
                     logger.error("数据库连接重试失败")
                     raise
                 await asyncio.sleep(self._retry_delay)
+            except Exception as exc:
+                # 其他异常直接抛出，不重试
+                logger.error(f"数据库连接检查失败: {exc}")
+                raise
     
     @asynccontextmanager
-    async def session(self) -> AsyncGenerator[AsyncSession, None]:
+    async def session(self) -> AsyncGenerator[AsyncSession]:
         """获取数据库会话（上下文管理器）。
         
         Yields:

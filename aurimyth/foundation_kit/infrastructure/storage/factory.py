@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import type
+from typing import ClassVar
 
 from aurimyth.foundation_kit.common.logging import logger
 
@@ -27,7 +27,7 @@ class StorageFactory:
         storage = await StorageFactory.create("s3", access_key_id="...", ...)
     """
     
-    _backends: dict[str, type[IStorage]] = {}
+    _backends: ClassVar[dict[str, type[IStorage]]] = {}
     
     @classmethod
     def register(cls, name: str, backend_class: type[IStorage]) -> None:

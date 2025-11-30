@@ -30,8 +30,8 @@ class CacheBackendError(CacheError):
 
 
 __all__ = [
+    "CacheBackendError",
     "CacheError",
     "CacheMissError",
-    "CacheBackendError",
 ]
 

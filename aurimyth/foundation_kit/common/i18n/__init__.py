@@ -9,8 +9,8 @@ from .translator import Translator, get_locale, load_translations, set_locale, t
 
 __all__ = [
     "Translator",
-    "translate",
     "get_locale",
-    "set_locale",
     "load_translations",
+    "set_locale",
+    "translate",
 ]

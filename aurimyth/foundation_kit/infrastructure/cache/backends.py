@@ -6,10 +6,11 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import timedelta
 import json
 import pickle
-from typing import Any, Optional
+from typing import Any
 
 from redis.asyncio import Redis
 
@@ -58,12 +59,16 @@ class RedisCache(ICache):
             if data is None:
                 return default
             
-            if self._serializer == "json":
-                return json.loads(data.decode())
-            elif self._serializer == "pickle":
-                return pickle.loads(data)
-            else:
-                return data.decode()
+            # 使用函数式编程处理序列化器
+            deserializers: dict[str, Callable[[bytes], Any]] = {
+                "json": lambda d: json.loads(d.decode()),
+                "pickle": pickle.loads,
+            }
+            
+            deserializer = deserializers.get(self._serializer)
+            if deserializer:
+                return deserializer(data)
+            return data.decode()
         except Exception as exc:
             logger.error(f"Redis获取失败: {key}, {exc}")
             return default
@@ -79,11 +84,15 @@ class RedisCache(ICache):
             return False
         
         try:
-            # 序列化
-            if self._serializer == "json":
-                data = json.dumps(value).encode()
-            elif self._serializer == "pickle":
-                data = pickle.dumps(value)
+            # 使用函数式编程处理序列化器
+            serializers: dict[str, Callable[[Any], bytes]] = {
+                "json": lambda v: json.dumps(v).encode(),
+                "pickle": pickle.dumps,
+            }
+            
+            serializer = serializers.get(self._serializer)
+            if serializer:
+                data = serializer(value)
             else:
                 data = str(value).encode()
             
@@ -207,7 +216,7 @@ class MemoryCache(ICache):
             count = 0
             for key in keys:
                 if key in self._cache:
-                    value, expire_at = self._cache[key]
+                    _value, expire_at = self._cache[key]
                     # 检查是否过期
                     if expire_at is None or asyncio.get_event_loop().time() <= expire_at:
                         count += 1
@@ -332,8 +341,8 @@ class MemcachedCache(ICache):
 
 
 __all__ = [
-    "RedisCache",
-    "MemoryCache",
     "MemcachedCache",
+    "MemoryCache",
+    "RedisCache",
 ]
 

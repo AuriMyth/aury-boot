@@ -6,13 +6,25 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
-
-import aioboto3
-from botocore.config import Config
+from typing import TYPE_CHECKING, Optional
 
 from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.infrastructure.storage.base import IStorage, StorageFile
+
+# 延迟导入 aioboto3（可选依赖）
+try:
+    import aioboto3
+    from botocore.config import Config
+    _AIOBOTO3_AVAILABLE = True
+except ImportError:
+    _AIOBOTO3_AVAILABLE = False
+    # 创建占位符类型，避免类型检查错误
+    if TYPE_CHECKING:
+        import aioboto3
+        from botocore.config import Config
+    else:
+        aioboto3 = None
+        Config = None
 
 
 class S3Storage(IStorage):
@@ -44,6 +56,11 @@ class S3Storage(IStorage):
     
     async def initialize(self) -> None:
         """初始化连接。"""
+        if not _AIOBOTO3_AVAILABLE:
+            raise ImportError(
+                "aioboto3 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[storage-s3]'"
+            )
+        
         try:
             self._session = aioboto3.Session()
             logger.info("S3存储初始化成功")

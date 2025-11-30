@@ -31,7 +31,7 @@ class TaskExecutionError(TaskError):
 
 __all__ = [
     "TaskError",
-    "TaskQueueError",
     "TaskExecutionError",
+    "TaskQueueError",
 ]
 

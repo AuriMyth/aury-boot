@@ -1,25 +1,26 @@
-"""RPC客户端实现。"""
+"""RPC客户端实现。
+
+基于 toolkit/http 的 HttpClient，提供 RPC 调用封装。
+"""
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
-import httpx
-from tenacity import (
-    AsyncRetrying,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from typing import TYPE_CHECKING, Any
 
 from aurimyth.foundation_kit.application.rpc.base import BaseRPCClient, RPCError, RPCResponse
+from aurimyth.foundation_kit.application.rpc.discovery import get_service_discovery
 from aurimyth.foundation_kit.common.logging import logger
+from aurimyth.foundation_kit.toolkit.http import HttpClient
+
+if TYPE_CHECKING:
+    from aurimyth.foundation_kit.application.config import BaseConfig
 
 
 class RPCClient(BaseRPCClient):
     """RPC客户端实现。
 
-    提供HTTP调用封装，支持自动重试和错误处理。
+    基于 toolkit/http 的 HttpClient，提供 RPC 调用封装。
+    支持自动重试和错误处理。
     """
 
     def __init__(
@@ -38,22 +39,25 @@ class RPCClient(BaseRPCClient):
             headers: 默认请求头
         """
         super().__init__(base_url, timeout, retry_times, headers)
-        self._client: httpx.AsyncClient | None = None
-
-    async def _get_client(self) -> httpx.AsyncClient:
-        """获取HTTP客户端（懒加载）。"""
-        if self._client is None:
-            self._client = httpx.AsyncClient(
-                timeout=self.timeout,
-                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
-            )
-        return self._client
+        # 使用 toolkit/http 的 HttpClient
+        from aurimyth.foundation_kit.toolkit.http import RetryConfig
+        
+        retry_config = RetryConfig(max_retries=retry_times)
+        self._http_client = HttpClient(
+            base_url=base_url,
+            timeout=float(timeout),
+            retry_config=retry_config,
+        )
+        # 添加默认请求头
+        if headers:
+            # HttpClient 不支持直接设置默认 headers，需要在每次请求时传递
+            self._default_headers = headers
+        else:
+            self._default_headers = {}
 
     async def close(self) -> None:
         """关闭HTTP客户端。"""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        await self._http_client.close()
 
     async def _call(
         self,
@@ -78,32 +82,20 @@ class RPCClient(BaseRPCClient):
         Raises:
             RPCError: RPC调用失败
         """
-        url = self._build_url(path)
+        # 合并请求头
         request_headers = self._prepare_headers(headers)
+        
+        logger.debug(f"RPC调用: {method} {path}")
 
-        logger.debug(f"RPC调用: {method} {url}")
-
-        async def _make_request() -> httpx.Response:
-            client = await self._get_client()
-            return await client.request(
+        try:
+            # 使用 toolkit/http 的 HttpClient
+            response = await self._http_client.request(
                 method=method,
-                url=url,
+                url=path,
                 json=data,
                 params=params,
                 headers=request_headers,
             )
-
-        # 重试逻辑
-        retry_decorator = AsyncRetrying(
-            stop=stop_after_attempt(self.retry_times),
-            wait=wait_exponential(multiplier=1, min=1, max=10),
-            retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
-            reraise=True,
-        )
-
-        try:
-            response = await retry_decorator(_make_request)
-            response.raise_for_status()
 
             # 解析响应
             result = response.json()
@@ -118,26 +110,19 @@ class RPCClient(BaseRPCClient):
             rpc_response.raise_for_status()
             return rpc_response
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"RPC调用失败: {method} {url}, status={e.response.status_code}")
-            raise RPCError(
-                message=f"HTTP错误: {e.response.status_code}",
-                code="HTTP_ERROR",
-                status_code=e.response.status_code,
-            ) from e
-        except httpx.RequestError as e:
-            logger.error(f"RPC请求失败: {method} {url}, error={str(e)}")
-            raise RPCError(
-                message=f"请求失败: {str(e)}",
-                code="REQUEST_ERROR",
-                status_code=0,
-            ) from e
         except Exception as e:
-            logger.error(f"RPC调用异常: {method} {url}, error={str(e)}")
+            # HttpClient 已经处理了 HTTP 错误，这里只需要转换为 RPCError
+            status_code = getattr(e, "response", None)
+            if status_code and hasattr(status_code, "status_code"):
+                status_code = status_code.status_code
+            else:
+                status_code = 500
+            
+            logger.error(f"RPC调用失败: {method} {path}, error={e!s}")
             raise RPCError(
-                message=f"未知错误: {str(e)}",
-                code="UNKNOWN_ERROR",
-                status_code=500,
+                message=f"RPC调用失败: {e!s}",
+                code="RPC_ERROR",
+                status_code=status_code,
             ) from e
 
     async def get(
@@ -209,4 +194,81 @@ class RPCClient(BaseRPCClient):
             RPCResponse: RPC响应
         """
         return await self._call("DELETE", path, headers=headers)
+
+
+def create_rpc_client(
+    service_name: str | None = None,
+    base_url: str | None = None,
+    timeout: int | None = None,
+    retry_times: int | None = None,
+    headers: dict[str, str] | None = None,
+    config: "BaseConfig | None" = None,
+) -> RPCClient:
+    """创建 RPC 客户端（支持服务发现）。
+
+    优先使用服务发现解析服务地址，如果未提供 service_name 或 base_url，则使用 base_url。
+
+    Args:
+        service_name: 服务名称（用于服务发现）
+        base_url: 服务基础URL（如果提供，直接使用，不进行服务发现）
+        timeout: 超时时间（秒），如果为 None 则使用配置中的默认值
+        retry_times: 重试次数，如果为 None 则使用配置中的默认值
+        headers: 默认请求头
+        config: 应用配置（可选），用于服务发现和获取默认配置
+
+    Returns:
+        RPCClient: RPC 客户端实例
+
+    Raises:
+        ValueError: 如果既未提供 service_name 也未提供 base_url
+
+    示例:
+        # 使用服务发现（自动从配置/DNS 解析）
+        from aurimyth.foundation_kit.application.config import BaseConfig
+        
+        config = BaseConfig()
+        client = create_rpc_client(service_name="user-service", config=config)
+        response = await client.get("/api/v1/users/1")
+
+        # 直接指定 URL（不使用服务发现）
+        client = create_rpc_client(base_url="http://user-service:8000")
+        response = await client.get("/api/v1/users/1")
+    """
+    # 从配置中获取默认值
+    if config:
+        rpc_client_settings = config.rpc_client
+        default_timeout = timeout if timeout is not None else rpc_client_settings.default_timeout
+        default_retry_times = retry_times if retry_times is not None else rpc_client_settings.default_retry_times
+    else:
+        default_timeout = timeout if timeout is not None else 30
+        default_retry_times = retry_times if retry_times is not None else 3
+    
+    if base_url:
+        # 直接使用提供的 URL
+        return RPCClient(
+            base_url=base_url,
+            timeout=default_timeout,
+            retry_times=default_retry_times,
+            headers=headers,
+        )
+    
+    if service_name:
+        # 使用服务发现解析
+        discovery = get_service_discovery(config)
+        resolved_url = discovery.resolve(service_name)
+        
+        if not resolved_url:
+            raise ValueError(
+                f"无法解析服务地址: {service_name}。"
+                "请检查配置（BaseConfig.rpc_client.services）或确保 DNS 服务发现已启用。"
+            )
+        
+        return RPCClient(
+            base_url=resolved_url,
+            timeout=default_timeout,
+            retry_times=default_retry_times,
+            headers=headers,
+        )
+    
+    raise ValueError("必须提供 service_name 或 base_url")
 

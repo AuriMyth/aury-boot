@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import type
+from typing import ClassVar
 
 from aurimyth.foundation_kit.common.logging import logger
 
@@ -32,7 +32,7 @@ class CacheFactory:
         cache = await CacheFactory.create("memory", max_size=1000)
     """
     
-    _backends: dict[str, type[ICache]] = {}
+    _backends: ClassVar[dict[str, type[ICache]]] = {}
     
     @classmethod
     def register(cls, name: str, backend_class: type[ICache]) -> None:

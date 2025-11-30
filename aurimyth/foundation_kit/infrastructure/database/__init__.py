@@ -12,10 +12,10 @@ from .exceptions import (
 from .manager import DatabaseManager
 
 __all__ = [
-    "DatabaseManager",
+    "DatabaseConnectionError",
     # 异常
     "DatabaseError",
-    "DatabaseConnectionError",
+    "DatabaseManager",
     "DatabaseQueryError",
     "DatabaseTransactionError",
 ]

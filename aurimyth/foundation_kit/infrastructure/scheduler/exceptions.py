@@ -30,8 +30,8 @@ class SchedulerBackendError(SchedulerError):
 
 
 __all__ = [
+    "SchedulerBackendError",
     "SchedulerError",
     "SchedulerJobError",
-    "SchedulerBackendError",
 ]
 

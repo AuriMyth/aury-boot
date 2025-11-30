@@ -11,9 +11,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, BinaryIO, Optional
+import os
+from typing import Any, BinaryIO
 
 from pydantic import BaseModel, Field
 
@@ -162,7 +164,6 @@ class LocalStorage(IStorage):
         Args:
             base_path: 基础路径
         """
-        import os
         self._base_path = base_path
         os.makedirs(base_path, exist_ok=True)
         logger.info(f"本地存储初始化: {base_path}")
@@ -174,8 +175,6 @@ class LocalStorage(IStorage):
         bucket_name: str | None = None,
     ) -> str:
         """上传文件。"""
-        import os
-        
         bucket = bucket_name or file.bucket_name or "default"
         bucket_path = os.path.join(self._base_path, bucket)
         os.makedirs(bucket_path, exist_ok=True)
@@ -206,8 +205,6 @@ class LocalStorage(IStorage):
         bucket_name: str | None = None,
     ) -> None:
         """删除文件。"""
-        import os
-        
         bucket = bucket_name or "default"
         file_path = os.path.join(self._base_path, bucket, object_name)
         
@@ -223,8 +220,6 @@ class LocalStorage(IStorage):
         expires_in: int | None = None,
     ) -> str:
         """获取文件URL。"""
-        import os
-        
         bucket = bucket_name or "default"
         file_path = os.path.join(self._base_path, bucket, object_name)
         return f"file://{os.path.abspath(file_path)}"
@@ -236,8 +231,6 @@ class LocalStorage(IStorage):
         bucket_name: str | None = None,
     ) -> bool:
         """检查文件是否存在。"""
-        import os
-        
         bucket = bucket_name or "default"
         file_path = os.path.join(self._base_path, bucket, object_name)
         return os.path.exists(file_path)
@@ -295,20 +288,32 @@ class StorageManager:
         logger.info(f"存储管理器初始化完成: {storage_type}")
     
     def _build_backend_config(self, storage_type: str, config: dict[str, Any]) -> dict[str, Any]:
-        """构建后端配置。"""
-        backend_config = {}
+        """构建后端配置。
         
-        if storage_type == "s3":
-            backend_config["access_key_id"] = config.get("STORAGE_ACCESS_KEY_ID")
-            backend_config["access_key_secret"] = config.get("STORAGE_ACCESS_KEY_SECRET")
-            backend_config["endpoint"] = config.get("STORAGE_ENDPOINT")
-            backend_config["region"] = config.get("STORAGE_REGION")
-            backend_config["bucket_name"] = config.get("STORAGE_BUCKET_NAME")
+        使用函数式编程处理配置构建逻辑。
+        """
+        # 配置构建函数字典（函数式编程）
+        config_builders: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+            "s3": lambda cfg: {
+                "access_key_id": cfg.get("STORAGE_ACCESS_KEY_ID"),
+                "access_key_secret": cfg.get("STORAGE_ACCESS_KEY_SECRET"),
+                "endpoint": cfg.get("STORAGE_ENDPOINT"),
+                "region": cfg.get("STORAGE_REGION"),
+                "bucket_name": cfg.get("STORAGE_BUCKET_NAME"),
+            },
+            "local": lambda cfg: {
+                "base_path": cfg.get("STORAGE_BASE_PATH", "./storage"),
+            },
+        }
         
-        elif storage_type == "local":
-            backend_config["base_path"] = config.get("STORAGE_BASE_PATH", "./storage")
+        if storage_type not in config_builders:
+            available = ", ".join(config_builders.keys())
+            raise ValueError(
+                f"不支持的存储类型: {storage_type}。可用类型: {available}"
+            )
         
-        return backend_config
+        builder = config_builders[storage_type]
+        return builder(config)
     
     @property
     def backend(self) -> IStorage:
@@ -382,9 +387,9 @@ class StorageManager:
 
 __all__ = [
     "IStorage",
+    "LocalStorage",
     "StorageBackend",
     "StorageConfig",
     "StorageFile",
     "StorageManager",
-    "LocalStorage",
 ]

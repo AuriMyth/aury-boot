@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import os
-from typing import Any, Optional
+from typing import Any
 
 from babel import Locale, dates, numbers
 from babel.support import Format
@@ -210,6 +210,31 @@ class Translator:
         except Exception as e:
             logger.error(f"货币格式化失败: {e}")
             return f"{currency} {amount}"
+
+
+def load_translations(translations: dict[str, dict[str, str]]) -> None:
+    """加载翻译字典。
+    
+    此函数用于加载用户提供的翻译资源。框架本身不提供默认翻译。
+    
+    Args:
+        translations: 翻译字典，格式为 {locale: {key: message}}
+        
+    使用示例:
+        load_translations({
+            "zh_CN": {
+                "user.created": "用户 {name} 创建成功",
+                "welcome": "欢迎",
+            },
+            "en_US": {
+                "user.created": "User {name} created successfully",
+                "welcome": "Welcome",
+            },
+        })
+    """
+    global _translations
+    _translations = translations
+    logger.info(f"翻译字典已加载，支持语言: {', '.join(translations.keys())}")
 
 
 def translate(key: str, default: str | None = None, locale: str | None = None, **kwargs: Any) -> str:

@@ -10,16 +10,40 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Optional
-
-import dramatiq
-from dramatiq import Message
-from dramatiq.brokers.redis import RedisBroker
-from dramatiq.middleware import AsyncIO, CurrentMessage, TimeLimit
+from typing import TYPE_CHECKING, Any
 
 from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.infrastructure.tasks.constants import TaskQueueName, TaskRunMode
 from aurimyth.foundation_kit.infrastructure.tasks.settings import TaskSettings
+
+# 延迟导入 dramatiq（可选依赖）
+try:
+    import dramatiq
+    from dramatiq import Message
+    from dramatiq.middleware import AsyncIO, CurrentMessage, TimeLimit
+    _DRAMATIQ_AVAILABLE = True
+except ImportError:
+    _DRAMATIQ_AVAILABLE = False
+    # 创建占位符类型，避免类型检查错误
+    if TYPE_CHECKING:
+        from dramatiq import Message
+        from dramatiq.middleware import AsyncIO, CurrentMessage, TimeLimit
+    else:
+        Message = None
+        AsyncIO = None
+        CurrentMessage = None
+        TimeLimit = None
+
+# 延迟导入 kombu broker（可选依赖）
+try:
+    from dramatiq_kombu_broker import KombuBroker
+    _KOMBU_BROKER_AVAILABLE = True
+except ImportError:
+    _KOMBU_BROKER_AVAILABLE = False
+    if TYPE_CHECKING:
+        from dramatiq_kombu_broker import KombuBroker
+    else:
+        KombuBroker = None
 
 
 class TaskProxy:
@@ -44,7 +68,7 @@ class TaskProxy:
         func: Callable,
         queue_name: str,
         actor_name: str,
-        broker: RedisBroker | None,
+        broker: Any,  # RedisBroker | None，但使用 Any 避免类型检查错误
         **actor_kwargs: Any,
     ) -> None:
         """初始化任务代理。
@@ -70,7 +94,7 @@ class TaskProxy:
             **kwargs: 关键字参数
             
         Returns:
-            Optional[Message]: 发送的消息对象
+            Message | None: 发送的消息对象
         """
         if not self._broker:
             raise RuntimeError("Broker 未初始化，无法发送任务")
@@ -138,7 +162,7 @@ class TaskManager:
         if TaskManager._instance is not None:
             raise RuntimeError("TaskManager 是单例类，请使用 get_instance() 获取实例")
         
-        self._broker: RedisBroker | None = None
+        self._broker: Any = None  # KombuBroker | None
         self._initialized: bool = False
         self._task_config: TaskSettings | None = None
         self._run_mode: TaskRunMode = TaskRunMode.WORKER  # 默认 Worker 模式（调度者）
@@ -190,12 +214,29 @@ class TaskManager:
             logger.warning("未配置任务队列URL，任务功能将被禁用")
             return
         
+        if not _DRAMATIQ_AVAILABLE:
+            raise ImportError(
+                "dramatiq 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[queue-dramatiq]'"
+            )
+        
+        if not _KOMBU_BROKER_AVAILABLE:
+            raise ImportError(
+                "dramatiq-kombu-broker 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[queue-dramatiq-kombu]'"
+            )
+        
         try:
-            middleware = middleware or [AsyncIO(), CurrentMessage(), TimeLimit()]
-            self._broker = RedisBroker(url=url, middleware=middleware)
+            # 使用函数式编程创建默认中间件（如果未提供）
+            def create_default_middleware() -> list:
+                """创建默认中间件列表。"""
+                return [AsyncIO(), CurrentMessage(), TimeLimit()]
+            
+            middleware_list = middleware if middleware is not None else create_default_middleware()
+            
+            # 使用 KombuBroker，支持多种后端（Redis、RabbitMQ、SQS 等）
+            self._broker = KombuBroker(url=url, middleware=middleware_list)
             dramatiq.set_broker(self._broker)
             self._initialized = True
-            logger.info("任务管理器初始化完成")
+            logger.info(f"任务管理器初始化完成（使用 Kombu Broker: {url}）")
         except Exception as exc:
             logger.error(f"任务队列初始化失败: {exc}")
             raise
@@ -226,6 +267,11 @@ class TaskManager:
                 # 发送邮件
                 pass
         """
+        if not _DRAMATIQ_AVAILABLE:
+            raise ImportError(
+                "dramatiq 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[queue-dramatiq]'"
+            )
+        
         def decorator(f: Callable) -> Callable:
             actor = dramatiq.actor(
                 f,
@@ -273,6 +319,11 @@ class TaskManager:
                 # 在 API 中会返回 TaskProxy
                 pass
         """
+        if not _DRAMATIQ_AVAILABLE:
+            raise ImportError(
+                "dramatiq 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[queue-dramatiq]'"
+            )
+        
         def decorator(f: Callable) -> Any:
             # 从配置获取运行模式，默认为 API
             run_mode = self._run_mode
@@ -313,7 +364,7 @@ class TaskManager:
         return decorator(func)
     
     @property
-    def broker(self) -> RedisBroker | None:
+    def broker(self) -> Any:  # KombuBroker | None
         """获取broker实例。"""
         return self._broker
     
@@ -360,6 +411,11 @@ def conditional_actor(
         # Producer 模式下发送任务
         send_email.send("user@example.com", "Hello")
     """
+    if not _DRAMATIQ_AVAILABLE:
+        raise ImportError(
+            "dramatiq 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[queue-dramatiq]'"
+        )
+    
     def decorator(func: Callable) -> Any:
         # 处理 run_mode 参数，默认为 WORKER
         if run_mode is None:

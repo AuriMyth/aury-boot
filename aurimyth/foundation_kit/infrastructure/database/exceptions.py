@@ -36,8 +36,8 @@ class DatabaseTransactionError(DatabaseError):
 
 
 __all__ = [
-    "DatabaseError",
     "DatabaseConnectionError",
+    "DatabaseError",
     "DatabaseQueryError",
     "DatabaseTransactionError",
 ]

@@ -10,16 +10,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import wraps
 import time
-from typing import TypeVar
 
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-T = TypeVar("T")
 
-
-def log_request(func: Callable[..., T]) -> Callable[..., T]:
+def log_request[T](func: Callable[..., T]) -> Callable[..., T]:
     """请求日志装饰器。
     
     记录请求的详细信息。

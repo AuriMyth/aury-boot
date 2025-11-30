@@ -10,9 +10,9 @@ from typing import Any, TypeVar
 from faker import Faker
 
 from aurimyth.foundation_kit.common.logging import logger
-from aurimyth.foundation_kit.core.models import BaseModel
+from aurimyth.foundation_kit.domain.models import Base
 
-ModelType = TypeVar("ModelType", bound=BaseModel)
+ModelType = TypeVar("ModelType", bound=Base)
 
 # 全局 Faker 实例
 _faker = Faker(["zh_CN", "en_US"])

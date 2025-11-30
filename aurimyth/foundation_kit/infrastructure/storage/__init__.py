@@ -22,23 +22,27 @@ from .exceptions import (
     StorageNotFoundError,
 )
 from .factory import StorageFactory
-from .s3 import S3Storage
 
-# 注册S3后端
-StorageFactory.register("s3", S3Storage)
+# 延迟导入 S3Storage（可选依赖）
+try:
+    from .s3 import S3Storage
+    # 注册S3后端
+    StorageFactory.register("s3", S3Storage)
+except ImportError:
+    # aioboto3 未安装，S3Storage 不可用
+    S3Storage = None  # type: ignore[assignment, misc]
 
 __all__ = [
     "IStorage",
-    "StorageBackend",
-    "StorageConfig",
-    "StorageFile",
-    "StorageFactory",
-    "StorageManager",
     "LocalStorage",
     "S3Storage",
-    # 异常
-    "StorageError",
-    "StorageNotFoundError",
+    "StorageBackend",
     "StorageBackendError",
+    "StorageConfig",
+    "StorageError",
+    "StorageFactory",
+    "StorageFile",
+    "StorageManager",
+    "StorageNotFoundError",
 ]
 

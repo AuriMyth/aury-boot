@@ -5,59 +5,130 @@ description = "AuriMyth Foundation Kit - 核心基础架构工具包"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aioboto3>=15.2.0",
-    "alembic>=1.16.5",
-    "apscheduler>=3.11.0",
-    "asyncpg>=0.30.0",
-    "babel>=2.17.0",
-    "dramatiq>=1.18.0",
-    "faker>=38.2.0",
-    "fastapi>=0.118.0",
+    "fastapi>=0.122.0",
+    "sqlalchemy>=2.0.44",
+    "alembic>=1.17.2",
     "greenlet>=3.2.4",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
     "httpx>=0.28.1",
     "loguru>=0.7.3",
-    "openai>=2.1.0",
-    "passlib[bcrypt]>=1.7.4",
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.11.0",
-    "pyjwt>=2.10.1",
-    "redis>=6.4.0",
-    "rich>=13.0.0",
-    "sqlalchemy>=2.0.43",
-    "tenacity>=9.0.0",
-    "typer>=0.12.0",
+    "tenacity>=9.1.2",
+    "typer>=0.20.0",
+    "rich>=14.2.0",
+    "babel>=2.17.0",
+    "faker>=38.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "pylint>=3.0.0",
-    "mypy>=1.0.0",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.7",
+    "mypy>=1.19.0",
+]
+db-postgresql = [
+    "asyncpg>=0.31.0",
+]
+db-mysql = [
+    "aiomysql>=0.3.2",
+]
+storage-s3 = [
+    "aioboto3>=15.5.0",
+]
+cache-redis = [
+    "redis>=7.1.0",
+]
+queue-dramatiq = [
+    "dramatiq>=1.18.0",
+]
+mq-kombu = [
+    "kombu>=5.6.1",
+]
+mq-redis = [
+    "kombu>=5.6.1",
+    "redis>=7.1.0",
+]
+mq-rabbitmq = [
+    "kombu>=5.6.1",
+    "amqp>=5.3.1",
+]
+queue-dramatiq-kombu = [
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+]
+scheduler-apscheduler = [
+    "apscheduler>=3.11.1",
+]
+queue-dramatiq-redis = [
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+    "redis>=7.1.0",
+]
+queue-dramatiq-rabbitmq = [
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+    "amqp>=5.3.1",
+]
+db-all = [
+    "asyncpg>=0.31.0",
+    "aiomysql>=0.3.2",
+]
+default = [
+    "aioboto3>=15.5.0",
+    "asyncpg>=0.31.0",
+    "apscheduler>=3.11.1",
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+    "amqp>=5.3.1",
+]
+minimal = [
+    "aioboto3>=15.5.0",
+    "asyncpg>=0.31.0",
+    "apscheduler>=3.11.1",
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+    "redis>=7.1.0",
+]
+all = [
+    "asyncpg>=0.31.0",
+    "aiomysql>=0.3.2",
+    "aioboto3>=15.5.0",
+    "dramatiq>=1.18.0",
+    "kombu>=5.6.1",
+    "dramatiq-kombu-broker>=0.2.2",
+    "redis>=7.1.0",
+    "amqp>=5.3.1",
+    "apscheduler>=3.11.1",
 ]
 
 [project.scripts]
-aurimyth-migrate = "aurimyth.foundation_kit.commands.cli:main"
+aurimyth-migrate = "aurimyth.foundation_kit.commands.migrate:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["aurimyth.foundation_kit"]
+packages = [
+    "aurimyth.foundation_kit",
+]
 
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 
 [tool.ruff]
-# Ruff 配置 - 宽松但标准的规则集
 target-version = "py313"
 line-length = 120
 indent-width = 4
-
-# 排除的文件和目录
 exclude = [
     ".git",
     ".venv",
@@ -72,53 +143,71 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-# 选择规则集
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "N",   # pep8-naming
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "SIM", # flake8-simplify
-    "T20", # flake8-print (允许 print，但会警告)
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (Python 3.13 语法升级)
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "T20",    # flake8-print
+    "PYI",    # flake8-pyi
+    "PT",     # flake8-pytest-style
+    "RUF",    # Ruff-specific rules
 ]
-
-# 忽略的规则（宽松但符合 Python 3.13 标准）
 ignore = [
-    "E501",  # 行长度（由 line-length 控制）
-    "E402",  # 模块级别导入不在文件顶部（有时需要）
-    "F401",  # 未使用的导入（有时需要保留用于类型检查）
-    "F841",  # 未使用的变量（有时需要保留用于调试）
-    "B008",  # 函数调用中的默认参数（某些情况下是合理的）
-    "B006",  # 可变默认参数（某些情况下是合理的）
-    "T201",  # print 语句（允许在脚本中使用）
-    "SIM108", # 使用三元表达式（有时 if-else 更清晰）
-    "B904",  # 异常处理中建议使用 raise ... from（某些情况下可以忽略）
-    "W293",  # 空行包含空白字符（自动修复）
-    # 注意：UP006, UP035, UP037 等 Python 3.13 规则必须启用，不能忽略
+    "E501",   # 行长度（由 line-length 配置）
+    "E402",   # 模块级别导入（允许在文档字符串后导入）
+    "F401",   # 未使用的导入（在 __init__.py 中允许）
+    "F841",   # 未使用的变量（某些情况下需要）
+    "B008",   # 函数调用中的默认参数（某些装饰器需要）
+    "B006",   # 可变默认参数（某些情况下需要）
+    "T201",   # print 语句（测试和脚本中允许）
+    "SIM108", # 使用三元表达式（某些情况下可读性更好）
+    "B904",   # 裸 except（某些情况下需要）
+    "W293",   # 空行包含空白字符（某些情况下需要）
+    "UP007",  # 已由 pyupgrade 自动处理
+    "UP035",  # 已由 pyupgrade 自动处理
+    "UP037",  # 已由 pyupgrade 自动处理
+    "RUF001", # 字符串中的全角标点（中文文档允许使用中文标点）
+    "RUF002", # 文档字符串中的全角标点（中文文档允许使用中文标点）
+    "RUF003", # 注释中的全角标点（中文注释允许使用中文标点）
+    "RUF012", # 可变类属性（SQLAlchemy 的 __mapper_args__ 是特殊属性，不需要 ClassVar）
+    "PYI034", # __aenter__ 返回类型（某些情况下需要返回具体类型）
+]
+unfixable = [
+    "F401",   # 未使用的导入（某些情况下需要保留）
 ]
 
-# 不允许自动修复的规则
-unfixable = [
-    "F401",  # 未使用的导入（可能需要保留）
-]
+[tool.ruff.lint.pyupgrade]
+# Python 3.13 语法升级配置
+keep-runtime-typing = false  # 允许将 typing 模块类型改为内置类型
 
 [tool.ruff.lint.per-file-ignores]
-# 按文件类型忽略规则
-"__init__.py" = ["F401"]  # 允许未使用的导入（用于 __all__）
-"tests/**/*.py" = ["T201", "F401", "F811"]  # 测试文件中允许 print 和未使用的导入
-"scripts/**/*.py" = ["T201"]  # 脚本中允许 print
-"migrations/**/*.py" = ["E501"]  # 迁移文件中允许长行
+"__init__.py" = [
+    "F401",
+]
+"tests/**/*.py" = [
+    "T201",
+    "F401",
+    "F811",
+]
+"scripts/**/*.py" = [
+    "T201",
+]
+"migrations/**/*.py" = [
+    "E501",
+]
 
 [tool.ruff.lint.isort]
-# isort 配置
-known-first-party = ["aurimyth"]
+known-first-party = [
+    "aurimyth",
+]
 force-sort-within-sections = true
 split-on-trailing-comma = true
 
 [tool.ruff.lint.mccabe]
-# 圈复杂度（宽松设置）
 max-complexity = 15

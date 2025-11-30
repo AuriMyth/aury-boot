@@ -8,14 +8,15 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 导入 Infrastructure 层的配置（作为基础配置）
 from aurimyth.foundation_kit.infrastructure.database.settings import (
     DatabaseSettings as InfrastructureDatabaseSettings,
+)
+from aurimyth.foundation_kit.infrastructure.events.settings import (
+    EventSettings as InfrastructureEventSettings,
 )
 from aurimyth.foundation_kit.infrastructure.tasks.settings import (
     TaskSettings as InfrastructureTaskSettings,
@@ -125,12 +126,16 @@ class LogSettings(BaseSettings):
     """日志配置。
     
     环境变量前缀: LOG_
-    示例: LOG_LEVEL
+    示例: LOG_LEVEL, LOG_FILE
     """
     
     level: str = Field(
         default="INFO",
         description="日志级别"
+    )
+    file: str | None = Field(
+        default=None,
+        description="日志文件路径（如果不设置则仅输出到控制台）"
     )
     
     model_config = SettingsConfigDict(
@@ -200,6 +205,119 @@ class TaskSettings(InfrastructureTaskSettings):
     pass
 
 
+class EventSettings(InfrastructureEventSettings):
+    """事件总线配置（Application 层适配）。
+    
+    继承自 infrastructure.events.settings.EventSettings，
+    在 Application 层提供统一的配置接口。
+    
+    环境变量前缀: EVENT_
+    示例: EVENT_BROKER_URL, EVENT_EXCHANGE_NAME
+    """
+    pass
+
+
+class RPCClientSettings(BaseSettings):
+    """RPC 客户端调用配置。
+    
+    用于配置客户端调用其他服务时的行为。
+    
+    环境变量前缀: RPC_CLIENT_
+    示例: RPC_CLIENT_SERVICES, RPC_CLIENT_TIMEOUT, RPC_CLIENT_RETRY_TIMES, RPC_CLIENT_DNS_SCHEME
+    """
+    
+    services: dict[str, str] = Field(
+        default_factory=dict,
+        description="服务地址映射 {service_name: url}（优先级最高，会覆盖 DNS 解析）"
+    )
+    default_timeout: int = Field(
+        default=30,
+        description="默认超时时间（秒）"
+    )
+    default_retry_times: int = Field(
+        default=3,
+        description="默认重试次数"
+    )
+    dns_scheme: str = Field(
+        default="http",
+        description="DNS 解析使用的协议（http 或 https）"
+    )
+    dns_port: int = Field(
+        default=80,
+        description="DNS 解析默认端口"
+    )
+    use_dns_fallback: bool = Field(
+        default=True,
+        description="是否在配置中找不到时使用 DNS 解析（K8s/Docker Compose 自动 DNS）"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="RPC_CLIENT_",
+        case_sensitive=False,
+    )
+
+
+class RPCServiceSettings(BaseSettings):
+    """RPC 服务注册配置。
+    
+    用于配置当前服务注册到服务注册中心时的信息。
+    
+    环境变量前缀: RPC_SERVICE_
+    示例: RPC_SERVICE_NAME, RPC_SERVICE_URL, RPC_SERVICE_HEALTH_CHECK_URL
+    """
+    
+    name: str | None = Field(
+        default=None,
+        description="服务名称（用于注册）"
+    )
+    url: str | None = Field(
+        default=None,
+        description="服务地址（用于注册）"
+    )
+    health_check_url: str | None = Field(
+        default=None,
+        description="健康检查 URL（用于注册）"
+    )
+    auto_register: bool = Field(
+        default=False,
+        description="是否自动注册到服务注册中心"
+    )
+    registry_url: str | None = Field(
+        default=None,
+        description="服务注册中心地址（如果使用外部注册中心）"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="RPC_SERVICE_",
+        case_sensitive=False,
+    )
+
+
+class HealthCheckSettings(BaseSettings):
+    """健康检查配置。
+    
+    用于配置 AuriMyth 框架的默认健康检查端点。
+    注意：此配置仅用于框架内置的健康检查端点，不影响服务自身的健康检查端点。
+    
+    环境变量前缀: HEALTH_CHECK_
+    示例: HEALTH_CHECK_PATH, HEALTH_CHECK_ENABLED
+    """
+    
+    path: str = Field(
+        default="/health",
+        description="健康检查端点路径（默认: /health）"
+    )
+    enabled: bool = Field(
+        default=True,
+        description="是否启用 AuriMyth 默认健康检查端点"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="HEALTH_CHECK_",
+        case_sensitive=False,
+    )
+
+
 class BaseConfig(BaseSettings):
     """基础配置类。
     
@@ -231,6 +349,18 @@ class BaseConfig(BaseSettings):
     # 任务队列配置
     task: TaskSettings = Field(default_factory=TaskSettings)
     
+    # 事件总线配置
+    event: EventSettings = Field(default_factory=EventSettings)
+    
+    # RPC 客户端配置（调用其他服务）
+    rpc_client: RPCClientSettings = Field(default_factory=RPCClientSettings)
+    
+    # RPC 服务配置（当前服务注册）
+    rpc_service: RPCServiceSettings = Field(default_factory=RPCServiceSettings)
+    
+    # 健康检查配置
+    health_check: HealthCheckSettings = Field(default_factory=HealthCheckSettings)
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -246,13 +376,17 @@ class BaseConfig(BaseSettings):
 
 __all__ = [
     "BaseConfig",
-    "DatabaseSettings",
-    "CacheSettings",
-    "ServerSettings",
     "CORSSettings",
+    "CacheSettings",
+    "DatabaseSettings",
+    "EventSettings",
+    "HealthCheckSettings",
     "LogSettings",
-    "ServiceSettings",
+    "RPCClientSettings",
+    "RPCServiceSettings",
     "SchedulerSettings",
+    "ServerSettings",
+    "ServiceSettings",
     "TaskSettings",
 ]
 

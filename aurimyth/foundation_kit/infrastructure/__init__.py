@@ -24,14 +24,17 @@ from .database import DatabaseManager
 
 # 日志（已迁移到 common 层）
 # 从 common.logging 导入
-# 调度器
-from .scheduler import SchedulerManager
+
+# 调度器（可选依赖）
+try:
+    from .scheduler import SchedulerManager
+except ImportError:
+    SchedulerManager = None  # type: ignore[assignment, misc]
 
 # 存储
 from .storage import (
     IStorage,
     LocalStorage,
-    S3Storage,
     StorageBackend,
     StorageConfig,
     StorageFactory,
@@ -39,35 +42,66 @@ from .storage import (
     StorageManager,
 )
 
-# 任务队列
-from .tasks import TaskManager, TaskProxy, conditional_actor
+# S3Storage（可选依赖，延迟导入）
+try:
+    from .storage import S3Storage
+except ImportError:
+    S3Storage = None  # type: ignore[assignment, misc]
+
+# 任务队列（可选依赖）
+try:
+    from .tasks import TaskManager, TaskProxy, conditional_actor
+except ImportError:
+    TaskManager = None  # type: ignore[assignment, misc]
+    TaskProxy = None  # type: ignore[assignment, misc]
+    conditional_actor = None  # type: ignore[assignment, misc]
+
+# 事件总线
+# 依赖注入
+from .di import Container, Lifetime, Scope, ServiceDescriptor
+from .events import (
+    EventBus,
+    EventConsumer,
+    EventLoggingMiddleware,
+    EventMiddleware,
+)
 
 __all__ = [
-    # 数据库
-    "DatabaseManager",
+    "CacheBackend",
+    "CacheFactory",
     # 缓存
     "CacheManager",
-    "CacheFactory",
-    "CacheBackend",
+    # 依赖注入
+    "Container",
+    # 数据库
+    "DatabaseManager",
+    # 事件总线
+    "EventBus",
+    "EventConsumer",
+    "EventLoggingMiddleware",
+    "EventMiddleware",
     "ICache",
-    "RedisCache",
-    "MemoryCache",
+    "IStorage",
+    "Lifetime",
+    "LocalStorage",
     "MemcachedCache",
+    "MemoryCache",
+    "RedisCache",
+    "S3Storage",
     # 调度器
     "SchedulerManager",
+    "Scope",
+    "ServiceDescriptor",
+    "StorageBackend",
+    "StorageConfig",
+    "StorageFactory",
+    "StorageFile",
+    # 存储
+    "StorageManager",
     # 任务队列
     "TaskManager",
     "TaskProxy",
     "conditional_actor",
-    # 存储
-    "StorageManager",
-    "StorageFactory",
-    "StorageBackend",
-    "IStorage",
-    "StorageConfig",
-    "StorageFile",
-    "LocalStorage",
-    "S3Storage",
     # 日志（已迁移到 common 层，请从 common.logging 导入）
 ]
 

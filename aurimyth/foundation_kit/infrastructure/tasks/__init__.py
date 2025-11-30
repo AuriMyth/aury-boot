@@ -12,14 +12,13 @@ from .exceptions import (
 from .manager import TaskManager, TaskProxy, conditional_actor
 
 __all__ = [
+    "TaskError",
+    "TaskExecutionError",
     "TaskManager",
     "TaskProxy",
+    "TaskQueueError",
     "TaskQueueName",
     "TaskRunMode",
     "conditional_actor",
-    # 异常
-    "TaskError",
-    "TaskQueueError",
-    "TaskExecutionError",
 ]
 

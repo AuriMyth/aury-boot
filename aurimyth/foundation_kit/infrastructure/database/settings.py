@@ -17,8 +17,7 @@ class DatabaseSettings(BaseSettings):
     """
     
     url: str = Field(
-        default="postgresql+asyncpg://postgres:password@localhost:5432/aurimyth",
-        description="数据库连接URL"
+        description="数据库连接URL（支持所有 SQLAlchemy 支持的数据库），必需配置"
     )
     echo: bool = Field(
         default=False,

@@ -16,16 +16,16 @@ from .factory import CacheFactory
 from .manager import CacheManager
 
 __all__ = [
-    "CacheManager",
-    "CacheFactory",
     "CacheBackend",
-    "ICache",
-    "RedisCache",
-    "MemoryCache",
-    "MemcachedCache",
+    "CacheBackendError",
     # 异常
     "CacheError",
+    "CacheFactory",
+    "CacheManager",
     "CacheMissError",
-    "CacheBackendError",
+    "ICache",
+    "MemcachedCache",
+    "MemoryCache",
+    "RedisCache",
 ]
 

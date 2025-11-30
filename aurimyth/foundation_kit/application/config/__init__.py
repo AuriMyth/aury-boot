@@ -11,7 +11,11 @@ from .settings import (
     CacheSettings,
     CORSSettings,
     DatabaseSettings,
+    EventSettings,
+    HealthCheckSettings,
     LogSettings,
+    RPCClientSettings,
+    RPCServiceSettings,
     SchedulerSettings,
     ServerSettings,
     ServiceSettings,
@@ -20,13 +24,17 @@ from .settings import (
 
 __all__ = [
     "BaseConfig",
-    "DatabaseSettings",  # 映射自 infrastructure.database.settings.DatabaseSettings
-    "CacheSettings",
-    "ServerSettings",
     "CORSSettings",
+    "CacheSettings",
+    "DatabaseSettings",  # 映射自 infrastructure.database.settings.DatabaseSettings
+    "EventSettings",
+    "HealthCheckSettings",
     "LogSettings",
-    "ServiceSettings",
+    "RPCClientSettings",
+    "RPCServiceSettings",
     "SchedulerSettings",
+    "ServerSettings",
+    "ServiceSettings",
     "TaskSettings",  # 映射自 infrastructure.tasks.settings.TaskSettings
 ]
 

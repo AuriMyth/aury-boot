@@ -8,7 +8,7 @@ from .client import TestClient
 from .factory import Factory
 
 __all__ = [
+    "Factory",
     "TestCase",
     "TestClient",
-    "Factory",
 ]
