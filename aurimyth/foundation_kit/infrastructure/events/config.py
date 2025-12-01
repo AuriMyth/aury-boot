@@ -9,8 +9,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EventSettings(BaseSettings):
-    """事件总线配置。
+class EventConfig(BaseSettings):
+    """事件总线基础设施配置。
+    
+    Infrastructure 层直接使用的事件总线配置。
     
     环境变量前缀: EVENT_
     示例: EVENT_BROKER_URL, EVENT_EXCHANGE_NAME, EVENT_QUEUE_PREFIX, EVENT_MAX_HISTORY_SIZE
@@ -44,7 +46,6 @@ class EventSettings(BaseSettings):
 
 
 __all__ = [
-    "EventSettings",
+    "EventConfig",
 ]
-
 

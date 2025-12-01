@@ -3,7 +3,7 @@
 提供所有应用共享的基础配置结构。
 使用 pydantic-settings 进行分层分级配置管理。
 
-注意：Application 层的配置作为适配层，映射 Infrastructure 层的配置。
+注意：Application 层的配置是独立的，不依赖 Infrastructure 层。
 """
 
 from __future__ import annotations
@@ -11,29 +11,43 @@ from __future__ import annotations
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 导入 Infrastructure 层的配置（作为基础配置）
-from aurimyth.foundation_kit.infrastructure.database.settings import (
-    DatabaseSettings as InfrastructureDatabaseSettings,
-)
-from aurimyth.foundation_kit.infrastructure.events.settings import (
-    EventSettings as InfrastructureEventSettings,
-)
-from aurimyth.foundation_kit.infrastructure.tasks.settings import (
-    TaskSettings as InfrastructureTaskSettings,
-)
 
-
-# Application 层的配置类，映射 Infrastructure 层的配置
-class DatabaseSettings(InfrastructureDatabaseSettings):
-    """数据库配置（Application 层适配）。
-    
-    继承自 infrastructure.database.settings.DatabaseSettings，
-    在 Application 层提供统一的配置接口。
+class DatabaseSettings(BaseSettings):
+    """数据库配置。
     
     环境变量前缀: DATABASE_
     示例: DATABASE_URL, DATABASE_ECHO, DATABASE_POOL_SIZE
     """
-    pass
+    
+    url: str = Field(
+        default="sqlite:///./app.db",
+        description="数据库连接字符串"
+    )
+    echo: bool = Field(
+        default=False,
+        description="是否输出 SQL 语句"
+    )
+    pool_size: int = Field(
+        default=5,
+        description="数据库连接池大小"
+    )
+    max_overflow: int = Field(
+        default=10,
+        description="连接池最大溢出连接数"
+    )
+    pool_recycle: int = Field(
+        default=3600,
+        description="连接回收时间（秒）"
+    )
+    pool_pre_ping: bool = Field(
+        default=True,
+        description="是否在获取连接前进行 PING"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE_",
+        case_sensitive=False,
+    )
 
 
 class CacheSettings(BaseSettings):
@@ -192,29 +206,52 @@ class SchedulerSettings(BaseSettings):
     )
 
 
-# Application 层的配置类，映射 Infrastructure 层的配置
-class TaskSettings(InfrastructureTaskSettings):
-    """任务队列配置（Application 层适配）。
-    
-    继承自 infrastructure.tasks.settings.TaskSettings，
-    在 Application 层提供统一的配置接口。
+class TaskSettings(BaseSettings):
+    """任务队列配置。
     
     环境变量前缀: TASK_
     示例: TASK_BROKER_URL, TASK_MAX_RETRIES
     """
-    pass
-
-
-class EventSettings(InfrastructureEventSettings):
-    """事件总线配置（Application 层适配）。
     
-    继承自 infrastructure.events.settings.EventSettings，
-    在 Application 层提供统一的配置接口。
+    broker_url: str | None = Field(
+        default=None,
+        description="任务队列代理 URL（如 Redis 或 RabbitMQ）"
+    )
+    max_retries: int = Field(
+        default=3,
+        description="最大重试次数"
+    )
+    timeout: int = Field(
+        default=3600,
+        description="任务超时时间（秒）"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="TASK_",
+        case_sensitive=False,
+    )
+
+
+class EventSettings(BaseSettings):
+    """事件总线配置。
     
     环境变量前缀: EVENT_
     示例: EVENT_BROKER_URL, EVENT_EXCHANGE_NAME
     """
-    pass
+    
+    broker_url: str | None = Field(
+        default=None,
+        description="事件总线代理 URL（如 RabbitMQ）"
+    )
+    exchange_name: str = Field(
+        default="aurimyth.events",
+        description="事件交换机名称"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="EVENT_",
+        case_sensitive=False,
+    )
 
 
 class RPCClientSettings(BaseSettings):
@@ -323,10 +360,9 @@ class BaseConfig(BaseSettings):
     
     所有应用配置的基类，提供通用配置项。
     使用 pydantic-settings 自动从环境变量和 .env 文件加载配置。
-    """
     
-    # 数据库配置
-    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    注意：Application 层配置完全独立，不依赖 Infrastructure 层。
+    """
     
     # 缓存配置
     cache: CacheSettings = Field(default_factory=CacheSettings)
@@ -345,12 +381,6 @@ class BaseConfig(BaseSettings):
     
     # 调度器配置
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
-    
-    # 任务队列配置
-    task: TaskSettings = Field(default_factory=TaskSettings)
-    
-    # 事件总线配置
-    event: EventSettings = Field(default_factory=EventSettings)
     
     # RPC 客户端配置（调用其他服务）
     rpc_client: RPCClientSettings = Field(default_factory=RPCClientSettings)
@@ -378,8 +408,6 @@ __all__ = [
     "BaseConfig",
     "CORSSettings",
     "CacheSettings",
-    "DatabaseSettings",
-    "EventSettings",
     "HealthCheckSettings",
     "LogSettings",
     "RPCClientSettings",
@@ -387,6 +415,5 @@ __all__ = [
     "SchedulerSettings",
     "ServerSettings",
     "ServiceSettings",
-    "TaskSettings",
 ]
 

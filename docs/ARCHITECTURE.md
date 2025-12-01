@@ -1,298 +1,118 @@
-# AuriMyth Foundation Kit 架构设计
+# AuriMyth Foundation Kit 架构文档
 
-## 核心设计哲学
+AuriMyth Foundation Kit 是一个基于 Python 的企业级微服务开发框架，旨在提供标准化、可扩展且易于维护的基础设施。它采用**分层架构**，严格遵循关注点分离和单向依赖原则。
 
-AuriMyth Foundation Kit 采用**组件化 + 依赖声明**的架构，提供优雅、抽象、可扩展、不受限的应用框架。
+## 1. 核心架构概览
 
-### 设计原则
+项目采用经典的四层架构设计：
 
-1. **抽象**：所有功能单元统一为 Component 接口，无特殊处理
-2. **可扩展**：只需改类属性，即可添加/移除/替换功能
-3. **不受限**：无固定的初始化步骤，按依赖关系动态排序
-4. **约定优于配置**：有配置就启用，没有就不启用
-5. **常量分散**：跨模块共享的常量放顶级，模块内常量放模块内
+```mermaid
+graph TD
+    App[Application Layer] --> Domain[Domain Layer]
+    App --> Infra[Infrastructure Layer]
+    App --> Common[Common Layer]
+    Domain --> Infra
+    Domain --> Common
+    Infra --> Common
+    Common --> None[No Dependencies]
+```
 
-## 整体架构
-
-### 模块分层
+### 1.1 目录结构
 
 ```
 aurimyth/foundation_kit/
-├── constants/              # 框架级常量（仅跨模块共享）
-│   ├── service.py         # ServiceType
-│   └── scheduler.py       # SchedulerMode
-│
-├── core/                   # 核心层（业务逻辑基类）
-│   ├── models.py          # ORM 模型基类
-│   ├── repository.py     # Repository 模式
-│   └── service.py         # Service 模式
-│
-├── infrastructure/         # 基础设施层（技术实现）
-│   ├── database/          # 数据库管理
-│   ├── cache/             # 缓存管理
-│   ├── tasks/             # 任务队列（含 constants.py）
-│   ├── scheduler/         # 调度器管理
-│   ├── storage/           # 对象存储
-│   └── logging.py         # 日志系统
-│
-├── application/            # 应用层（业务编排）
-│   ├── app.py             # FoundationApp（核心）
-│   ├── config/            # 配置管理
-│   ├── constants.py       # 应用层常量（ComponentName）
-│   ├── container.py       # 依赖注入
-│   ├── transaction.py     # 事务管理
-│   ├── events.py          # 事件系统
-│   ├── migrations.py      # 数据库迁移
-│   ├── scheduler.py       # 调度器启动器
-│   └── interfaces/        # API 接口层
-│       ├── errors.py      # 错误处理
-│       ├── ingress.py     # 请求模型
-│       └── egress.py      # 响应模型
-│
-├── testing/               # 测试框架
-├── i18n/                  # 国际化
-└── toolkit/               # 工具包
+├── application/      # 应用层：程序入口、配置、中间件、RPC
+├── domain/           # 领域层：业务模型、仓储接口、服务基类
+├── infrastructure/   # 基础设施层：数据库、缓存、消息队列的具体实现
+├── common/           # 基础层：通用异常、日志、工具类
+└── toolkit/          # 工具箱：独立的 HTTP 客户端等工具
 ```
 
-### 常量组织原则
+---
 
-- **顶级 constants/**：仅跨模块共享的常量（ServiceType, SchedulerMode）
-- **模块内 constants.py**：模块内使用的常量（ComponentName, TaskQueueName）
+## 2. 层次详解
 
-## FoundationApp 架构
+### 2.1 Application Layer (应用层)
+**职责**：负责应用的组装、配置加载、中间件处理以及对外的接口暴露。它是系统的入口。
 
-### 类层次结构
+*   **FoundationApp & Components**: 框架的核心引擎。`FoundationApp` 继承自 FastAPI，引入了 `Component` 概念。
+    *   **生命周期管理**: 所有功能模块（数据库、缓存等）都封装为 `Component`。
+    *   **拓扑排序**: 自动解析组件间的 `depends_on` 关系，确保按正确顺序启动和关闭。
+*   **Configuration**: 基于 `pydantic-settings` 的分层配置系统 (`BaseConfig`)，作为基础设施层配置的适配器。
+*   **RPC Client**: 提供服务发现能力的 HTTP RPC 客户端。
+*   **Middleware**: 全局中间件，如 `RequestLoggingMiddleware`。
 
-```
-FastAPI
-  ↓
-FoundationApp
-  ├─ Component 系统
-  │  ├─ 统一接口（Component）
-  │  ├─ 依赖声明（depends_on）
-  │  ├─ 拓扑排序（自动）
-  │  └─ 生命周期管理（setup/teardown）
-  │
-  ├─ 默认组件（items 类属性）
-  │  ├─ RequestLoggingComponent
-  │  ├─ CORSComponent
-  │  ├─ DatabaseComponent
-  │  ├─ CacheComponent
-  │  ├─ TaskComponent
-  │  └─ SchedulerComponent
-  │
-  └─ 生命周期管理
-     ├─ _on_startup（启动所有组件）
-     └─ _on_shutdown（关闭所有组件）
-```
+### 2.2 Domain Layer (领域层)
+**职责**：包含核心业务逻辑、数据模型定义和持久化接口。
 
-### 生命周期流程
+*   **Models**: 基于 SQLAlchemy 2.0 的声明式模型基类 `Base`，支持跨数据库的 `GUID` 类型。
+*   **Repository Interface**: 定义了 `IRepository[ModelType]` 接口，规范了 CRUD 操作。
+*   **Repository Implementation**: 提供了 `BaseRepository` 的通用实现，包含：
+    *   标准 CRUD (Create, Read, Update, Delete)
+    *   分页 (`paginate`) 与 排序
+    *   软删除 (`soft delete`) 支持
+    *   批量操作 (`bulk_insert`, `bulk_update`)
+*   **Services**: 业务逻辑的基类。
 
-#### 应用启动流程
+### 2.3 Infrastructure Layer (基础设施层)
+**职责**：提供技术细节的具体实现。**严禁包含业务逻辑**。这一层大量使用**单例管理器模式 (Singleton Manager Pattern)**。
 
-```
-1. _register_components() - 注册所有组件
-   ↓
-2. _topological_sort() - 拓扑排序（按 depends_on）
-   ↓
-3. 逐个执行 component.setup()
-   ↓
-4. 应用准备好处理请求
-```
+*   **Database**: `DatabaseManager` 管理 SQLAlchemy 的 `AsyncEngine` 和连接池，提供会话工厂和健康检查。
+*   **Cache**: `CacheManager` 提供统一接口，支持 Redis, Memory, Memcached 后端。
+*   **Events**: `EventBus` 提供事件发布/订阅能力。
+    *   **Local Mode**: 内存中的观察者模式。
+    *   **Distributed Mode**: 基于 Kombu 的消息队列集成（Redis/RabbitMQ）。
+*   **Tasks**: `TaskManager` 封装了 `dramatiq`。
+    *   **Conditional Task**: 支持 Worker 模式（注册 Actor）和 API 模式（仅作为 Producer 发送消息）的自动切换。
+*   **Dependency Injection**: `Container` 提供轻量级依赖注入，支持 Singleton, Scoped, Transient 生命周期。
 
-#### 应用关闭流程
+### 2.4 Common Layer (基础层)
+**职责**：提供跨层通用的工具和定义，**不依赖其他任何层**。
 
-```
-1. _topological_sort(reverse=True) - 逆序排序
-   ↓
-2. 逐个执行 component.teardown()
-   ↓
-3. 应用完全关闭
-```
+*   **Exceptions**: `FoundationError` 是所有异常的根类，支持元数据 (`metadata`) 和异常链。
+*   **Logging**: 统一的日志配置和工具。
 
-## Component 组件系统
+---
 
-### 基础组件类
+## 3. 关键设计模式
+
+### 3.1 组件系统 (The Component System)
+
+为了解耦框架的各个部分，AuriMyth 引入了组件系统。
 
 ```python
 class Component(ABC):
-    """应用组件基类"""
-    
-    name: str                      # 组件唯一标识（使用 ComponentName 常量）
-    enabled: bool = True           # 是否默认启用
-    depends_on: list[str] = []    # 依赖的其他组件（使用 ComponentName 常量）
-    
-    def can_enable(self, config: BaseConfig) -> bool:
-        """是否可以启用此组件（可被覆盖）"""
-        return self.enabled
-    
-    @abstractmethod
-    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
-        """组件启动时调用"""
-        pass
-    
-    @abstractmethod
-    async def teardown(self, app: FoundationApp) -> None:
-        """组件关闭时调用"""
-        pass
+    name: str
+    depends_on: list[str]
+
+    async def setup(self, app: FoundationApp, config: BaseConfig): ...
+    async def teardown(self, app: FoundationApp): ...
 ```
 
-### 依赖关系管理
+开发者可以通过继承 `Component` 并将其添加到 `FoundationApp` 的组件列表中，轻松扩展应用功能。
 
-- **声明式依赖**：通过 `depends_on` 列表声明依赖关系
-- **自动排序**：使用拓扑排序算法自动确定启动顺序
-- **循环检测**：自动检测并警告循环依赖
+### 3.2 双模任务队列 (Dual-Mode Task Queue)
 
-### 默认组件
+为了解决微服务部署中 API 服务与 Worker 服务分离的问题，`TaskManager` 提供了智能的 `conditional_task`：
 
-#### 1. RequestLoggingComponent
-- **名称**：`ComponentName.REQUEST_LOGGING`
-- **依赖**：无
-- **启用条件**：`enabled = True`（总是启用）
-- **职责**：添加请求日志中间件
+*   **Worker Mode**: 装饰器将函数注册为实际的 `dramatiq` actor，负责执行任务。
+*   **API Mode**: 装饰器返回一个 `TaskProxy`，它不注册 actor（避免在 API 服务中加载不必要的任务代码），但保留 `send()` 接口用于发布任务。
 
-#### 2. CORSComponent
-- **名称**：`ComponentName.CORS`
-- **依赖**：无
-- **启用条件**：`config.cors.allow_origins` 不为空
-- **职责**：添加 CORS 中间件
+### 3.3 仓储模式 (Repository Pattern)
 
-#### 3. DatabaseComponent
-- **名称**：`ComponentName.DATABASE`
-- **依赖**：无
-- **启用条件**：`config.database.url` 不为空
-- **职责**：初始化数据库连接池
+框架通过泛型 `BaseRepository[ModelType]` 极大地简化了数据访问层代码。开发者只需继承基类，即可获得完整的增删改查能力，无需重复编写 SQL 或 ORM 样板代码。
 
-#### 4. CacheComponent
-- **名称**：`ComponentName.CACHE`
-- **依赖**：无
-- **启用条件**：`config.cache.cache_type` 不为空
-- **职责**：初始化缓存后端
+### 3.4 依赖注入 (Dependency Injection)
 
-#### 5. TaskComponent
-- **名称**：`ComponentName.TASK_QUEUE`
-- **依赖**：无
-- **启用条件**：`service.service_type == WORKER` 且 `task.broker_url` 不为空
-- **职责**：初始化任务队列（Worker 模式）
+内置的 `Container` 实现了 IoC (控制反转)。
+*   支持自动解析构造函数类型提示。
+*   `Scope` 机制确保在请求生命周期内的对象复用。
 
-#### 6. SchedulerComponent
-- **名称**：`ComponentName.SCHEDULER`
-- **依赖**：无
-- **启用条件**：`scheduler.mode == EMBEDDED`
-- **职责**：初始化调度器（嵌入式模式）
+---
 
-## 核心层（Core）
+## 4. 部署视图
 
-### 模型基类
+应用通常以两种角色部署：
 
-- `BaseModel` - 基础模型（无字段）
-- `TimestampedModel` - 带时间戳的模型（id, created_at, updated_at, yn）
-
-### Repository 模式
-
-- `IRepository[ModelType]` - 仓储接口
-- `BaseRepository[ModelType]` - 仓储基类
-- 设计原则：Repository 不执行 commit，只执行 flush；事务由 Service 层管理
-
-### Service 模式
-
-- `BaseService` - 领域服务基类
-- 职责：管理数据库会话、协调多个Repository、实现业务逻辑、事务管理
-
-## 基础设施层（Infrastructure）
-
-### 单例模式
-
-所有基础设施管理器都采用单例模式：
-- `DatabaseManager.get_instance()`
-- `CacheManager.get_instance()`
-- `TaskManager.get_instance()`
-- `SchedulerManager.get_instance()`
-
-### 数据库管理
-
-- 连接池管理、会话工厂、健康检查
-
-### 缓存管理
-
-- 多后端支持（Redis、Memory、Memcached）、工厂模式、装饰器支持
-
-### 任务队列
-
-- 条件注册（`conditional_actor`）、队列管理、错误处理
-
-### 调度器
-
-- 三种模式：`EMBEDDED`、`STANDALONE`、`DISABLED`
-- 独立启动器：`run_scheduler()`
-
-## 应用层（Application）
-
-### 配置管理
-
-使用 `pydantic-settings` 进行分层配置，环境变量前缀：
-- `DATABASE_*` - 数据库配置
-- `CACHE_*` - 缓存配置
-- `SERVICE_*` - 服务配置
-- `SCHEDULER_*` - 调度器配置
-- `TASK_*` - 任务配置
-
-### 依赖注入
-
-- `Container` - 依赖注入容器（单例模式）
-- 支持三种生命周期：`SINGLETON`、`SCOPED`、`TRANSIENT`
-
-### 事务管理
-
-- `@transactional` - 装饰器模式
-- `transactional_context` - 上下文管理器模式
-
-### 事件系统
-
-- `EventBus` - 事件总线（单例模式）
-- 支持发布/订阅模式，所有事件基于 Pydantic
-
-### 错误处理
-
-责任链模式：
-- `BaseErrorHandler` - 自定义异常
-- `HTTPExceptionHandler` - FastAPI HTTP 异常
-- `ValidationErrorHandler` - Pydantic 验证异常
-- `DatabaseErrorHandler` - 数据库异常
-
-## 接口层（Interfaces）
-
-### 请求模型（Ingress）
-
-- `BaseRequest` - 基础请求
-- `PaginationRequest` - 分页请求
-- `ListRequest` - 列表请求
-- `FilterRequest` - 过滤请求
-
-### 响应模型（Egress）
-
-- `BaseResponse[T]` - 基础响应（泛型）
-- `SuccessResponse` - 成功响应
-- `ErrorResponse` - 错误响应
-- `PaginationResponse[T]` - 分页响应
-
-### 错误处理
-
-- `ErrorCode` - 错误代码枚举
-- `ErrorDetail` - 错误详情（Pydantic）
-- `BaseError` - 基础异常类
-
-## 与 Django/Spring Boot 的对比
-
-| 特性 | Django | Spring Boot | Foundation Kit |
-|------|--------|------------|---------------|
-| 组件系统 | Apps | Beans | Components |
-| 依赖管理 | 手动 | @DependsOn | depends_on（自动排序）|
-| 配置驱动 | settings.py | application.properties | BaseConfig |
-| 条件启用 | if settings.X | @ConditionalOn* | can_enable() |
-| 中间件 | MIDDLEWARE | FilterChain | Component（统一）|
-| 生命周期 | AppConfig.ready() | @PostConstruct | setup()/teardown() |
-
-## 总结
-
-AuriMyth Foundation Kit 通过组件化架构和依赖声明机制，提供了一个高度灵活且易于扩展的 FastAPI 应用框架。所有功能单元统一为 Component 接口，通过 `depends_on` 声明依赖关系，框架自动拓扑排序并管理生命周期。
+1.  **API Server**: 处理 HTTP 请求，作为 RPC 服务端，作为任务生产者。
+2.  **Worker**: 监听消息队列，作为任务消费者，处理后台作业和分布式事件。

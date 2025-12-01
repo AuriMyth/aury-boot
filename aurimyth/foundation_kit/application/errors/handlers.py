@@ -18,6 +18,8 @@ from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.domain.exceptions import (
     ModelError,
     ServiceException,
+)
+from aurimyth.foundation_kit.domain.exceptions import (
     VersionConflictError as DomainVersionConflictError,
 )
 from aurimyth.foundation_kit.infrastructure.database.exceptions import (
@@ -234,7 +236,7 @@ class DatabaseErrorHandler(ErrorHandler):
     
     def can_handle(self, exception: Exception) -> bool:
         """判断是否为数据库异常。"""
-        return isinstance(exception, (SQLAlchemyError, ModelError, InfraDatabaseError, FoundationError))
+        return isinstance(exception, SQLAlchemyError | ModelError | InfraDatabaseError | FoundationError)
     
     async def handle(self, exception: Exception, request: Request) -> JSONResponse:
         """处理数据库异常。"""

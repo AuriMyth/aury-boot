@@ -13,8 +13,8 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from aurimyth.foundation_kit.common.logging import logger
+from aurimyth.foundation_kit.infrastructure.tasks.config import TaskConfig
 from aurimyth.foundation_kit.infrastructure.tasks.constants import TaskQueueName, TaskRunMode
-from aurimyth.foundation_kit.infrastructure.tasks.settings import TaskSettings
 
 # 延迟导入 dramatiq（可选依赖）
 try:
@@ -164,7 +164,7 @@ class TaskManager:
         
         self._broker: Any = None  # KombuBroker | None
         self._initialized: bool = False
-        self._task_config: TaskSettings | None = None
+        self._task_config: TaskConfig | None = None
         self._run_mode: TaskRunMode = TaskRunMode.WORKER  # 默认 Worker 模式（调度者）
     
     @classmethod
@@ -176,7 +176,7 @@ class TaskManager:
     
     async def initialize(
         self,
-        task_config: TaskSettings | None = None,
+        task_config: TaskConfig | None = None,
         run_mode: TaskRunMode | str | None = None,
         broker_url: str | None = None,
         *,
@@ -185,7 +185,7 @@ class TaskManager:
         """初始化任务队列。
         
         Args:
-            task_config: 任务配置（TaskSettings）
+            task_config: 任务配置（TaskConfig）
             run_mode: 运行模式（TaskRunMode 或字符串，如 "api", "worker"）
             broker_url: Broker连接URL（可选，优先使用 config）
             middleware: 中间件列表
@@ -194,7 +194,7 @@ class TaskManager:
             logger.warning("任务管理器已初始化，跳过")
             return
         
-        self._task_config = task_config or TaskSettings()
+        self._task_config = task_config or TaskConfig()
         
         # 处理 run_mode 参数
         if run_mode is None:

@@ -20,9 +20,9 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from .bus import EventBus
+from .config import EventConfig
 from .consumer import EventConsumer
 from .middleware import EventLoggingMiddleware, EventMiddleware
-from .settings import EventSettings
 
 # 事件类型定义（基础数据结构）
 EventType = TypeVar("EventType", bound="Event")
@@ -68,11 +68,11 @@ class Event(BaseModel, ABC):
 __all__ = [
     "Event",
     "EventBus",
+    "EventConfig",
     "EventConsumer",
     "EventHandler",
     "EventLoggingMiddleware",
     "EventMiddleware",
-    "EventSettings",
     "EventType",
 ]
 

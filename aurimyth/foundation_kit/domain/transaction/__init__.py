@@ -2,8 +2,9 @@
 
 提供多种事务管理方式：
 1. @transactional - 通用装饰器，自动从参数中获取session
-2. transactional_context - 上下文管理器
-3. TransactionManager - 手动控制事务
+2. @requires_transaction - Repository 事务检查装饰器
+3. transactional_context - 上下文管理器
+4. TransactionManager - 手动控制事务
 """
 
 from collections.abc import AsyncGenerator, Callable
@@ -198,11 +199,38 @@ def ensure_transaction(session: AsyncSession) -> bool:
     return session.in_transaction()
 
 
+def requires_transaction(func: Callable) -> Callable:
+    """事务必需装饰器。
+    
+    确保方法在事务中执行，如果不在事务中则抛出 TransactionRequiredError。
+    
+    用于 Repository 方法，强制要求在事务中调用。
+    
+    用法:
+        class UserRepository(BaseRepository):
+            @requires_transaction
+            async def update_user(self, user, data):
+                # 此方法必须在事务中执行
+                return await self.update(user, data)
+    """
+    
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        if not self._session.in_transaction():
+            raise TransactionRequiredError(
+                f"方法 {func.__name__} 需要在事务中执行，但当前会话不在事务中"
+            )
+        return await func(self, *args, **kwargs)
+    
+    return wrapper
+
+
 __all__ = [
-    "TransactionManager",
-    "TransactionRequiredError",
     "ensure_transaction",
+    "requires_transaction",
     "transactional",
     "transactional_context",
+    "TransactionManager",
+    "TransactionRequiredError",
 ]
 

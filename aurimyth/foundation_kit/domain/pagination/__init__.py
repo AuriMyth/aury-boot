@@ -124,7 +124,7 @@ class SortParams(BaseModel):
                     field = item
                     direction = "asc"
                 result.append((field, direction))
-            elif isinstance(item, (list, tuple)) and len(item) == 2:
+            elif isinstance(item, list | tuple) and len(item) == 2:
                 field, direction = item
                 if direction.lower() not in ("asc", "desc"):
                     raise ValueError(f"排序方向必须是 'asc' 或 'desc'，得到: {direction}")

@@ -9,8 +9,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class TaskSettings(BaseSettings):
-    """任务队列配置。
+class TaskConfig(BaseSettings):
+    """任务队列基础设施配置。
+    
+    Infrastructure 层直接使用的任务队列配置。
     
     环境变量前缀: TASK_
     示例: TASK_BROKER_URL, TASK_MAX_RETRIES
@@ -36,6 +38,6 @@ class TaskSettings(BaseSettings):
 
 
 __all__ = [
-    "TaskSettings",
+    "TaskConfig",
 ]
 

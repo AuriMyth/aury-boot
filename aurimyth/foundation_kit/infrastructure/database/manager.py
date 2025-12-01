@@ -14,7 +14,7 @@ from sqlalchemy.exc import DisconnectionError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from aurimyth.foundation_kit.common.logging import logger
-from aurimyth.foundation_kit.infrastructure.database.settings import DatabaseSettings
+from aurimyth.foundation_kit.infrastructure.database.config import DatabaseConfig
 
 
 class DatabaseManager:
@@ -42,7 +42,7 @@ class DatabaseManager:
     
     _instance: DatabaseManager | None = None
     _initialized: bool = False
-    _config: DatabaseSettings | None = None
+    _config: DatabaseConfig | None = None
     
     def __init__(self) -> None:
         """私有构造函数，使用 get_instance() 获取实例。"""
@@ -62,7 +62,7 @@ class DatabaseManager:
         return cls._instance
     
     @classmethod
-    def configure(cls, config: DatabaseSettings) -> None:
+    def configure(cls, config: DatabaseConfig) -> None:
         """配置数据库管理器。
         
         Args:

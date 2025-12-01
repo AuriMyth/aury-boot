@@ -18,8 +18,8 @@ from kombu import Connection, Exchange
 from aurimyth.foundation_kit.common.logging import logger
 
 from . import Event, EventHandler, EventType
+from .config import EventConfig
 from .consumer import EventConsumer
-from .settings import EventSettings
 
 
 class EventBus:
@@ -51,7 +51,7 @@ class EventBus:
     
     _instance: EventBus | None = None
     
-    def __init__(self, settings: EventSettings | None = None) -> None:
+    def __init__(self, settings: EventConfig | None = None) -> None:
         """私有构造函数，使用 get_instance() 获取实例。
         
         Args:
@@ -60,7 +60,7 @@ class EventBus:
         if EventBus._instance is not None:
             raise RuntimeError("EventBus 是单例类，请使用 get_instance() 获取实例")
         
-        self._settings = settings or EventSettings()
+        self._settings = settings or EventConfig()
         self._handlers: dict[type[Event], list[EventHandler]] = {}
         self._event_history: list[Event] = []
         
@@ -287,9 +287,11 @@ class EventBus:
         self._event_history.append(event)
         
         # 限制历史记录大小
-        if self._settings.max_history_size is not None:
-            if len(self._event_history) > self._settings.max_history_size:
-                self._event_history = self._event_history[-self._settings.max_history_size:]
+        if (
+            self._settings.max_history_size is not None
+            and len(self._event_history) > self._settings.max_history_size
+        ):
+            self._event_history = self._event_history[-self._settings.max_history_size:]
     
     def get_history(
         self,

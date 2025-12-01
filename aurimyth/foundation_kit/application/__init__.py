@@ -4,14 +4,6 @@
 """
 
 # 事件系统（从 infrastructure 导入 - Event 定义在最底层）
-from aurimyth.foundation_kit.infrastructure.events import (
-    Event,
-    EventBus,
-    EventConsumer,
-    EventLoggingMiddleware,
-    EventMiddleware,
-)
-
 # 事务管理（从 domain 导入）
 from aurimyth.foundation_kit.domain.transaction import (
     TransactionManager,
@@ -23,6 +15,13 @@ from aurimyth.foundation_kit.domain.transaction import (
 
 # 依赖注入容器（从 infrastructure 导入）
 from aurimyth.foundation_kit.infrastructure.di import Container, Lifetime, Scope, ServiceDescriptor
+from aurimyth.foundation_kit.infrastructure.events import (
+    Event,
+    EventBus,
+    EventConsumer,
+    EventLoggingMiddleware,
+    EventMiddleware,
+)
 
 from . import interfaces, rpc
 
@@ -41,7 +40,6 @@ from .config import (
     BaseConfig,
     CacheSettings,
     CORSSettings,
-    DatabaseSettings,
     LogSettings,
     ServerSettings,
 )
@@ -72,7 +70,6 @@ __all__ = [
     # 依赖注入容器
     "Container",
     "DatabaseComponent",
-    "DatabaseSettings",
     # 事件系统
     "Event",
     "EventBus",

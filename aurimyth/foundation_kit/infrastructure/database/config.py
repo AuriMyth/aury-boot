@@ -9,8 +9,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class DatabaseSettings(BaseSettings):
-    """数据库配置。
+class DatabaseConfig(BaseSettings):
+    """数据库基础设施配置。
+    
+    Infrastructure 层直接使用的数据库配置。
     
     环境变量前缀: DATABASE_
     示例: DATABASE_URL, DATABASE_ECHO, DATABASE_POOL_SIZE
@@ -47,6 +49,6 @@ class DatabaseSettings(BaseSettings):
 
 
 __all__ = [
-    "DatabaseSettings",
+    "DatabaseConfig",
 ]
 

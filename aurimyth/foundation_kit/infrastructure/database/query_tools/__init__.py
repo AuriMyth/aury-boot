@@ -1,9 +1,6 @@
-"""仓储装饰器。
+"""查询优化工具。
 
-提供事务检查、缓存和性能监控装饰器。
-
-**架构说明**：
-这个模块不再依赖 domain 层。事务检查异常现在通过异常类名称检查而非直接导入。
+提供缓存和性能监控装饰器。
 """
 
 from __future__ import annotations
@@ -13,44 +10,10 @@ from functools import wraps
 import hashlib
 import time
 
-from sqlalchemy import Select, text
-
 from aurimyth.foundation_kit.common.logging import logger
-
-
-class TransactionRequiredError(Exception):
-    """事务必需错误。
-    
-    在需要事务上下文但未提供时抛出。
-    """
-    pass
 
 # 查询性能监控配置
 QUERY_SLOW_THRESHOLD = 1.0  # 慢查询阈值（秒）
-
-
-def requires_transaction(func: Callable) -> Callable:
-    """事务必需装饰器。
-    
-    确保方法在事务中执行，如果不在事务中则抛出 TransactionRequiredError。
-    
-    用法:
-        class UserRepository(BaseRepository):
-            @requires_transaction
-            async def update_user(self, user, data):
-                # 此方法必须在事务中执行
-                return await self.update(user, data)
-    """
-    
-    @wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        if not self._session.in_transaction():
-            raise TransactionRequiredError(
-                f"方法 {func.__name__} 需要在事务中执行，但当前会话不在事务中"
-            )
-        return await func(self, *args, **kwargs)
-    
-    return wrapper
 
 
 def cache_query(
@@ -164,6 +127,7 @@ def monitor_query(
                     # 如果启用 explain，尝试获取查询计划
                     if enable_explain and hasattr(self, "_last_query"):
                         try:
+                            from sqlalchemy import text
                             explain_result = await self._session.execute(
                                 text(f"EXPLAIN {self._last_query!s}")
                             )
@@ -189,4 +153,10 @@ def monitor_query(
         return wrapper
     
     return decorator
+
+
+__all__ = [
+    "cache_query",
+    "monitor_query",
+]
 

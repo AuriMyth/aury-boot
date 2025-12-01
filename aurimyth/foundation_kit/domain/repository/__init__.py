@@ -8,8 +8,8 @@
 """
 
 from .impl import BaseRepository, SimpleRepository
-from .interface import IRepository
 from .interceptors import QueryInterceptor
+from .interface import IRepository
 from .query_builder import QueryBuilder
 
 __all__ = [
