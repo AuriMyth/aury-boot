@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any
 
 from kombu import Connection, Exchange
 
 from aurimyth.foundation_kit.common.logging import logger
 
-from . import Event, EventHandler, EventType
 from .config import EventConfig
 from .consumer import EventConsumer
+from .models import Event, EventHandler, EventType
 
 
 class EventBus:

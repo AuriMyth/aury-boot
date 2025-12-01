@@ -1,6 +1,7 @@
 """RPC客户端实现。
 
 基于 toolkit/http 的 HttpClient，提供 RPC 调用封装。
+支持链路追踪（Distributed Tracing）。
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from aurimyth.foundation_kit.application.rpc.base import BaseRPCClient, RPCError, RPCResponse
 from aurimyth.foundation_kit.application.rpc.discovery import get_service_discovery
-from aurimyth.foundation_kit.common.logging import logger
+from aurimyth.foundation_kit.common.logging import logger, get_trace_id
 from aurimyth.foundation_kit.toolkit.http import HttpClient
 
 if TYPE_CHECKING:
@@ -17,10 +18,10 @@ if TYPE_CHECKING:
 
 
 class RPCClient(BaseRPCClient):
-    """RPC客户端实现。
+    """RPC客户端实现（支持链路追踪）。
 
     基于 toolkit/http 的 HttpClient，提供 RPC 调用封装。
-    支持自动重试和错误处理。
+    支持自动重试、错误处理和链路追踪（自动传递追踪ID）。
     """
 
     def __init__(
@@ -85,7 +86,15 @@ class RPCClient(BaseRPCClient):
         # 合并请求头
         request_headers = self._prepare_headers(headers)
         
-        logger.debug(f"RPC调用: {method} {path}")
+        # 添加链路追踪 ID
+        trace_id = get_trace_id()
+        request_headers["x-trace-id"] = trace_id
+        request_headers["x-request-id"] = trace_id
+        
+        logger.debug(
+            f"RPC调用开始: {method} {path} | "
+            f"Trace-ID: {trace_id}"
+        )
 
         try:
             # 使用 toolkit/http 的 HttpClient
@@ -108,6 +117,13 @@ class RPCClient(BaseRPCClient):
             )
 
             rpc_response.raise_for_status()
+            
+            logger.debug(
+                f"RPC调用成功: {method} {path} | "
+                f"状态: {response.status_code} | "
+                f"Trace-ID: {trace_id}"
+            )
+            
             return rpc_response
 
         except Exception as e:
@@ -118,7 +134,11 @@ class RPCClient(BaseRPCClient):
             else:
                 status_code = 500
             
-            logger.error(f"RPC调用失败: {method} {path}, error={e!s}")
+            logger.error(
+                f"RPC调用失败: {method} {path} | "
+                f"错误: {e!s} | "
+                f"Trace-ID: {trace_id}"
+            )
             raise RPCError(
                 message=f"RPC调用失败: {e!s}",
                 code="RPC_ERROR",

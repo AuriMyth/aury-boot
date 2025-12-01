@@ -57,6 +57,9 @@ from .migrations import MigrationManager
 # 调度器启动器
 from .scheduler import run_scheduler, run_scheduler_sync
 
+# 服务器集成
+from .server import ApplicationServer, run_app
+
 __all__ = [
     # 配置
     "BaseConfig",
@@ -101,6 +104,9 @@ __all__ = [
     # 调度器启动器
     "run_scheduler",
     "run_scheduler_sync",
+    # 服务器集成
+    "ApplicationServer",
+    "run_app",
     # 事务管理
     "transactional",
     "transactional_context",

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import traceback
 
 from rich.console import Console
 from rich.table import Table
@@ -16,10 +17,23 @@ from .app import app, get_manager
 console = Console()
 
 
+def _handle_exception(e: Exception, operation: str) -> None:
+    """统一处理异常，打印完整堆栈信息。
+    
+    Args:
+        e: 异常对象
+        operation: 操作名称（用于错误消息）
+    """
+    typer.echo(f"\n❌ {operation}失败: {e}", err=True)
+    typer.echo("\n📋 异常堆栈:", err=True)
+    typer.echo(traceback.format_exc(), err=True)
+    raise typer.Exit(1)
+
+
 @app.command()
 def make(
     message: str = typer.Option(..., "-m", "--message", help="迁移消息"),
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
     autogenerate: bool = typer.Option(True, "--autogenerate/--no-autogenerate", help="是否自动生成"),
     dry_run: bool = typer.Option(False, "--dry-run", help="干运行（只检测变更，不生成文件）"),
 ) -> None:
@@ -31,7 +45,7 @@ def make(
         aurimyth-migrate make -m "check changes" --dry-run
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _make():
             result = await manager.make_migrations(
@@ -56,14 +70,13 @@ def make(
         
         asyncio.run(_make())
     except Exception as e:
-        typer.echo(f"❌ 生成迁移失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "生成迁移")
 
 
 @app.command()
 def up(
     revision: str = typer.Option("head", "-r", "--revision", help="目标版本（默认 head）"),
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
     dry_run: bool = typer.Option(False, "--dry-run", help="干运行（只显示会执行的迁移，不实际执行）"),
 ) -> None:
     """执行迁移（类似 Django 的 migrate）。
@@ -74,7 +87,7 @@ def up(
         aurimyth-migrate up --dry-run
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _upgrade():
             await manager.upgrade(revision=revision, dry_run=dry_run)
@@ -83,14 +96,13 @@ def up(
         
         asyncio.run(_upgrade())
     except Exception as e:
-        typer.echo(f"❌ 执行迁移失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "执行迁移")
 
 
 @app.command()
 def down(
     revision: str = typer.Argument(..., help="目标版本（如 previous, -1, 或具体版本号）"),
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
     dry_run: bool = typer.Option(False, "--dry-run", help="干运行（只显示会回滚的迁移，不实际执行）"),
 ) -> None:
     """回滚迁移。
@@ -101,7 +113,7 @@ def down(
         aurimyth-migrate down abc123 --dry-run
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _downgrade():
             await manager.downgrade(revision=revision, dry_run=dry_run)
@@ -110,13 +122,12 @@ def down(
         
         asyncio.run(_downgrade())
     except Exception as e:
-        typer.echo(f"❌ 回滚迁移失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "回滚迁移")
 
 
 @app.command()
 def status(
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
 ) -> None:
     """查看迁移状态（类似 Django 的 showmigrations）。
     
@@ -124,7 +135,7 @@ def status(
         aurimyth-migrate status
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _status():
             status_info = await manager.status()
@@ -151,13 +162,12 @@ def status(
         
         asyncio.run(_status())
     except Exception as e:
-        typer.echo(f"❌ 查看状态失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "查看状态")
 
 
 @app.command()
 def show(
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
 ) -> None:
     """显示所有迁移（类似 Django 的 showmigrations）。
     
@@ -165,7 +175,7 @@ def show(
         aurimyth-migrate show
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _show():
             migrations = await manager.show()
@@ -190,13 +200,12 @@ def show(
         
         asyncio.run(_show())
     except Exception as e:
-        typer.echo(f"❌ 显示迁移失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "显示迁移")
 
 
 @app.command()
 def check(
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
 ) -> None:
     """检查迁移（类似 Django 的 check）。
     
@@ -206,7 +215,7 @@ def check(
         aurimyth-migrate check
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _check():
             result = await manager.check()
@@ -229,15 +238,14 @@ def check(
         
         asyncio.run(_check())
     except Exception as e:
-        typer.echo(f"❌ 检查失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "检查")
 
 
 @app.command()
 def merge(
     revisions: str = typer.Argument(..., help="要合并的版本（逗号分隔）"),
     message: str | None = typer.Option(None, "-m", "--message", help="合并消息"),
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
 ) -> None:
     """合并迁移（类似 Django 的迁移合并）。
     
@@ -248,7 +256,7 @@ def merge(
         aurimyth-migrate merge "abc123,def456" -m "merge branches"
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         revision_list = [r.strip() for r in revisions.split(",")]
         
         async def _merge():
@@ -257,14 +265,13 @@ def merge(
         
         asyncio.run(_merge())
     except Exception as e:
-        typer.echo(f"❌ 合并迁移失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "合并迁移")
 
 
 @app.command()
 def history(
     verbose: bool = typer.Option(False, "-v", "--verbose", help="显示详细信息"),
-    script_location: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
 ) -> None:
     """显示迁移历史。
     
@@ -273,15 +280,14 @@ def history(
         aurimyth-migrate history --verbose
     """
     try:
-        manager = get_manager(script_location)
+        manager = get_manager(config_override=config)
         
         async def _history():
             await manager.history(verbose=verbose)
         
         asyncio.run(_history())
     except Exception as e:
-        typer.echo(f"❌ 显示历史失败: {e}", err=True)
-        raise typer.Exit(1) from None
+        _handle_exception(e, "显示历史")
 
 
 __all__ = [

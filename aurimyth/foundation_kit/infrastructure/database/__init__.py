@@ -10,6 +10,7 @@ from .exceptions import (
     DatabaseTransactionError,
 )
 from .manager import DatabaseManager
+from .query_tools import cache_query, monitor_query
 from .strategies import (
     MySQLUpsertStrategy,
     PostgreSQLUpsertStrategy,
@@ -17,7 +18,6 @@ from .strategies import (
     UpsertStrategy,
     UpsertStrategyFactory,
 )
-from .query_tools import cache_query, monitor_query
 
 __all__ = [
     # 异常

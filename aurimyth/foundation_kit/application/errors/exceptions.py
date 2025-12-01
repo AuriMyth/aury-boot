@@ -98,12 +98,12 @@ class NotFoundError(BaseError):
     def __init__(
         self,
         message: str = "资源不存在",
-        resource: str | None = None,
+        resource: Any = None,
         **kwargs
     ) -> None:
         metadata = kwargs.pop("metadata", {})
         if resource:
-            metadata["resource"] = resource
+            metadata["resource"] = str(resource)  # 自动转换为字符串，支持 GUID、UUID 等
         
         super().__init__(
             message=message,
@@ -120,12 +120,12 @@ class AlreadyExistsError(BaseError):
     def __init__(
         self,
         message: str = "资源已存在",
-        resource: str | None = None,
+        resource: Any = None,
         **kwargs
     ) -> None:
         metadata = kwargs.pop("metadata", {})
         if resource:
-            metadata["resource"] = resource
+            metadata["resource"] = str(resource)  # 自动转换为字符串，支持 GUID、UUID 等
         
         super().__init__(
             message=message,

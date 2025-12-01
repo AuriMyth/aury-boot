@@ -1,6 +1,20 @@
 """常用组合模型。
 
 提供预定义的模型组合，方便直接使用。
+
+**重要提示**：不要直接继承 Base 类用于 Repository，必须使用下列预定义模型或自己组合 Mixin。
+直接使用 Base 会导致缺少 id 等必要字段，Repository 会报错。
+
+可用模型：
+- Model: 标准模型（int主键 + 时间戳）
+- AuditableStateModel: 标准模型 + 软删除
+- UUIDModel: UUID 主键模型（UUID 主键 + 时间戳）
+- UUIDAuditableStateModel: UUID 主键模型 + 软删除
+- VersionedModel: 乐观锁模型（int主键 + 乐观锁）
+- VersionedTimestampedModel: 乐观锁 + 时间戳
+- VersionedUUIDModel: UUID 主键 + 乐观锁 + 时间戳
+- FullFeaturedModel: 完整功能（int主键 + 时间戳 + 软删除 + 乐观锁）
+- FullFeaturedUUIDModel: 完整功能 UUID 版本
 """
 
 from __future__ import annotations

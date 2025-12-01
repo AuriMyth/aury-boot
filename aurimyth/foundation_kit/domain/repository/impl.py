@@ -9,21 +9,53 @@ Infrastructure 层现在仅负责数据库连接管理，完全不依赖 domain 
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Union, cast
 
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.domain.exceptions import VersionConflictError
-from aurimyth.foundation_kit.domain.models import Base
-from aurimyth.foundation_kit.domain.pagination import PaginationParams, PaginationResult, SortParams
+from aurimyth.foundation_kit.domain.models import GUID, Base
+from aurimyth.foundation_kit.domain.pagination import (
+    PaginationParams,
+    PaginationResult,
+    SortParams,
+)
 from aurimyth.foundation_kit.domain.repository.interface import IRepository
 from aurimyth.foundation_kit.domain.repository.query_builder import QueryBuilder
 
 
+def _get_model_attr(model_class: type, attr_name: str) -> Any:
+    """安全地获取模型类的属性，避免类型检查器警告。
+    
+    Args:
+        model_class: SQLAlchemy 模型类
+        attr_name: 属性名称
+        
+    Returns:
+        属性值（如果存在），否则返回 None
+    """
+    return cast(Any, getattr(model_class, attr_name, None))
+
+
 class BaseRepository[ModelType: Base](IRepository[ModelType]):
-    """仓储基类实现。提供通用 CRUD 操作。"""
+    """仓储基类实现。提供通用 CRUD 操作。
+    
+    **重要**：使用此类的模型必须至少继承以下 Mixin 之一：
+    - IDMixin: 标准自增整数主键
+    - UUIDMixin: UUID 主键
+    
+    可选 Mixin：
+    - AuditableStateMixin: 软删除支持
+    - VersionMixin: 乐观锁支持
+    - TimestampMixin: 时间戳字段
+    
+    示例：
+        class User(IDMixin, TimestampMixin, AuditableStateMixin, Base):
+            __tablename__ = "users"
+            name: Mapped[str]
+    """
     
     def __init__(self, session: AsyncSession, model_class: type[ModelType]) -> None:
         self._session = session
@@ -41,13 +73,15 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     def query(self) -> QueryBuilder[ModelType]:
         builder = QueryBuilder(self._model_class)
         if hasattr(self._model_class, "deleted_at"):
-            builder.filter_by(self._model_class.deleted_at == 0)
+            deleted_at = _get_model_attr(self._model_class, "deleted_at")
+            builder.filter_by(deleted_at == 0)
         return builder
     
     def _build_base_query(self) -> Select:
         query = select(self._model_class)
         if hasattr(self._model_class, "deleted_at"):
-            query = query.where(self._model_class.deleted_at == 0)
+            deleted_at = _get_model_attr(self._model_class, "deleted_at")
+            query = query.where(deleted_at == 0)
         return query
     
     def _apply_filters(self, query: Select, **filters) -> Select:
@@ -56,8 +90,12 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
                 query = query.where(getattr(self._model_class, key) == value)
         return query
     
-    async def get(self, id: int) -> ModelType | None:
-        query = self._build_base_query().where(self._model_class.id == id)
+    async def get(self, id: Union[int, GUID]) -> ModelType | None:
+        """按 ID 获取实体，支持 int 和 GUID。"""
+        if not hasattr(self._model_class, "id"):
+            raise AttributeError(f"模型 {self._model_class.__name__} 没有 'id' 字段，请继承 IDMixin 或 UUIDMixin")
+        id_attr = _get_model_attr(self._model_class, "id")
+        query = self._build_base_query().where(id_attr == id)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
     
@@ -109,7 +147,8 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     async def count(self, **filters) -> int:
         query = select(func.count()).select_from(self._model_class)
         if hasattr(self._model_class, "deleted_at"):
-            query = query.where(self._model_class.deleted_at == 0)
+            deleted_at = _get_model_attr(self._model_class, "deleted_at")
+            query = query.where(deleted_at == 0)
         query = self._apply_filters(query, **filters)
         result = await self._session.execute(query)
         return result.scalar_one()
@@ -130,15 +169,16 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     
     async def update(self, entity: ModelType, data: dict[str, Any] | None = None) -> ModelType:
         if hasattr(entity, "version"):
-            current_version = entity.version
+            entity_any = cast(Any, entity)
+            current_version = entity_any.version
             await self._session.refresh(entity, ["version"])
-            if entity.version != current_version:
+            if entity_any.version != current_version:
                 raise VersionConflictError(
                     message="数据已被其他操作修改，请刷新后重试",
-                    current_version=entity.version,
+                    current_version=entity_any.version,
                     expected_version=current_version,
                 )
-            entity.version += 1
+            entity_any.version = entity_any.version + 1
         
         if data:
             for key, value in data.items():
@@ -153,7 +193,8 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     async def delete(self, entity: ModelType, soft: bool = True) -> None:
         if soft:
             if hasattr(entity, "deleted_at"):
-                entity.deleted_at = int(time.time())
+                # 使用 setattr 因为类型检查器不知道动态属性
+                setattr(entity, "deleted_at", int(time.time()))  # noqa: B010
                 await self._session.flush()
                 logger.debug(f"软删除实体: {entity}")
             elif hasattr(entity, "mark_deleted"):
@@ -218,14 +259,16 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     async def bulk_delete(self, filters: dict[str, Any] | None = None) -> int:
         query = delete(self._model_class)
         if hasattr(self._model_class, "deleted_at"):
-            query = query.where(self._model_class.deleted_at == 0)
+            deleted_at = _get_model_attr(self._model_class, "deleted_at")
+            query = query.where(deleted_at == 0)
         if filters:
             for key, value in filters.items():
                 if hasattr(self._model_class, key) and value is not None:
-                    query = query.where(getattr(self._model_class, key) == value)
+                    attr = _get_model_attr(self._model_class, key)
+                    query = query.where(attr == value)
         result = await self._session.execute(query)
         await self._session.flush()
-        deleted_count = result.rowcount
+        deleted_count = cast(Any, result).rowcount
         logger.debug(f"批量删除 {deleted_count} 条记录")
         return deleted_count
     

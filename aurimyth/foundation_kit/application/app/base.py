@@ -146,7 +146,13 @@ class FoundationApp(FastAPI):
         # 初始化日志（必须在其他操作之前）
         setup_logging(
             log_level=config.log.level,
-            log_file=config.log.file,
+            log_dir=config.log.dir,
+            rotation_time=config.log.rotation_time,
+            rotation_size=config.log.rotation_size,
+            retention_days=config.log.retention_days,
+            enable_file_rotation=config.log.enable_file_rotation,
+            enable_classify=config.log.enable_classify,
+            enable_console=config.log.enable_console,
         )
 
         # 初始化组件管理

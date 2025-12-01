@@ -13,6 +13,7 @@ from aurimyth.foundation_kit.application.app.base import Component, FoundationAp
 from aurimyth.foundation_kit.application.config import BaseConfig
 from aurimyth.foundation_kit.application.constants import ComponentName, SchedulerMode, ServiceType
 from aurimyth.foundation_kit.application.middleware.logging import RequestLoggingMiddleware
+from aurimyth.foundation_kit.application.migrations import MigrationManager
 from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.infrastructure.cache import CacheManager
 from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
@@ -211,11 +212,73 @@ class SchedulerComponent(Component):
             logger.warning(f"调度器关闭失败: {e}")
 
 
+class MigrationComponent(Component):
+    """数据库迁移组件。
+    
+    自动执行数据库迁移（升级到最新版本）。
+    
+    配置选项：
+    - `ENABLE_AUTO_MIGRATION`：是否启用自动迁移（默认：True）
+    - `ALEMBIC_CONFIG_PATH`：Alembic 配置文件路径（默认：alembic.ini）
+    - `AUTO_MIGRATE_ON_STARTUP`：应用启动时是否自动执行迁移（默认：True）
+    
+    使用示例：
+        # 在应用启动时自动执行迁移
+        app = FoundationApp()
+        # MigrationComponent 会在 DatabaseComponent 之后自动执行迁移
+    """
+
+    name = ComponentName.MIGRATIONS
+    enabled = True
+    depends_on: ClassVar[list[str]] = [ComponentName.DATABASE]
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """仅当配置了数据库 URL 时启用。"""
+        return self.enabled and bool(config.database.url)
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """执行数据库迁移。
+        
+        在应用启动时自动执行所有待处理的迁移，升级数据库到最新版本。
+        """
+        try:
+            # 创建迁移管理器
+            migration_manager = MigrationManager()
+            
+            # 检查是否有迁移需要执行
+            logger.info("🔄 检查数据库迁移...")
+            status = await migration_manager.status()
+            
+            pending = status.get("pending", [])
+            applied = status.get("applied", [])
+            
+            if pending:
+                logger.info("📊 数据库迁移状态：")
+                logger.info(f"   已执行: {len(applied)} 个迁移")
+                logger.info(f"   待执行: {len(pending)} 个迁移")
+                
+                # 执行迁移到最新版本
+                logger.info("⏳ 执行数据库迁移...")
+                await migration_manager.upgrade(revision="head")
+                
+                logger.info("✅ 数据库迁移完成")
+            else:
+                logger.info("✅ 数据库已是最新版本，无需迁移")
+        except Exception as e:
+            logger.error(f"❌ 数据库迁移失败: {e}", exc_info=True)
+            raise
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """无需清理。"""
+        pass
+
+
 # 设置默认组件
 FoundationApp.items = [
     RequestLoggingComponent,
     CORSComponent,
     DatabaseComponent,
+    MigrationComponent,
     CacheComponent,
     TaskComponent,
     SchedulerComponent,
@@ -226,6 +289,7 @@ __all__ = [
     "CORSComponent",
     "CacheComponent",
     "DatabaseComponent",
+    "MigrationComponent",
     "RequestLoggingComponent",
     "SchedulerComponent",
     "TaskComponent",

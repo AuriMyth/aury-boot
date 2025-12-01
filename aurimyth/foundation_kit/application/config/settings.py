@@ -140,16 +140,40 @@ class LogSettings(BaseSettings):
     """日志配置。
     
     环境变量前缀: LOG_
-    示例: LOG_LEVEL, LOG_FILE
+    示例: LOG_LEVEL, LOG_DIR, LOG_ROTATION_TIME, LOG_RETENTION_DAYS
     """
     
     level: str = Field(
         default="INFO",
-        description="日志级别"
+        description="日志级别 (DEBUG/INFO/WARNING/ERROR/CRITICAL)"
     )
-    file: str | None = Field(
+    dir: str | None = Field(
         default=None,
-        description="日志文件路径（如果不设置则仅输出到控制台）"
+        description="日志文件目录（如果不设置则默认为 './log'）"
+    )
+    rotation_time: str = Field(
+        default="00:00",
+        description="日志文件轮转时间 (HH:MM 格式，每天定时轮转)"
+    )
+    rotation_size: str = Field(
+        default="100 MB",
+        description="日志文件轮转大小阈值（基于大小的轮转）"
+    )
+    retention_days: int = Field(
+        default=7,
+        description="日志文件保留天数"
+    )
+    enable_file_rotation: bool = Field(
+        default=True,
+        description="是否启用日志文件轮转"
+    )
+    enable_classify: bool = Field(
+        default=True,
+        description="是否按模块和级别分类日志文件"
+    )
+    enable_console: bool = Field(
+        default=True,
+        description="是否输出日志到控制台"
     )
     
     model_config = SettingsConfigDict(
@@ -250,6 +274,36 @@ class EventSettings(BaseSettings):
     
     model_config = SettingsConfigDict(
         env_prefix="EVENT_",
+        case_sensitive=False,
+    )
+
+
+class MigrationSettings(BaseSettings):
+    """数据库迁移配置。
+    
+    环境变量前缀: MIGRATION_
+    示例: MIGRATION_CONFIG_PATH, MIGRATION_SCRIPT_LOCATION, MIGRATION_MODEL_MODULES
+    """
+    
+    config_path: str = Field(
+        default="alembic.ini",
+        description="Alembic 配置文件路径"
+    )
+    script_location: str = Field(
+        default="alembic",
+        description="Alembic 迁移脚本目录"
+    )
+    model_modules: list[str] = Field(
+        default_factory=lambda: ["app.models", "app.**.models"],
+        description="模型模块列表（用于自动检测变更）。支持通配符: * 和 **。默认: ['app.models', 'app.**.models']"
+    )
+    auto_create: bool = Field(
+        default=True,
+        description="是否自动创建迁移配置和目录"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="MIGRATION_",
         case_sensitive=False,
     )
 
@@ -364,9 +418,7 @@ class BaseConfig(BaseSettings):
     注意：Application 层配置完全独立，不依赖 Infrastructure 层。
     """
     
-    # 缓存配置
-    cache: CacheSettings = Field(default_factory=CacheSettings)
-    
+    # ========== 服务器与网络 ==========
     # 服务器配置
     server: ServerSettings = Field(default_factory=ServerSettings)
     
@@ -376,20 +428,39 @@ class BaseConfig(BaseSettings):
     # 日志配置
     log: LogSettings = Field(default_factory=LogSettings)
     
+    # 健康检查配置
+    health_check: HealthCheckSettings = Field(default_factory=HealthCheckSettings)
+    
+    # ========== 数据与缓存 ==========
+    # 数据库配置
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    
+    # 缓存配置
+    cache: CacheSettings = Field(default_factory=CacheSettings)
+    
+    # 迁移配置
+    migration: MigrationSettings = Field(default_factory=MigrationSettings)
+    
+    # ========== 服务编排 ==========
     # 服务配置
     service: ServiceSettings = Field(default_factory=ServiceSettings)
     
     # 调度器配置
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     
+    # ========== 异步与事件 ==========
+    # 任务队列配置
+    task: TaskSettings = Field(default_factory=TaskSettings)
+    
+    # 事件总线配置
+    event: EventSettings = Field(default_factory=EventSettings)
+    
+    # ========== 微服务通信 ==========
     # RPC 客户端配置（调用其他服务）
     rpc_client: RPCClientSettings = Field(default_factory=RPCClientSettings)
     
     # RPC 服务配置（当前服务注册）
     rpc_service: RPCServiceSettings = Field(default_factory=RPCServiceSettings)
-    
-    # 健康检查配置
-    health_check: HealthCheckSettings = Field(default_factory=HealthCheckSettings)
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -408,12 +479,16 @@ __all__ = [
     "BaseConfig",
     "CORSSettings",
     "CacheSettings",
+    "DatabaseSettings",
+    "EventSettings",
     "HealthCheckSettings",
     "LogSettings",
+    "MigrationSettings",
     "RPCClientSettings",
     "RPCServiceSettings",
     "SchedulerSettings",
     "ServerSettings",
     "ServiceSettings",
+    "TaskSettings",
 ]
 

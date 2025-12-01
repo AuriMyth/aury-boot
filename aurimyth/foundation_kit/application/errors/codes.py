@@ -1,6 +1,22 @@
 """错误代码定义。
 
 提供统一的错误代码枚举。
+
+**重要提示**：
+Python 的 Enum 不支持继承已有成员的枚举。
+如果你需要扩展错误代码，请使用以下方式之一：
+
+方式 1（推荐）：创建独立的枚举类
+```python
+class ServiceErrorCode(str, Enum):
+    # 服务特定错误代码（5xxx）
+    CUSTOM_ERROR = "5000"
+```
+
+方式 2：使用联合类型
+```python
+ErrorCodeType = ErrorCode | ServiceErrorCode
+```
 """
 
 from __future__ import annotations
@@ -9,7 +25,15 @@ from enum import Enum
 
 
 class ErrorCode(str, Enum):
-    """错误代码枚举。"""
+    """Foundation Kit 基础错误代码。
+    
+    预留范围：
+    - 1xxx: 通用错误
+    - 2xxx: 数据库错误
+    - 3xxx: 业务错误
+    - 4xxx: 外部服务错误
+    - 5xxx+: 留给各个服务自定义
+    """
     
     # 通用错误 (1xxx)
     UNKNOWN_ERROR = "1000"
