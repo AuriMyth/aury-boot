@@ -1,4 +1,4 @@
-name: Deploy Docs
+name: Publish Docs
 
 on:
   push:
@@ -17,15 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: 3.x
+          cache: 'pip'
 
-      - name: Install dependencies
-        run: |
-          pip install mkdocs-material pymdown-extensions
+      - run: pip install mkdocs-material pymdown-extensions
 
-      - name: Build and Deploy
+      - name: Deploy to GitHub Pages
         working-directory: docs/user_manual
         run: mkdocs gh-deploy --force
