@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 import os
@@ -35,7 +34,7 @@ class StorageBackend(str, Enum):
 class StorageFile:
     """存储文件对象。"""
     
-    bucket_name: str
+    bucket_name: str | None = None
     object_name: str
     data: BinaryIO | None = None
     content_type: str | None = None
@@ -48,10 +47,18 @@ class StorageConfig(BaseModel):
     backend: StorageBackend = Field(..., description="存储后端类型")
     access_key_id: str | None = Field(None, description="访问密钥ID")
     access_key_secret: str | None = Field(None, description="访问密钥")
+    session_token: str | None = Field(None, description="会话令牌（STS临时凭证）")
     endpoint: str | None = Field(None, description="端点URL")
     region: str | None = Field(None, description="区域")
     bucket_name: str | None = Field(None, description="默认桶名")
     base_path: str | None = Field(None, description="基础路径（本地存储）")
+    addressing_style: str | None = Field(None, description="S3寻址风格（virtual/path）")
+    role_arn: str | None = Field(None, description="STS AssumeRole 的角色ARN（由外部决定何时刷新）")
+    role_session_name: str | None = Field(None, description="STS会话名（AssumeRole RoleSessionName）")
+    external_id: str | None = Field(None, description="STS ExternalId（可选）")
+    sts_endpoint: str | None = Field(None, description="STS端点（可选，私有云/非AWS）")
+    sts_region: str | None = Field(None, description="STS区域（可选）")
+    sts_duration_seconds: int | None = Field(None, description="AssumeRole DurationSeconds（默认3600）")
 
 
 class IStorage(ABC):
@@ -263,57 +270,48 @@ class StorageManager:
             cls._instance = cls()
         return cls._instance
     
-    async def init_app(self, config: dict[str, Any]) -> None:
-        """初始化存储（类似CacheManager）。
-        
-        Args:
-            config: 配置字典
-                - STORAGE_TYPE: 存储类型（s3/local）
-                - STORAGE_ACCESS_KEY_ID: 访问密钥ID
-                - STORAGE_ACCESS_KEY_SECRET: 访问密钥
-                - STORAGE_ENDPOINT: 端点URL
-                - STORAGE_REGION: 区域
-                - STORAGE_BUCKET_NAME: 默认桶名
-                - STORAGE_BASE_PATH: 基础路径（本地存储）
+    async def init(self, config: StorageConfig) -> None:
+        """使用 Pydantic 校验后的 StorageConfig 初始化（SDK 友好）。
+
+        说明：
+        - storage 作为可抽离 SDK，不负责“从环境变量读取配置”
+        - Application/调用方负责把配置读出来并构造 StorageConfig
         """
-        self._config = config.copy()
-        storage_type = config.get("STORAGE_TYPE", "local")
-        
-        # 构建后端配置
-        backend_config = self._build_backend_config(storage_type, config)
-        
-        # 使用工厂创建后端（延迟导入避免循环依赖）
+        self._config = config.model_dump()
+        backend_name = config.backend.value
+
+        backend_kwargs = self._config_to_backend_kwargs(config)
+
         from .factory import StorageFactory
-        self._backend = await StorageFactory.create(storage_type, **backend_config)
-        logger.info(f"存储管理器初始化完成: {storage_type}")
-    
-    def _build_backend_config(self, storage_type: str, config: dict[str, Any]) -> dict[str, Any]:
-        """构建后端配置。
-        
-        使用函数式编程处理配置构建逻辑。
-        """
-        # 配置构建函数字典（函数式编程）
-        config_builders: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
-            "s3": lambda cfg: {
-                "access_key_id": cfg.get("STORAGE_ACCESS_KEY_ID"),
-                "access_key_secret": cfg.get("STORAGE_ACCESS_KEY_SECRET"),
-                "endpoint": cfg.get("STORAGE_ENDPOINT"),
-                "region": cfg.get("STORAGE_REGION"),
-                "bucket_name": cfg.get("STORAGE_BUCKET_NAME"),
-            },
-            "local": lambda cfg: {
-                "base_path": cfg.get("STORAGE_BASE_PATH", "./storage"),
-            },
+        self._backend = await StorageFactory.create(backend_name, **backend_kwargs)
+        logger.info(f"存储管理器初始化完成: {backend_name}")
+
+    def _config_to_backend_kwargs(self, config: StorageConfig) -> dict[str, Any]:
+        """将 StorageConfig 转换为后端构造参数。"""
+        if config.backend == StorageBackend.LOCAL:
+            return {
+                "base_path": config.base_path or "./storage",
+            }
+
+        style = config.addressing_style or "virtual"
+        if style not in {"virtual", "path"}:
+            style = "virtual"
+
+        return {
+            "access_key_id": config.access_key_id,
+            "access_key_secret": config.access_key_secret,
+            "session_token": config.session_token,
+            "endpoint": config.endpoint,
+            "region": config.region,
+            "bucket_name": config.bucket_name,
+            "addressing_style": style,
+            "role_arn": config.role_arn,
+            "role_session_name": config.role_session_name or "aurimyth-storage",
+            "external_id": config.external_id,
+            "sts_endpoint": config.sts_endpoint,
+            "sts_region": config.sts_region,
+            "sts_duration_seconds": config.sts_duration_seconds or 3600,
         }
-        
-        if storage_type not in config_builders:
-            available = ", ".join(config_builders.keys())
-            raise ValueError(
-                f"不支持的存储类型: {storage_type}。可用类型: {available}"
-            )
-        
-        builder = config_builders[storage_type]
-        return builder(config)
     
     @property
     def backend(self) -> IStorage:

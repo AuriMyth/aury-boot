@@ -222,5 +222,41 @@ packages = [
     "aurimyth",
 ]
 
+[tool.hatch.build.targets.sdist]
+include = [
+    "aurimyth/",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+]
+exclude = [
+    "/.git",
+    "/.venv",
+    "/.idea",
+    "/.vscode",
+    "/.cursor",
+    "/.ruff_cache",
+    "/.mypy_cache",
+    "/.pytest_cache",
+    "/__pycache__",
+    "/dist",
+    "/build",
+    "/docs",
+    "/tests",
+    "/logs",
+    "*.egg-info",
+    "*.pyc",
+    "*.pyo",
+    ".env*",
+    "*.bak",
+    "uv.lock",
+    "release.sh",
+    "pypi_key",
+    "WARP.md",
+    "LATEST_UPDATES.md",
+    "IMPLEMENTATION_SUMMARY.md",
+    "FOUNDATION_KIT_MISSING_FEATURES.md",
+]
+
 # 启用 keyring 提供者，自动从 keyring 读取凭据
 keyring-provider = "subprocess"

@@ -17,6 +17,7 @@ from aurimyth.foundation_kit.common.logging import logger
 from aurimyth.foundation_kit.infrastructure.cache import CacheManager
 from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
 from aurimyth.foundation_kit.infrastructure.scheduler import SchedulerManager
+from aurimyth.foundation_kit.infrastructure.storage import StorageManager
 from aurimyth.foundation_kit.infrastructure.tasks import TaskManager
 
 
@@ -90,6 +91,57 @@ class CacheComponent(Component):
                 await cache_manager.cleanup()
         except Exception as e:
             logger.warning(f"缓存关闭失败: {e}")
+
+
+class StorageComponent(Component):
+    """对象存储组件。
+
+设计要点（解耦）：
+- 不从 `BaseConfig` 读取 storage 字段（Application 层无需感知 storage 的全部配置）
+- 由 Storage 自己的 `StorageSettings`（pydantic-settings）从环境变量读取并创建后端
+"""
+
+    name = ComponentName.STORAGE
+    enabled = True
+    depends_on: ClassVar[list[str]] = []
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        st = getattr(config, "storage", None)
+        return self.enabled and bool(getattr(st, "enabled", True))
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        try:
+            from aurimyth.foundation_kit.infrastructure.storage import StorageBackend, StorageConfig
+
+            storage_manager = StorageManager.get_instance()
+            st = config.storage
+            storage_config = StorageConfig(
+                backend=StorageBackend(st.type),
+                access_key_id=st.access_key_id,
+                access_key_secret=st.access_key_secret,
+                session_token=st.session_token,
+                endpoint=st.endpoint,
+                region=st.region,
+                bucket_name=st.bucket_name,
+                base_path=st.base_path,
+                addressing_style=st.addressing_style,
+                role_arn=st.role_arn,
+                role_session_name=st.role_session_name,
+                external_id=st.external_id,
+                sts_endpoint=st.sts_endpoint,
+                sts_region=st.sts_region,
+                sts_duration_seconds=st.sts_duration_seconds,
+            )
+            await storage_manager.init(storage_config)
+        except Exception as e:
+            logger.warning(f"存储初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        try:
+            storage_manager = StorageManager.get_instance()
+            await storage_manager.cleanup()
+        except Exception as e:
+            logger.warning(f"存储关闭失败: {e}")
 
 
 class TaskComponent(Component):
@@ -364,6 +416,7 @@ FoundationApp.components = [
     MigrationComponent,
     AdminConsoleComponent,
     CacheComponent,
+    StorageComponent,
     TaskComponent,
     SchedulerComponent,
 ]
@@ -375,6 +428,7 @@ __all__ = [
     "DatabaseComponent",
     "MigrationComponent",
     "SchedulerComponent",
+    "StorageComponent",
     "TaskComponent",
 ]
 

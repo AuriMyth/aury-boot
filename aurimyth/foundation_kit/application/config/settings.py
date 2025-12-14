@@ -94,6 +94,48 @@ class CacheSettings(BaseSettings):
     )
 
 
+class StorageSettings(BaseSettings):
+    """对象存储组件接入配置（Application 层）。
+
+说明：
+- Application 层负责从 env/.env 读取配置（快速接入组件）
+- Infrastructure 层的 storage 仅接受 Pydantic(BaseModel) 的配置对象，不读取 env
+
+环境变量前缀：STORAGE_
+"""
+
+    enabled: bool = Field(default=True, description="是否启用存储组件")
+
+    # 后端类型
+    type: Literal["local", "s3", "oss", "cos"] = Field(default="local", description="存储类型")
+
+    # S3/兼容协议通用
+    access_key_id: str | None = Field(default=None, description="访问密钥ID")
+    access_key_secret: str | None = Field(default=None, description="访问密钥")
+    session_token: str | None = Field(default=None, description="会话令牌（STS临时凭证）")
+    endpoint: str | None = Field(default=None, description="端点URL（MinIO/私有云等）")
+    region: str | None = Field(default=None, description="区域")
+    bucket_name: str | None = Field(default=None, description="默认桶名")
+    addressing_style: Literal["virtual", "path"] = Field(default="virtual", description="S3寻址风格")
+
+    # S3 AssumeRole（服务端使用；由外部决定何时刷新）
+    role_arn: str | None = Field(default=None, description="STS AssumeRole 的角色ARN")
+    role_session_name: str = Field(default="aurimyth-storage", description="STS会话名")
+    external_id: str | None = Field(default=None, description="STS ExternalId")
+    sts_endpoint: str | None = Field(default=None, description="STS端点（可选）")
+    sts_region: str | None = Field(default=None, description="STS区域（可选）")
+    sts_duration_seconds: int = Field(default=3600, description="AssumeRole DurationSeconds")
+
+    # local
+    base_path: str = Field(default="./storage", description="本地存储基础目录")
+
+    model_config = SettingsConfigDict(
+        env_prefix="STORAGE_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class ServerSettings(BaseSettings):
     """服务器配置。
     
@@ -560,6 +602,9 @@ class BaseConfig(BaseSettings):
     
     # 缓存配置
     cache: CacheSettings = Field(default_factory=CacheSettings)
+
+    # 对象存储配置（接入用；storage SDK 本身不读取 env）
+    storage: StorageSettings = Field(default_factory=StorageSettings)
     
     # 迁移配置
     migration: MigrationSettings = Field(default_factory=MigrationSettings)
@@ -612,6 +657,7 @@ __all__ = [
     "SchedulerSettings",
     "ServerSettings",
     "ServiceSettings",
+    "StorageSettings",
     "TaskSettings",
 ]
 
