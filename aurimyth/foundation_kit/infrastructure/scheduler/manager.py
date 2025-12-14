@@ -1,10 +1,11 @@
-"""任务调度器管理器 - 统一的任务调度接口。
+"""任务调度器管理器 - 命名多实例支持。
 
 提供：
 - 统一的调度器管理
 - 任务注册和启动
 - 生命周期管理
 - 自动设置日志上下文（调度器任务日志自动写入 scheduler_xxx.log）
+- 支持多个命名实例
 """
 
 from __future__ import annotations
@@ -36,16 +37,22 @@ except ImportError:
 
 
 class SchedulerManager:
-    """调度器管理器 - 单例模式。
+    """调度器管理器（命名多实例）。
     
     职责：
     1. 管理调度器实例
     2. 注册任务
     3. 生命周期管理
+    4. 支持多个命名实例，如不同业务线的调度器
     
     使用示例:
+        # 默认实例
         scheduler = SchedulerManager.get_instance()
         await scheduler.initialize()
+        
+        # 命名实例
+        report_scheduler = SchedulerManager.get_instance("report")
+        cleanup_scheduler = SchedulerManager.get_instance("cleanup")
         
         # 注册任务
         scheduler.add_job(
@@ -58,34 +65,57 @@ class SchedulerManager:
         scheduler.start()
     """
     
-    _instance: SchedulerManager | None = None
+    _instances: dict[str, SchedulerManager] = {}
     
-    def __init__(self) -> None:
-        """私有构造函数。"""
-        if SchedulerManager._instance is not None:
-            raise RuntimeError("SchedulerManager 是单例类，请使用 get_instance() 获取实例")
+    def __init__(self, name: str = "default") -> None:
+        """初始化调度器管理器。
         
+        Args:
+            name: 实例名称
+        """
+        self.name = name
         self._scheduler: AsyncIOScheduler | None = None
         self._initialized: bool = False
         self._pending_jobs: list[dict[str, Any]] = []  # 待注册的任务（装饰器收集）
         self._started: bool = False  # 调度器是否已启动
     
     @classmethod
-    def get_instance(cls) -> SchedulerManager:
-        """获取单例实例。
+    def get_instance(cls, name: str = "default") -> SchedulerManager:
+        """获取指定名称的实例。
         
         首次获取时会同步初始化调度器实例，使装饰器可以在模块导入时使用。
+        
+        Args:
+            name: 实例名称，默认为 "default"
+            
+        Returns:
+            SchedulerManager: 调度器管理器实例
         """
-        if cls._instance is None:
+        if name not in cls._instances:
             if not _APSCHEDULER_AVAILABLE:
                 raise ImportError(
                     "apscheduler 未安装。请安装可选依赖: pip install 'aurimyth-foundation-kit[scheduler-apscheduler]'"
                 )
-            cls._instance = cls()
-            cls._instance._scheduler = AsyncIOScheduler()
-            cls._instance._initialized = True
-            logger.debug("调度器实例已创建")
-        return cls._instance
+            instance = cls(name)
+            instance._scheduler = AsyncIOScheduler()
+            instance._initialized = True
+            cls._instances[name] = instance
+            logger.debug(f"调度器实例已创建: {name}")
+        return cls._instances[name]
+    
+    @classmethod
+    def reset_instance(cls, name: str | None = None) -> None:
+        """重置实例（仅用于测试）。
+        
+        Args:
+            name: 要重置的实例名称。如果为 None，则重置所有实例。
+            
+        注意：调用此方法前应先调用 shutdown() 释放资源。
+        """
+        if name is None:
+            cls._instances.clear()
+        elif name in cls._instances:
+            del cls._instances[name]
     
     async def initialize(self) -> None:
         """初始化调度器（已废弃，保留以保持后向兼容）。

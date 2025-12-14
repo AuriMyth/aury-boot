@@ -158,9 +158,53 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         return query
     
     def _apply_filters(self, query: Select, **filters) -> Select:
+        """将简单和带操作符的 filters 应用于查询。
+        
+        支持键名后缀操作符（与 QueryBuilder.filter 一致）：
+        - __gt, __lt, __gte, __lte, __in, __like, __ilike, __isnull, __ne
+        例如：
+        - name__ilike="%foo%"
+        - age__gte=18
+        - id__in=[1,2,3]
+        - deleted_at__isnull=True
+        
+        注意：此处所有条件均以 AND 组合。更复杂的 AND/OR/NOT 组合请使用 repo.query()。
+        """
         for key, value in filters.items():
-            if value is not None and hasattr(self._model_class, key):
-                query = query.where(getattr(self._model_class, key) == value)
+            if value is None:
+                continue
+            
+            if "__" in key:
+                field_name, operator = key.rsplit("__", 1)
+                if not hasattr(self._model_class, field_name):
+                    continue
+                field = _get_model_attr(self._model_class, field_name)
+                
+                if operator == "isnull":
+                    condition = field.is_(None) if bool(value) else field.isnot(None)
+                elif operator == "in":
+                    condition = field.in_(value)
+                elif operator == "gt":
+                    condition = field > value
+                elif operator == "lt":
+                    condition = field < value
+                elif operator == "gte":
+                    condition = field >= value
+                elif operator == "lte":
+                    condition = field <= value
+                elif operator == "like":
+                    condition = field.like(value)
+                elif operator == "ilike":
+                    condition = field.ilike(value)
+                elif operator == "ne":
+                    condition = field != value
+                else:
+                    # 未知操作符，忽略
+                    continue
+                query = query.where(condition)
+            else:
+                if hasattr(self._model_class, key):
+                    query = query.where(getattr(self._model_class, key) == value)
         return query
     
     async def get(self, id: Union[int, GUID]) -> ModelType | None:
@@ -178,10 +222,12 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
     
-    async def list(self, skip: int = 0, limit: int = 100, **filters) -> list[ModelType]:
+    async def list(self, skip: int = 0, limit: int | None = 100, **filters) -> list[ModelType]:
         query = self._build_base_query()
         query = self._apply_filters(query, **filters)
-        query = query.offset(skip).limit(limit)
+        query = query.offset(skip)
+        if limit is not None:
+            query = query.limit(limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
     

@@ -1,52 +1,38 @@
-"""对象存储系统模块。
+"""对象存储系统模块（统一出口）。
 
-支持多种存储后端：
-- S3协议存储（AWS S3, MinIO等）
-- 本地文件系统
-- 可扩展其他存储类型
-
-使用工厂模式，可以轻松切换存储后端。
+本包基于 aurimyth-storage-sdk 提供的实现，对外暴露统一接口与管理器。
 """
 
-from .base import IStorage, LocalStorage, StorageBackend, StorageConfig, StorageFile, StorageManager
+from .base import StorageManager
 from .exceptions import StorageBackendError, StorageError, StorageNotFoundError
 from .factory import StorageFactory
-from .sts import (
-    StorageSTSAction,
-    StorageSTSConfig,
-    StorageSTSCredentials,
-    StorageSTSRequest,
-    StorageSTSIssuer,
+
+# 从 SDK 直接导出核心类型
+from aurimyth_storage_sdk.storage import (
+    IStorage,
+    LocalStorage,
+    S3Storage,  # 可选依赖，未安装 aws extras 时为 None
+    StorageBackend,
+    StorageConfig,
+    StorageFile,
+    UploadResult,
 )
 
-# 延迟导入 S3Storage（可选依赖）
-try:
-    from .s3 import S3Storage
-    # 注册S3后端
-    StorageFactory.register("s3", S3Storage)
-    # 兼容别名：OSS/COS 通常可按 S3 协议接入
-    StorageFactory.register("oss", S3Storage)
-    StorageFactory.register("cos", S3Storage)
-except ImportError:
-    # aioboto3 未安装，S3Storage 不可用
-    S3Storage = None  # type: ignore[assignment, misc]
-
 __all__ = [
+    # SDK 类型
     "IStorage",
     "LocalStorage",
     "S3Storage",
     "StorageBackend",
-    "StorageBackendError",
     "StorageConfig",
-    "StorageError",
-    "StorageFactory",
     "StorageFile",
+    "UploadResult",
+    # 管理器与工厂
     "StorageManager",
+    "StorageFactory",
+    # 异常
+    "StorageError",
+    "StorageBackendError",
     "StorageNotFoundError",
-    "StorageSTSAction",
-    "StorageSTSConfig",
-    "StorageSTSCredentials",
-    "StorageSTSRequest",
-    "StorageSTSIssuer",
 ]
 

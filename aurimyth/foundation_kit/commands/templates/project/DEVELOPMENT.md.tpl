@@ -253,8 +253,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 repo = UserRepository(session, User)
 
 # === 查询 ===
-user = await repo.get(user_id)                    # 按 ID
-user = await repo.get_by(email="a@b.com")         # 按条件
+user = await repo.get(user_id)                    # 按 ID（支持 int/UUID）
+user = await repo.get_by(email="a@b.com")         # 按条件（简单 AND 过滤）
 users = await repo.list(skip=0, limit=10)         # 列表
 users = await repo.list(is_active=True)           # 带过滤
 count = await repo.count(is_active=True)          # 计数
@@ -283,6 +283,37 @@ await repo.delete(user)              # 软删除
 await repo.delete(user, soft=False)  # 硬删除
 await repo.hard_delete(user)         # 硬删除别名
 deleted = await repo.delete_by_id(user_id)  # 按 ID 删除
+```
+
+#### 2.2.1 Filters 语法（增强）
+
+BaseRepository 的 `get_by/list/paginate/count/exists` 的 `**filters` 支持下列操作符（与 `QueryBuilder.filter` 对齐）：
+- `__gt`, `__lt`, `__gte`, `__lte`, `__in`, `__like`, `__ilike`, `__isnull`, `__ne`
+
+示例：
+
+```python
+# 模糊匹配 + 范围 + IN + 为空判断（条件之间为 AND 关系）
+users = await repo.list(
+    name__ilike="%foo%",
+    age__gte=18,
+    id__in=[u1, u2, u3],
+    deleted_at__isnull=True,
+)
+
+# 单个实体（不等于）
+user = await repo.get_by(status__ne="archived")
+```
+
+> 注意：filters 条件之间用 AND 组合；如需 AND/OR/NOT 的复杂组合，请使用 `QueryBuilder`（见 2.4）。
+
+#### 2.2.2 查询全部（limit=None）
+
+`list()` 支持 `limit=None` 返回全部记录（谨慎使用大表）：
+
+```python
+all_users = await repo.list(limit=None)                 # 全量
+active_all = await repo.list(limit=None, is_active=True)
 ```
 
 ### 2.3 自动提交机制
@@ -332,15 +363,19 @@ async def search_users(
     query = self.query()  # 自动排除软删除
     
     if keyword:
-        query = query.filter(
-            (User.name.ilike(f"%{{keyword}}%")) | 
-            (User.email.ilike(f"%{{keyword}}%"))
+        # 使用 QueryBuilder 的 or_ 与 filter_by 组合复杂条件
+        query = query.filter_by(
+            query.or_(
+                User.name.ilike(f"%{{keyword}}%"),
+                User.email.ilike(f"%{{keyword}}%"),
+            )
         )
     
     if status is not None:
-        query = query.filter_by(status=status)
+        # 简单等值可直接使用 filter（支持 **kwargs）
+        query = query.filter(status=status)
     
-    query = query.order_by(User.created_at.desc()).limit(100)
+    query = query.order_by("-created_at").limit(100)
     result = await self.session.execute(query.build())
     return list(result.scalars().all())
 ```
@@ -1064,24 +1099,112 @@ send_email.send_with_options(args=("user@example.com", "Hello", "World"), delay=
 
 ---
 
-## 10. S3 存储
+## 10. 对象存储（基于 aurimyth-storage-sdk）
+
+### 10.1 安装
+
+```bash
+# 完整安装（S3/COS/OSS + STS 支持）
+uv add "aurimyth-storage-sdk[aws]"
+# 或
+pip install "aurimyth-storage-sdk[aws]"
+```
+
+### 10.2 基本用法（StorageManager）
 
 ```python
-from aurimyth.foundation_kit.infrastructure.storage import StorageManager
+from io import BytesIO
+from aurimyth.foundation_kit.infrastructure.storage import (
+    StorageManager, StorageConfig, StorageBackend, StorageFile,
+)
 
+# 初始化（一般由 StorageComponent 自动完成，以下仅演示手动调用）
 storage = StorageManager.get_instance()
+await storage.init(StorageConfig(
+    backend=StorageBackend.COS,
+    bucket_name="my-bucket-1250000000",
+    region="ap-guangzhou",
+    endpoint="https://cos.ap-guangzhou.myqcloud.com",
+    access_key_id="AKIDxxxxx",
+    access_key_secret="xxxxx",
+))
 
-# 上传文件
-await storage.upload("path/to/file.txt", content)
+# 上传文件（返回 URL）
+url = await storage.upload_file(
+    StorageFile(
+        object_name="user/123/avatar.png",
+        data=BytesIO(image_bytes),
+        content_type="image/png",
+    )
+)
 
 # 下载文件
-content = await storage.download("path/to/file.txt")
+content = await storage.download_file("user/123/avatar.png")
 
 # 获取预签名 URL
-url = await storage.presigned_url("path/to/file.txt", expires=3600)
+url = await storage.get_file_url("user/123/avatar.png", expires_in=3600)
+
+# 检查文件是否存在
+exists = await storage.file_exists("user/123/avatar.png")
 
 # 删除文件
-await storage.delete("path/to/file.txt")
+await storage.delete_file("user/123/avatar.png")
+```
+
+### 10.3 STS 临时凭证（前端直传）
+
+```python
+from aurimyth_storage_sdk.sts import (
+    STSProviderFactory, ProviderType, STSRequest, ActionType,
+)
+
+# 创建腾讯云 STS Provider
+provider = STSProviderFactory.create(
+    ProviderType.TENCENT,
+    secret_id="AKIDxxxxx",
+    secret_key="xxxxx",
+)
+
+# 签发临时上传凭证
+credentials = await provider.get_credentials(
+    STSRequest(
+        bucket="my-bucket-1250000000",
+        region="ap-guangzhou",
+        allow_path="user/123/",
+        action_type=ActionType.WRITE,
+        duration_seconds=900,
+    )
+)
+
+# 返回给前端
+return {{
+    "accessKeyId": credentials.access_key_id,
+    "secretAccessKey": credentials.secret_access_key,
+    "sessionToken": credentials.session_token,
+    "expiration": credentials.expiration.isoformat(),
+    "bucket": credentials.bucket,
+    "region": credentials.region,
+    "endpoint": credentials.endpoint,
+}}
+```
+
+### 10.4 本地存储（开发测试）
+
+```python
+from aurimyth.foundation_kit.infrastructure.storage import (
+    StorageManager, StorageConfig, StorageBackend, StorageFile,
+)
+
+storage = StorageManager.get_instance()
+await storage.init(StorageConfig(
+    backend=StorageBackend.LOCAL,
+    base_path="./dev_storage",
+))
+
+url = await storage.upload_file(
+    StorageFile(object_name="test.txt", data=b"hello")
+)
+# url: file:///path/to/dev_storage/default/test.txt
 ```
 
 ---

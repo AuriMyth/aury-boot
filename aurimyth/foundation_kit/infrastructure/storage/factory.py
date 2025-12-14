@@ -9,7 +9,7 @@ from typing import ClassVar
 
 from aurimyth.foundation_kit.common.logging import logger
 
-from .base import IStorage, LocalStorage
+from aurimyth_storage_sdk.storage import IStorage, LocalStorage
 
 
 class StorageFactory:
@@ -77,9 +77,9 @@ class StorageFactory:
         return list(cls._backends.keys())
 
 
-# 注册默认后端
+# 注册默认后端（本地）
 StorageFactory.register("local", LocalStorage)
-# S3后端在__init__.py中注册（延迟导入避免循环依赖）
+# 说明：S3/COS/OSS 请直接使用 StorageManager + StorageConfig 或 SDK 中的 S3Storage
 
 
 __all__ = [

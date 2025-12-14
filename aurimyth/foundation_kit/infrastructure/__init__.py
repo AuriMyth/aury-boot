@@ -31,22 +31,18 @@ try:
 except ImportError:
     SchedulerManager = None  # type: ignore[assignment, misc]
 
-# 存储
+# 存储（基于 aurimyth-storage-sdk）
 from .storage import (
     IStorage,
     LocalStorage,
+    S3Storage,
     StorageBackend,
     StorageConfig,
     StorageFactory,
     StorageFile,
     StorageManager,
+    UploadResult,
 )
-
-# S3Storage（可选依赖，延迟导入）
-try:
-    from .storage import S3Storage
-except ImportError:
-    S3Storage = None  # type: ignore[assignment, misc]
 
 # 任务队列（可选依赖）
 try:
@@ -98,6 +94,7 @@ __all__ = [
     "StorageFile",
     # 存储
     "StorageManager",
+    "UploadResult",
     # 任务队列
     "TaskManager",
     "TaskProxy",

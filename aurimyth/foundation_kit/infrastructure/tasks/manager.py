@@ -134,16 +134,22 @@ class TaskProxy:
 
 
 class TaskManager:
-    """任务管理器 - 单例模式。
+    """任务管理器（命名多实例）。
     
     职责：
     1. 管理任务队列broker
     2. 注册任务
     3. 任务执行和监控
+    4. 支持多个命名实例，如不同的消息队列
     
     使用示例:
+        # 默认实例
         task_manager = TaskManager.get_instance()
         await task_manager.initialize()
+        
+        # 命名实例
+        email_tasks = TaskManager.get_instance("email")
+        report_tasks = TaskManager.get_instance("report")
         
         # 注册任务
         @task_manager.task
@@ -155,24 +161,47 @@ class TaskManager:
         send_email.send("user@example.com", "Hello")
     """
     
-    _instance: TaskManager | None = None
+    _instances: dict[str, TaskManager] = {}
     
-    def __init__(self) -> None:
-        """私有构造函数。"""
-        if TaskManager._instance is not None:
-            raise RuntimeError("TaskManager 是单例类，请使用 get_instance() 获取实例")
+    def __init__(self, name: str = "default") -> None:
+        """初始化任务管理器。
         
+        Args:
+            name: 实例名称
+        """
+        self.name = name
         self._broker: Any = None  # KombuBroker | None
         self._initialized: bool = False
         self._task_config: TaskConfig | None = None
         self._run_mode: TaskRunMode = TaskRunMode.WORKER  # 默认 Worker 模式（调度者）
     
     @classmethod
-    def get_instance(cls) -> TaskManager:
-        """获取单例实例。"""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def get_instance(cls, name: str = "default") -> TaskManager:
+        """获取指定名称的实例。
+        
+        Args:
+            name: 实例名称，默认为 "default"
+            
+        Returns:
+            TaskManager: 任务管理器实例
+        """
+        if name not in cls._instances:
+            cls._instances[name] = cls(name)
+        return cls._instances[name]
+    
+    @classmethod
+    def reset_instance(cls, name: str | None = None) -> None:
+        """重置实例（仅用于测试）。
+        
+        Args:
+            name: 要重置的实例名称。如果为 None，则重置所有实例。
+            
+        注意：调用此方法前应先调用 cleanup() 释放资源。
+        """
+        if name is None:
+            cls._instances.clear()
+        elif name in cls._instances:
+            del cls._instances[name]
     
     async def initialize(
         self,

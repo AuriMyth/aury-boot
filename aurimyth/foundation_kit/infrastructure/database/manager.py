@@ -1,4 +1,4 @@
-"""数据库管理器 - 单例模式实现。
+"""数据库管理器 - 命名多实例实现。
 
 提供统一的数据库连接管理、会话创建和健康检查功能。
 """
@@ -18,18 +18,23 @@ from aurimyth.foundation_kit.infrastructure.database.config import DatabaseConfi
 
 
 class DatabaseManager:
-    """数据库管理器（单例模式）。
+    """数据库管理器（命名多实例）。
     
     职责：
     1. 管理数据库引擎和连接池
     2. 提供会话工厂
     3. 健康检查和重连机制
     4. 生命周期管理
+    5. 支持多个命名实例，如主库/从库、不同业务数据库等
     
     使用示例:
-        # 初始化
+        # 默认实例
         db_manager = DatabaseManager.get_instance()
         await db_manager.initialize()
+        
+        # 命名实例
+        primary = DatabaseManager.get_instance("primary")
+        replica = DatabaseManager.get_instance("replica")
         
         # 获取会话
         async with db_manager.session() as session:
@@ -40,45 +45,57 @@ class DatabaseManager:
         await db_manager.cleanup()
     """
     
-    _instance: DatabaseManager | None = None
-    _initialized: bool = False
-    _config: DatabaseConfig | None = None
+    _instances: dict[str, DatabaseManager] = {}
     
-    def __init__(self) -> None:
-        """私有构造函数，使用 get_instance() 获取实例。"""
-        if DatabaseManager._instance is not None:
-            raise RuntimeError("DatabaseManager 是单例类，请使用 get_instance() 获取实例")
+    def __init__(self, name: str = "default") -> None:
+        """初始化数据库管理器。
         
+        Args:
+            name: 实例名称
+        """
+        self.name = name
+        self._initialized: bool = False
+        self._config: DatabaseConfig | None = None
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker | None = None
         self._max_retries: int = 3
         self._retry_delay: float = 1.0
     
     @classmethod
-    def get_instance(cls) -> DatabaseManager:
-        """获取单例实例。"""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def get_instance(cls, name: str = "default") -> DatabaseManager:
+        """获取指定名称的实例。
+        
+        Args:
+            name: 实例名称，默认为 "default"
+            
+        Returns:
+            DatabaseManager: 数据库管理器实例
+        """
+        if name not in cls._instances:
+            cls._instances[name] = cls(name)
+        return cls._instances[name]
     
     @classmethod
-    def reset_instance(cls) -> None:
-        """重置单例实例（仅用于测试）。
+    def reset_instance(cls, name: str | None = None) -> None:
+        """重置实例（仅用于测试）。
         
+        Args:
+            name: 要重置的实例名称。如果为 None，则重置所有实例。
+            
         注意：调用此方法前应先调用 cleanup() 释放资源。
         """
-        cls._instance = None
-        cls._initialized = False
-        cls._config = None
+        if name is None:
+            cls._instances.clear()
+        elif name in cls._instances:
+            del cls._instances[name]
     
-    @classmethod
-    def configure(cls, config: DatabaseConfig) -> None:
+    def configure(self, config: DatabaseConfig) -> None:
         """配置数据库管理器。
         
         Args:
             config: 数据库配置
         """
-        cls._config = config
+        self._config = config
     
     @property
     def engine(self) -> AsyncEngine:

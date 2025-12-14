@@ -97,8 +97,8 @@ class StorageComponent(Component):
     """对象存储组件。
 
 设计要点（解耦）：
-- 不从 `BaseConfig` 读取 storage 字段（Application 层无需感知 storage 的全部配置）
-- 由 Storage 自己的 `StorageSettings`（pydantic-settings）从环境变量读取并创建后端
+- 使用 aurimyth-storage-sdk 的 StorageConfig/StorageBackend，Application 层仅做装配
+- 建议由应用的 `StorageSettings` 读取环境变量并构造 SDK 的 StorageConfig
 """
 
     name = ComponentName.STORAGE

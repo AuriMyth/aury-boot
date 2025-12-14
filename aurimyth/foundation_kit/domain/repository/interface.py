@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from aurimyth.foundation_kit.domain.models import Base
+from aurimyth.foundation_kit.domain.models import Base, GUID
 from aurimyth.foundation_kit.domain.pagination import PaginationParams, PaginationResult, SortParams
 
 if TYPE_CHECKING:
@@ -25,8 +25,8 @@ class IRepository[ModelType: Base](ABC):
     """
     
     @abstractmethod
-    async def get(self, id: int) -> ModelType | None:
-        """根据ID获取实体。"""
+    async def get(self, id: int | GUID) -> ModelType | None:
+        """根据ID获取实体。支持 int 和 GUID。"""
         pass
     
     @abstractmethod
@@ -35,8 +35,8 @@ class IRepository[ModelType: Base](ABC):
         pass
     
     @abstractmethod
-    async def list(self, skip: int = 0, limit: int = 100, **filters) -> list[ModelType]:
-        """获取实体列表。"""
+    async def list(self, skip: int = 0, limit: int | None = 100, **filters) -> list[ModelType]:
+        """获取实体列表。limit=None 时返回全部记录（谨慎使用）。"""
         pass
     
     @abstractmethod

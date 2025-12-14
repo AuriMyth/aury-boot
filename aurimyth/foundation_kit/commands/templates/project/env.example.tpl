@@ -157,6 +157,34 @@ SERVICE_NAME={project_name_snake}
 # MIGRATION_AUTO_CREATE=true
 
 # =============================================================================
+# 对象存储配置 (STORAGE_) - 基于 aurimyth-storage-sdk
+# =============================================================================
+# 是否启用存储组件
+# STORAGE_ENABLED=true
+# 存储类型: local / s3 / cos / oss
+# STORAGE_TYPE=local
+#
+# 本地存储（开发环境）
+# STORAGE_BASE_PATH=./storage
+#
+# S3/COS/OSS 通用配置
+# STORAGE_ACCESS_KEY_ID=AKIDxxxxx
+# STORAGE_ACCESS_KEY_SECRET=xxxxx
+# STORAGE_SESSION_TOKEN=
+# STORAGE_ENDPOINT=https://cos.ap-guangzhou.myqcloud.com
+# STORAGE_REGION=ap-guangzhou
+# STORAGE_BUCKET_NAME=my-bucket-1250000000
+# STORAGE_ADDRESSING_STYLE=virtual
+#
+# STS AssumeRole（可选，服务端自动刷新凭证）
+# STORAGE_ROLE_ARN=
+# STORAGE_ROLE_SESSION_NAME=aurimyth-storage
+# STORAGE_EXTERNAL_ID=
+# STORAGE_STS_ENDPOINT=
+# STORAGE_STS_REGION=
+# STORAGE_STS_DURATION_SECONDS=3600
+
+# =============================================================================
 # RPC 客户端配置 (RPC_CLIENT_)
 # =============================================================================
 # 服务地址映射 {{service_name: url}}

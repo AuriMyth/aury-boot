@@ -1,4 +1,4 @@
-"""缓存管理器 - 单例模式。
+"""缓存管理器 - 命名多实例模式。
 
 提供统一的缓存管理接口。
 """
@@ -19,45 +19,67 @@ from .factory import CacheFactory
 
 
 class CacheManager:
-    """缓存管理器 - 单例模式。
+    """缓存管理器（命名多实例）。
     
     类似Flask-Cache的API设计，优雅简洁。
+    支持多个命名实例，如不同的 Redis 实例或缓存策略。
     
     使用示例:
-        # 方式1：使用配置字典
+        # 默认实例
         cache = CacheManager.get_instance()
         await cache.init_app({
             "CACHE_TYPE": "redis",
-            "CACHE_REDIS_URL": "redis://localhost:6379"
+            "CACHE_URL": "redis://localhost:6379"
         })
         
-        # 方式2：直接指定后端
-        await cache.init_app({
-            "CACHE_TYPE": "memory",
-            "CACHE_MAX_SIZE": 1000
-        })
+        # 命名实例
+        session_cache = CacheManager.get_instance("session")
+        rate_limit_cache = CacheManager.get_instance("rate_limit")
         
         # 使用
         await cache.set("key", "value", expire=60)
         value = await cache.get("key")
     """
     
-    _instance: CacheManager | None = None
+    _instances: dict[str, CacheManager] = {}
     
-    def __init__(self) -> None:
-        """私有构造函数。"""
-        if CacheManager._instance is not None:
-            raise RuntimeError("CacheManager 是单例类，请使用 get_instance() 获取实例")
+    def __init__(self, name: str = "default") -> None:
+        """初始化缓存管理器。
         
+        Args:
+            name: 实例名称
+        """
+        self.name = name
         self._backend: ICache | None = None
         self._config: dict[str, Any] = {}
     
     @classmethod
-    def get_instance(cls) -> CacheManager:
-        """获取单例实例。"""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def get_instance(cls, name: str = "default") -> CacheManager:
+        """获取指定名称的实例。
+        
+        Args:
+            name: 实例名称，默认为 "default"
+            
+        Returns:
+            CacheManager: 缓存管理器实例
+        """
+        if name not in cls._instances:
+            cls._instances[name] = cls(name)
+        return cls._instances[name]
+    
+    @classmethod
+    def reset_instance(cls, name: str | None = None) -> None:
+        """重置实例（仅用于测试）。
+        
+        Args:
+            name: 要重置的实例名称。如果为 None，则重置所有实例。
+            
+        注意：调用此方法前应先调用 cleanup() 释放资源。
+        """
+        if name is None:
+            cls._instances.clear()
+        elif name in cls._instances:
+            del cls._instances[name]
     
     async def init_app(self, config: dict[str, Any]) -> None:
         """初始化缓存（类似Flask-Cache）。
