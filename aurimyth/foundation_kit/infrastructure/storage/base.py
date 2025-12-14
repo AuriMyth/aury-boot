@@ -34,8 +34,8 @@ class StorageBackend(str, Enum):
 class StorageFile:
     """存储文件对象。"""
     
-    bucket_name: str | None = None
     object_name: str
+    bucket_name: str | None = None
     data: BinaryIO | None = None
     content_type: str | None = None
     metadata: dict[str, str] | None = None
