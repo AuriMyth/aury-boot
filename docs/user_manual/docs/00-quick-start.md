@@ -741,23 +741,40 @@ async def websocket_chat(websocket: WebSocket, room_id: str):
 
 ## 19. 对象存储
 
-```python
-from aurimyth.foundation_kit.infrastructure.storage.factory import StorageFactory
-from aurimyth.foundation_kit.infrastructure.storage.base import StorageFile
+基于 [aurimyth-storage-sdk](https://github.com/AuriMythNeo/aurimyth-storage-sdk)，支持 S3 兼容存储和 STS 临时凭证。
 
-# 初始化
-storage = await StorageFactory.create(
-    "s3",
-    access_key_id="...",
-    access_key_secret="...",
-    bucket_name="my-bucket"
+```bash
+# 安装
+uv add "aurimyth-storage-sdk[aws]"
+```
+
+```python
+from io import BytesIO
+from aurimyth.foundation_kit.infrastructure.storage import (
+    StorageManager, StorageConfig, StorageBackend, StorageFile,
 )
 
+# 获取存储管理器（支持命名多实例）
+storage = StorageManager.get_instance()
+
+# 初始化（一般由 StorageComponent 自动完成）
+await storage.init(StorageConfig(
+    backend=StorageBackend.COS,
+    bucket_name="my-bucket-1250000000",
+    region="ap-guangzhou",
+    endpoint="https://cos.ap-guangzhou.myqcloud.com",
+    access_key_id="AKIDxxxxx",
+    access_key_secret="xxxxx",
+))
+
 # 上传
-with open("avatar.png", "rb") as f:
-    url = await storage.upload_file(
-        StorageFile(data=f, object_name="avatars/user_1.png")
+url = await storage.upload_file(
+    StorageFile(
+        object_name="avatars/user_1.png",
+        data=BytesIO(image_bytes),
+        content_type="image/png",
     )
+)
 ```
 
 > 📖 **详细说明**：参考 [19-storage-guide.md](./19-storage-guide.md)

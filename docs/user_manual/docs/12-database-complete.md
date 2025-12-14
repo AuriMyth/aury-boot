@@ -177,7 +177,13 @@ from repositories import UserRepository
 from schemas import UserCreateRequest, UserResponse
 
 router = APIRouter()
+
+# 获取默认数据库实例
 db_manager = DatabaseManager.get_instance()
+
+# 命名多实例（如主库/从库）
+# primary_db = DatabaseManager.get_instance("primary")
+# replica_db = DatabaseManager.get_instance("replica")
 
 # 依赖注入
 async def get_user_repo(session=Depends(db_manager.get_session)) -> UserRepository:

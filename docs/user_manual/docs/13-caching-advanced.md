@@ -4,11 +4,22 @@
 
 ## 高级特性
 
-### 装饰器缓存
+### 获取缓存实例
 
 ```python
 from aurimyth.foundation_kit.infrastructure.cache import CacheManager
 
+# 默认实例
+cache = CacheManager.get_instance()
+
+# 命名多实例（如会话缓存、限流缓存）
+# session_cache = CacheManager.get_instance("session")
+# rate_limit_cache = CacheManager.get_instance("rate_limit")
+```
+
+### 装饰器缓存
+
+```python
 cache = CacheManager.get_instance()
 
 # 自动缓存函数结果
