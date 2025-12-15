@@ -34,8 +34,8 @@ class DatabaseComponent(Component):
 ### 基类定义
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Component, FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.app.base import Component, FoundationApp
+from aury.boot.application.config import BaseConfig
 from typing import ClassVar
 
 class Component(ABC):
@@ -79,7 +79,7 @@ class Component(ABC):
 管理数据库连接和连接池。
 
 ```python
-from aurimyth.foundation_kit.application.app.components import DatabaseComponent
+from aury.boot.application.app.components import DatabaseComponent
 
 class MyApp(FoundationApp):
     components = [
@@ -92,7 +92,7 @@ class MyApp(FoundationApp):
 # - 创建会话工厂
 
 # 在路由中使用
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.database import DatabaseManager
 
 db_manager = DatabaseManager.get_instance()
 
@@ -117,7 +117,7 @@ DATABASE_ECHO=false
 管理缓存系统（Redis 或内存）。
 
 ```python
-from aurimyth.foundation_kit.application.app.components import CacheComponent
+from aury.boot.application.app.components import CacheComponent
 
 class MyApp(FoundationApp):
     components = [
@@ -128,7 +128,7 @@ class MyApp(FoundationApp):
 # CACHE_TYPE=memory    → 内存缓存（开发）
 # CACHE_TYPE=redis     → Redis 缓存（生产）
 
-from aurimyth.foundation_kit.infrastructure.cache import CacheManager
+from aury.boot.infrastructure.cache import CacheManager
 
 cache = CacheManager.get_instance()
 await cache.set("key", "value", expire=300)
@@ -147,7 +147,7 @@ CACHE_MAX_SIZE=1000
 管理异步任务队列。
 
 ```python
-from aurimyth.foundation_kit.application.app.components import TaskComponent
+from aury.boot.application.app.components import TaskComponent
 
 class MyApp(FoundationApp):
     components = [
@@ -157,7 +157,7 @@ class MyApp(FoundationApp):
 # 在 API 模式下：作为生产者，提交任务到队列
 # 在 Worker 模式下：消费队列中的任务
 
-from aurimyth.foundation_kit.infrastructure.tasks import TaskManager
+from aury.boot.infrastructure.tasks import TaskManager
 
 tm = TaskManager.get_instance()
 
@@ -180,14 +180,14 @@ TASK_BROKER_URL=redis://localhost:6379/0
 管理定时任务调度。
 
 ```python
-from aurimyth.foundation_kit.application.app.components import SchedulerComponent
+from aury.boot.application.app.components import SchedulerComponent
 
 class MyApp(FoundationApp):
     components = [
         SchedulerComponent,
     ]
 
-from aurimyth.foundation_kit.infrastructure.scheduler import SchedulerManager
+from aury.boot.infrastructure.scheduler import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
 
@@ -208,7 +208,7 @@ SCHEDULER_MODE=embedded  # 或 standalone
 自动执行数据库迁移。
 
 ```python
-from aurimyth.foundation_kit.application.app.components import (
+from aury.boot.application.app.components import (
     DatabaseComponent,
     MigrationComponent,
 )
@@ -228,10 +228,10 @@ class MyApp(FoundationApp):
 
 提供基于 **SQLAdmin** 的管理后台（默认路径：`/api/admin-console`），用于快速搭建生产可用的后台管理能力。
 
-> 依赖：`uv add "aurimyth-foundation-kit[admin]"`（需同步数据库驱动）
+> 依赖：`uv add "aury-boot[admin]"`（需同步数据库驱动）
 
 ```python
-from aurimyth.foundation_kit.application.app.components import AdminConsoleComponent
+from aury.boot.application.app.components import AdminConsoleComponent
 
 class MyApp(FoundationApp):
     components = [
@@ -260,8 +260,8 @@ ADMIN_AUTH_BASIC_PASSWORD=change_me
 ### 基本结构
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Component, FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.app.base import Component, FoundationApp
+from aury.boot.application.config import BaseConfig
 from typing import ClassVar
 
 class MyCustomComponent(Component):
@@ -345,8 +345,8 @@ class ExternalAPIComponent(Component):
 ### 方式 1：类属性（推荐）
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.app.components import (
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.app.components import (
     DatabaseComponent,
     CacheComponent,
 )
@@ -424,8 +424,8 @@ class DependentComponent(Component):
     
     async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
         # 通过单例管理器访问资源
-        from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
-        from aurimyth.foundation_kit.infrastructure.cache import CacheManager
+        from aury.boot.infrastructure.database import DatabaseManager
+        from aury.boot.infrastructure.cache import CacheManager
         
         db_manager = DatabaseManager.get_instance()
         cache_manager = CacheManager.get_instance()

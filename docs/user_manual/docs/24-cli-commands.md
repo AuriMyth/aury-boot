@@ -1,6 +1,6 @@
 # 24. CLI 命令参考
 
-AuriMyth Foundation Kit 提供统一的命令行工具 `aum`（或 `aurimyth`），整合了项目脚手架、代码生成、服务器管理和数据库迁移功能。
+Aury Boot 提供统一的命令行工具 `aury`，整合了项目脚手架、代码生成、服务器管理和数据库迁移功能。
 
 ## 安装命令行补全
 
@@ -31,19 +31,19 @@ Options:
   --help         显示帮助信息
 ```
 
-## aum init
+## aury init
 
-在当前项目中初始化 AuriMyth 脚手架。
+在当前项目中初始化 Aury 脚手架。
 
-**前置条件**：已运行 `uv init` 创建项目并安装 aurimyth-foundation-kit。
+**前置条件**：已运行 `uv init` 创建项目并安装 aury-boot。
 
 ```bash
 # 前置步骤（必须先执行）
 uv init . --name my_service --no-package --python 3.13
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 然后初始化脚手架
-aum init [PACKAGE_NAME] [OPTIONS]
+aury init [PACKAGE_NAME] [OPTIONS]
 
 Arguments:
   PACKAGE_NAME        可选，顶层包名（如 my_package）
@@ -97,30 +97,30 @@ Options:
 ```bash
 # 前置步骤
 uv init . --name my_service --no-package --python 3.13
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 交互式模式（默认）
-aum init
+aury init
 
 # 跳过交互，纯默认配置
-aum init -y
+aury init -y
 
 # 使用顶层包结构
-aum init my_package
+aury init my_package
 
 # 包含 Docker 配置
-aum init --docker
+aury init --docker
 
 # 强制覆盖已存在的文件
-aum init --force
+aury init --force
 ```
 
-## aum generate
+## aury generate
 
-代码生成器，生成符合 AuriMyth 规范的代码文件。
+代码生成器，生成符合 Aury 规范的代码文件。
 
 ```bash
-aum generate COMMAND [ARGS]...
+aury generate COMMAND [ARGS]...
 
 Commands:
   model    生成 SQLAlchemy 模型
@@ -167,19 +167,19 @@ Commands:
 
 ```bash
 # 完整示例
-aum generate crud user email:str:unique age:int? status:str=active
+aury generate crud user email:str:unique age:int? status:str=active
 
 # 文章模型
-aum generate crud article title:str(200) content:text status:str=draft
+aury generate crud article title:str(200) content:text status:str=draft
 
 # 商品模型
-aum generate crud product name:str:unique price:decimal stock:int=0
+aury generate crud product name:str:unique price:decimal stock:int=0
 ```
 
 ### generate model
 
 ```bash
-aum generate model NAME [FIELDS...] [OPTIONS]
+aury generate model NAME [FIELDS...] [OPTIONS]
 
 Arguments:
   NAME       模型名称（如 user, UserProfile）
@@ -199,43 +199,43 @@ Options:
 
 ```bash
 # 基本用法
-aum generate model user
+aury generate model user
 
 # 带字段定义
-aum generate model user email:str:unique age:int? status:str=active
+aury generate model user email:str:unique age:int? status:str=active
 
 # 交互式
-aum generate model user -i
+aury generate model user -i
 ```
 
 ### generate repo
 
 ```bash
-aum generate repo NAME [FIELDS...] [OPTIONS]
+aury generate repo NAME [FIELDS...] [OPTIONS]
 ```
 
 生成 `repositories/{name}_repository.py`。如果指定了 `unique` 字段，会自动生成 `get_by_xxx` 方法。
 
 ```bash
-aum generate repo user email:str:unique  # 生成 get_by_email 方法
+aury generate repo user email:str:unique  # 生成 get_by_email 方法
 ```
 
 ### generate service
 
 ```bash
-aum generate service NAME [FIELDS...] [OPTIONS]
+aury generate service NAME [FIELDS...] [OPTIONS]
 ```
 
 生成 `services/{name}_service.py`。如果指定了 `unique` 字段，会自动生成重复检测逻辑。
 
 ```bash
-aum generate service user email:str:unique  # 创建时检查 email 重复
+aury generate service user email:str:unique  # 创建时检查 email 重复
 ```
 
 ### generate api
 
 ```bash
-aum generate api NAME [OPTIONS]
+aury generate api NAME [OPTIONS]
 ```
 
 生成 `api/{name}.py`，包含完整的 CRUD 路由。
@@ -243,7 +243,7 @@ aum generate api NAME [OPTIONS]
 ### generate schema
 
 ```bash
-aum generate schema NAME [FIELDS...] [OPTIONS]
+aury generate schema NAME [FIELDS...] [OPTIONS]
 
 Options:
   -i, --interactive  交互式添加字段
@@ -255,7 +255,7 @@ Options:
 ### generate crud
 
 ```bash
-aum generate crud NAME [FIELDS...] [OPTIONS]
+aury generate crud NAME [FIELDS...] [OPTIONS]
 
 Options:
   -i, --interactive   交互式添加字段
@@ -271,28 +271,28 @@ Options:
 
 ```bash
 # 基本用法（无字段）
-aum generate crud user
+aury generate crud user
 
 # 带字段定义（AI 友好）
-aum generate crud user email:str:unique age:int? status:str=active
-aum generate crud article title:str(200) content:text published:bool=false
+aury generate crud user email:str:unique age:int? status:str=active
+aury generate crud article title:str(200) content:text published:bool=false
 
 # 交互式（人类友好）
-aum generate crud user -i
+aury generate crud user -i
 
 # 强制覆盖
-aum generate crud user --force
+aury generate crud user --force
 
 # 禁用软删除
-aum generate crud user --no-soft-delete
+aury generate crud user --no-soft-delete
 ```
 
-## aum server
+## aury server
 
 服务器管理命令。
 
 ```bash
-aum server COMMAND [ARGS]...
+aury server COMMAND [ARGS]...
 
 Commands:
   dev   启动开发服务器（热重载）
@@ -303,7 +303,7 @@ Commands:
 ### server dev
 
 ```bash
-aum server dev [OPTIONS]
+aury server dev [OPTIONS]
 
 Options:
   -a, --app TEXT   应用模块路径（默认自动检测）
@@ -316,7 +316,7 @@ Options:
 ### server prod
 
 ```bash
-aum server prod [OPTIONS]
+aury server prod [OPTIONS]
 
 Options:
   -a, --app TEXT      应用模块路径
@@ -330,7 +330,7 @@ Options:
 ### server run
 
 ```bash
-aum server run [OPTIONS]
+aury server run [OPTIONS]
 
 Options:
   -a, --app TEXT         应用模块路径
@@ -351,16 +351,16 @@ Options:
 
 ```bash
 # 开发模式
-aum server dev
-aum server dev --port 9000
+aury server dev
+aury server dev --port 9000
 
 # 生产模式
-aum server prod
-aum server prod --workers 8
+aury server prod
+aury server prod --workers 8
 
 # 自定义运行
-aum server run --reload --workers 4
-aum server run --ssl-keyfile key.pem --ssl-certfile cert.pem
+aury server run --reload --workers 4
+aury server run --ssl-keyfile key.pem --ssl-certfile cert.pem
 ```
 
 ## aum scheduler
@@ -415,12 +415,12 @@ aum worker -q high,default
 aum worker --app mypackage.main:app
 ```
 
-## aum migrate
+## aury migrate
 
 数据库迁移命令。
 
 ```bash
-aum migrate COMMAND [ARGS]...
+aury migrate COMMAND [ARGS]...
 
 Commands:
   make     生成迁移文件
@@ -436,7 +436,7 @@ Commands:
 ### migrate make
 
 ```bash
-aum migrate make [OPTIONS]
+aury migrate make [OPTIONS]
 
 Options:
   -m, --message TEXT           迁移消息（必需）
@@ -448,7 +448,7 @@ Options:
 ### migrate up
 
 ```bash
-aum migrate up [OPTIONS]
+aury migrate up [OPTIONS]
 
 Options:
   -r, --revision TEXT  目标版本（默认: head）
@@ -459,7 +459,7 @@ Options:
 ### migrate down
 
 ```bash
-aum migrate down REVISION [OPTIONS]
+aury migrate down REVISION [OPTIONS]
 
 Arguments:
   REVISION  目标版本（previous, -1, 或具体版本号）
@@ -472,7 +472,7 @@ Options:
 ### migrate status
 
 ```bash
-aum migrate status [OPTIONS]
+aury migrate status [OPTIONS]
 ```
 
 显示当前迁移状态、待执行迁移和已执行迁移。
@@ -481,20 +481,20 @@ aum migrate status [OPTIONS]
 
 ```bash
 # 生成迁移
-aum migrate make -m "add user table"
-aum migrate make -m "check changes" --dry-run
+aury migrate make -m "add user table"
+aury migrate make -m "check changes" --dry-run
 
 # 执行迁移
-aum migrate up
-aum migrate up -r "abc123"
+aury migrate up
+aury migrate up -r "abc123"
 
 # 回滚迁移
-aum migrate down previous
-aum migrate down -1
+aury migrate down previous
+aury migrate down -1
 
 # 查看状态
-aum migrate status
-aum migrate show
+aury migrate status
+aury migrate show
 ```
 
 ## 环境变量

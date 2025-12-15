@@ -29,7 +29,7 @@ Kit 提供了统一的响应模型，所有 API 返回都应该使用 `BaseRespo
 ### BaseResponse 结构
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 from datetime import datetime
 
 # BaseResponse 包含以下字段：
@@ -45,7 +45,7 @@ from datetime import datetime
 
 ```python
 from fastapi import APIRouter
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 
 router = APIRouter()
 
@@ -85,7 +85,7 @@ async def delete_user(user_id: str):
 ### Pagination 模型
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import (
+from aury.boot.application.interfaces.egress import (
     Pagination,
     PaginationResponse
 )
@@ -138,7 +138,7 @@ async def list_users(
 ### SuccessResponse - 简单成功消息
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import SuccessResponse
+from aury.boot.application.interfaces.egress import SuccessResponse
 
 @router.post("/users")
 async def create_user(request: UserCreateRequest):
@@ -154,7 +154,7 @@ async def create_user(request: UserCreateRequest):
 ### ErrorResponse - 错误响应
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import ErrorResponse
+from aury.boot.application.interfaces.egress import ErrorResponse
 
 @router.post("/users")
 async def create_user(request: UserCreateRequest):
@@ -172,7 +172,7 @@ async def create_user(request: UserCreateRequest):
 ### IDResponse - 返回 ID
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import IDResponse
+from aury.boot.application.interfaces.egress import IDResponse
 
 @router.post("/users")
 async def create_user(request: UserCreateRequest):
@@ -187,7 +187,7 @@ async def create_user(request: UserCreateRequest):
 ### CountResponse - 返回计数
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import CountResponse
+from aury.boot.application.interfaces.egress import CountResponse
 
 @router.get("/users/count")
 async def count_users():
@@ -204,7 +204,7 @@ async def count_users():
 ### 使用 ResponseBuilder
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import ResponseBuilder
+from aury.boot.application.interfaces.egress import ResponseBuilder
 
 # 成功响应
 return ResponseBuilder.success(
@@ -231,7 +231,7 @@ Kit 提供了内置的请求模型基类，方便构建标准的 API 请求：
 ### BaseRequest - 基础请求
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.ingress import BaseRequest
+from aury.boot.application.interfaces.ingress import BaseRequest
 from pydantic import Field
 
 class UserCreateRequest(BaseRequest):
@@ -247,7 +247,7 @@ class UserCreateRequest(BaseRequest):
 ### PaginationRequest - 分页请求
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.ingress import (
+from aury.boot.application.interfaces.ingress import (
     PaginationRequest,
     SortOrder
 )
@@ -273,7 +273,7 @@ pagination_req.limit       # 限制数量（50）
 ### ListRequest - 列表请求（不分页）
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.ingress import ListRequest
+from aury.boot.application.interfaces.ingress import ListRequest
 
 class UserListAllRequest(ListRequest):
     """获取所有用户请求"""
@@ -293,7 +293,7 @@ items = await db.query(User).offset(list_req.offset).limit(list_req.limit).all()
 ### FilterRequest - 过滤请求
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.ingress import FilterRequest
+from aury.boot.application.interfaces.ingress import FilterRequest
 
 class UserFilterRequest(FilterRequest):
     """用户过滤请求"""
@@ -310,7 +310,7 @@ filter_req = UserFilterRequest(filters={"status": "active", "role": "admin"})
 
 ```python
 from fastapi import APIRouter
-from aurimyth.foundation_kit.application.interfaces.ingress import PaginationRequest
+from aury.boot.application.interfaces.ingress import PaginationRequest
 
 router = APIRouter()
 
@@ -432,7 +432,7 @@ class UserCreateRequest(BaseModel):
 
 ```python
 from fastapi import APIRouter, Depends, HTTPException
-from aurimyth.foundation_kit.application.interfaces.egress import (
+from aury.boot.application.interfaces.egress import (
     BaseResponse,
     PaginationResponse,
     Pagination,
@@ -536,12 +536,12 @@ async def delete_user(
 
 ```python
 from fastapi import FastAPI
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     NotFoundError,
     AlreadyExistsError,
     UnauthorizedError,
 )
-from aurimyth.foundation_kit.application.interfaces.egress import ErrorResponse
+from aury.boot.application.interfaces.egress import ErrorResponse
 
 app = FastAPI()
 
@@ -603,7 +603,7 @@ A: Kit 采用统一的响应格式有以下优势：
 A: 使用 `BaseResponse[T]` 的泛型：
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 from pydantic import BaseModel
 
 class CustomData(BaseModel):
@@ -622,7 +622,7 @@ return BaseResponse[CustomData](
 A: 可以继承 `BaseResponse`：
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 from pydantic import Field
 
 class CustomResponse(BaseResponse[dict]):

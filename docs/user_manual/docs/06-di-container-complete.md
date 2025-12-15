@@ -320,7 +320,7 @@ Kit DI 与 FastAPI 的 `Depends()` 完美配合。
 
 ```python
 from fastapi import APIRouter, Depends
-from aurimyth.foundation_kit.infrastructure.di import Container
+from aury.boot.infrastructure.di import Container
 
 router = APIRouter()
 container = Container.get_instance()
@@ -480,7 +480,7 @@ def test_user_service():
 DI 容器和组件系统可以协作。
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Component, FoundationApp
+from aury.boot.application.app.base import Component, FoundationApp
 
 class DISetupComponent(Component):
     """在应用启动时初始化 DI 容器"""

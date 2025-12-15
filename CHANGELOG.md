@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 AuriMyth Foundation Kit 的重要变更。
+本文件记录 Aury Boot 的重要变更。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
@@ -24,17 +24,17 @@
 - 所有 Manager 新增 `reset_instance(name: str | None = None)` 方法，用于测试时重置实例
 
 ### Changed
-- **Storage 模块重构**：移除内置存储实现，改为依赖 `aurimyth-storage-sdk`
-  - 安装方式：`pip install "aurimyth-storage-sdk[aws]"` 或 `uv add "aurimyth-storage-sdk[aws]"`
+- **Storage 模块重构**：移除内置存储实现，改为依赖 `aury-sdk-storage`
+  - 安装方式：`pip install "aury-sdk-storage[aws]"` 或 `uv add "aury-sdk-storage[aws]"`
   - `StorageManager` 现在委托给 SDK 的 `IStorage` 实现
   - 移除了 `s3.py`、`sts.py`、`sts_providers/` 等文件
-  - STS 临时凭证功能现在通过 `aurimyth_storage_sdk.sts` 模块提供
+  - STS 临时凭证功能现在通过 `aury.sdk.storage.sts` 模块提供
 - Manager 单例模式从类变量 `_instance` 改为 `_instances: dict[str, Manager]`
 - `DatabaseManager.configure()` 从类方法改为实例方法
 
 ### Removed
-- 移除内置的 S3/COS/OSS 存储实现（由 `aurimyth-storage-sdk` 替代）
-- 移除内置的 STS 临时凭证提供者（由 `aurimyth-storage-sdk` 替代）
+- 移除内置的 S3/COS/OSS 存储实现（由 `aury-sdk-storage` 替代）
+- 移除内置的 STS 临时凭证提供者（由 `aury-sdk-storage` 替代）
 
 ### Fixed
 - 修复项目模板中的 f-string 和 JSON 字典转义问题
@@ -65,10 +65,10 @@
   - 标准响应模型：`BaseResponse`、`PaginationResponse`
   - 统一异常处理
 - **CLI 工具**
-  - `aum init`：项目脚手架
-  - `aum generate crud`：CRUD 代码生成
-  - `aum server dev/prod`：服务器管理
-  - `aum migrate`：数据库迁移
+  - `aury init`：项目脚手架
+  - `aury generate crud`：CRUD 代码生成
+  - `aury server dev/prod`：服务器管理
+  - `aury migrate`：数据库迁移
 - **文档**
   - 完整的用户手册
   - 项目模板（DEVELOPMENT.md、CLI.md）

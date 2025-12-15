@@ -1,6 +1,6 @@
-# AuriMyth Foundation Kit 架构文档
+# Aury Boot 架构文档
 
-AuriMyth Foundation Kit 是一个基于 Python 的企业级微服务开发框架，旨在提供标准化、可扩展且易于维护的基础设施。它采用**分层架构**，严格遵循关注点分离和单向依赖原则。
+Aury Boot 是一个基于 Python 的企业级微服务开发框架，旨在提供标准化、可扩展且易于维护的基础设施。它采用**分层架构**，严格遵循关注点分离和单向依赖原则。
 
 ## 1. 核心架构概览
 
@@ -20,7 +20,7 @@ graph TD
 ### 1.1 目录结构
 
 ```
-aurimyth/foundation_kit/
+aury/kit/
 ├── application/      # 应用层：程序入口、配置、中间件、RPC
 ├── domain/           # 领域层：业务模型、仓储接口、服务基类
 ├── infrastructure/   # 基础设施层：数据库、缓存、消息队列的具体实现
@@ -78,7 +78,7 @@ aurimyth/foundation_kit/
 
 ### 3.1 组件系统 (The Component System)
 
-为了解耦框架的各个部分，AuriMyth 引入了组件系统。
+为了解耦框架的各个部分，Aury 引入了组件系统。
 
 ```python
 class Component(ABC):

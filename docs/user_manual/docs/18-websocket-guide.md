@@ -8,8 +8,8 @@
 
 ```python
 from fastapi import APIRouter, WebSocket
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.infrastructure.database import DatabaseManager
+from aury.boot.common.logging import logger
 
 router = APIRouter()
 db_manager = DatabaseManager.get_instance()

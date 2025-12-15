@@ -18,7 +18,7 @@ Kit 使用 **SQLAlchemy 2.0+** 作为 ORM，支持异步操作和全功能的关
 ```python
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text
-from aurimyth.foundation_kit.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import UUIDAuditableStateModel
 
 class User(UUIDAuditableStateModel):
     """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
@@ -53,7 +53,7 @@ class User(UUIDAuditableStateModel):
 ### 关系模型
 
 ```python
-from aurimyth.foundation_kit.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import UUIDAuditableStateModel
 
 class Post(UUIDAuditableStateModel):
     """文章模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
@@ -77,7 +77,7 @@ class Post(UUIDAuditableStateModel):
 ### 软删除模型
 
 ```python
-from aurimyth.foundation_kit.domain.models.base import SoftDeleteModel
+from aury.boot.domain.models.base import SoftDeleteModel
 
 class Article(SoftDeleteModel):
     """支持软删除的模型"""
@@ -99,7 +99,7 @@ class Article(SoftDeleteModel):
 继承 `BaseRepository` 获得自动 CRUD 操作：
 
 ```python
-from aurimyth.foundation_kit.domain.repository.impl import BaseRepository
+from aury.boot.domain.repository.impl import BaseRepository
 from models import User
 
 class UserRepository(BaseRepository[User]):
@@ -172,7 +172,7 @@ async def create_users(session):
 
 ```python
 from fastapi import APIRouter, Depends, HTTPException
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.database import DatabaseManager
 from repositories import UserRepository
 from schemas import UserCreateRequest, UserResponse
 
@@ -190,7 +190,7 @@ async def get_user_repo(session=Depends(db_manager.get_session)) -> UserReposito
     return UserRepository(session)
 
 # 创建
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 
 @router.post("/users")
 async def create_user(
@@ -217,7 +217,7 @@ async def get_user(user_id: str, repo: UserRepository = Depends(get_user_repo)):
     return BaseResponse(code=200, message="获取成功", data=user)
 
 # 列表（分页）
-from aurimyth.foundation_kit.application.interfaces.egress import PaginationResponse, Pagination
+from aury.boot.application.interfaces.egress import PaginationResponse, Pagination
 
 @router.get("/users")
 async def list_users(
@@ -263,7 +263,7 @@ Kit 提供了多种事务管理方式，推荐按场景选择：
 ### 方式 1：@transactional 装饰器（最简洁）
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 装饰器自动处理事务开启、提交、回滚
@@ -298,8 +298,8 @@ async def create_order_api(request: OrderRequest, session=Depends(db_manager.get
 ### 方式 2：transactional_context 上下文管理器
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional_context
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.domain.transaction import transactional_context
+from aury.boot.infrastructure.database import DatabaseManager
 
 db_manager = DatabaseManager.get_instance()
 
@@ -328,7 +328,7 @@ async def create_order(request: OrderRequest):
 ### 方式 3：TransactionManager 手动控制
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import TransactionManager
+from aury.boot.domain.transaction import TransactionManager
 
 async def create_order(request: OrderRequest, session: AsyncSession):
     """手动控制事务，适合复杂场景"""
@@ -408,7 +408,7 @@ async def inner_transaction(session: AsyncSession):
 
 **事务检查**：
 ```python
-from aurimyth.foundation_kit.domain.transaction import (
+from aury.boot.domain.transaction import (
     ensure_transaction,
     requires_transaction
 )
@@ -482,7 +482,7 @@ await repo.bulk_delete(ids_to_delete)
 在并发场景下锁定查询的行，防止其他事务修改。
 
 ```python
-from aurimyth.foundation_kit.domain.repository.query_builder import QueryBuilder
+from aury.boot.domain.repository.query_builder import QueryBuilder
 
 class AccountRepository(BaseRepository[Account]):
     async def get_for_update(self, account_id: str) -> Account | None:
@@ -518,7 +518,7 @@ class AccountRepository(BaseRepository[Account]):
 **典型用例：转账操作**：
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 
 @transactional
 async def transfer_money(session: AsyncSession, from_id: str, to_id: str, amount: float):
@@ -572,7 +572,7 @@ DATABASE_ISOLATION_LEVEL=REPEATABLE READ
 **配置示例**：
 
 ```python
-from aurimyth.foundation_kit.infrastructure.database import DatabaseConfig
+from aury.boot.infrastructure.database import DatabaseConfig
 
 # 通过配置对象
  config = DatabaseConfig(

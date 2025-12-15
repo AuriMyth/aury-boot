@@ -17,7 +17,7 @@ Foundation Kit 的 Repository 支持智能的自动提交机制，优于 Django 
 ### 基本用法
 
 ```python
-from aurimyth.foundation_kit.domain.repository.impl import BaseRepository
+from aury.boot.domain.repository.impl import BaseRepository
 
 # 默认行为：非事务中自动提交
 repo = UserRepository(session, User)  # auto_commit=True
@@ -34,7 +34,7 @@ await repo.with_commit().create({"name": "test2"})  # 强制 commit
 ### 与事务的配合
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 
 # 在事务中：无论 auto_commit 是什么，都不会自动提交
 @transactional
@@ -60,7 +60,7 @@ async def create_with_profile(session: AsyncSession):
 自动处理事务开启、提交、回滚。
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 @transactional
@@ -131,8 +131,8 @@ async def inner_operation(session: AsyncSession):
 更明确的事务边界。
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional_context
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.domain.transaction import transactional_context
+from aury.boot.infrastructure.database import DatabaseManager
 
 db_manager = DatabaseManager.get_instance()
 
@@ -193,7 +193,7 @@ async def operation_with_control(session: AsyncSession):
 更灵活但更冗长的方式。
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import TransactionManager
+from aury.boot.domain.transaction import TransactionManager
 
 async def manual_transaction_control(session: AsyncSession):
     """手动控制事务，适合复杂场景"""
@@ -319,7 +319,7 @@ async def update_inventory(session: AsyncSession, items):
 保存点允许在事务中设置回滚点，实现部分回滚而不影响整个事务。
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import TransactionManager
+from aury.boot.domain.transaction import TransactionManager
 
 async def complex_operation(session: AsyncSession):
     """使用保存点实现部分回滚"""
@@ -374,7 +374,7 @@ async def complex_operation(session: AsyncSession):
 注册在事务成功提交后执行的回调函数，适合发送通知、触发后续任务等副作用操作。
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional, on_commit
+from aury.boot.domain.transaction import transactional, on_commit
 
 @transactional
 async def create_order(session: AsyncSession, order_data: dict):
@@ -404,7 +404,7 @@ async def update_inventory_cache(items: list):
 **在 TransactionManager 中使用**：
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import TransactionManager
+from aury.boot.domain.transaction import TransactionManager
 
 async def manual_with_callback(session: AsyncSession):
     tm = TransactionManager(session)
@@ -466,7 +466,7 @@ async def risky_operation(session: AsyncSession):
 ### 检查是否在事务中
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import ensure_transaction
+from aury.boot.domain.transaction import ensure_transaction
 
 @router.post("/users")
 async def create_user(request: UserCreateRequest, session=Depends(...)):
@@ -482,7 +482,7 @@ async def create_user(request: UserCreateRequest, session=Depends(...)):
 ### 强制要求事务
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import requires_transaction
+from aury.boot.domain.transaction import requires_transaction
 
 class UserRepository(BaseRepository[User]):
     """用户仓储"""
@@ -601,8 +601,8 @@ async def inner(session: AsyncSession):
 
 A:
 ```python
-from aurimyth.foundation_kit.infrastructure.tasks.manager import TaskManager
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.tasks.manager import TaskManager
+from aury.boot.infrastructure.database import DatabaseManager
 
 tm = TaskManager.get_instance()
 db_manager = DatabaseManager.get_instance()

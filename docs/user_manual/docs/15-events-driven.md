@@ -7,7 +7,7 @@
 ### 基础事件
 
 ```python
-from aurimyth.foundation_kit.infrastructure.events import Event
+from aury.boot.infrastructure.events import Event
 
 class OrderCreatedEvent(Event):
     """订单创建事件"""
@@ -43,7 +43,7 @@ class OrderUpdatedEvent(Event):
 ### 基础订阅
 
 ```python
-from aurimyth.foundation_kit.infrastructure.events.bus import EventBus
+from aury.boot.infrastructure.events.bus import EventBus
 
 bus = EventBus.get_instance()
 
@@ -272,7 +272,7 @@ async def retry_subscriber(event: OrderCreatedEvent):
 ```bash
 # AMQP 事件总线
 EVENT_BROKER_URL=amqp://guest:guest@localhost:5672/
-EVENT_EXCHANGE_NAME=aurimyth_events
+EVENT_EXCHANGE_NAME=aury_events
 EVENT_MAX_RETRIES=3
 
 # Redis 事件总线
@@ -284,7 +284,7 @@ EVENT_BROKER_URL=redis://localhost:6379/0
 ### 事件追踪
 
 ```python
-from aurimyth.foundation_kit.common.logging import get_trace_id, logger
+from aury.boot.common.logging import get_trace_id, logger
 
 @bus.subscribe(OrderCreatedEvent)
 async def traced_subscriber(event: OrderCreatedEvent):

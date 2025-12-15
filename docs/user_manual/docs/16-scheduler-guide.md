@@ -5,7 +5,7 @@
 ## 调度器初始化
 
 ```python
-from aurimyth.foundation_kit.infrastructure.scheduler.manager import SchedulerManager
+from aury.boot.infrastructure.scheduler.manager import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
 ```
@@ -361,7 +361,7 @@ for job in jobs:
 ### 任务执行日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 async def logged_task():
     logger.info("任务开始执行")

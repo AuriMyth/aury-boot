@@ -8,7 +8,7 @@ Kit 使用 Pydantic 的 `BaseSettings` 实现分层配置管理。
 
 ```python
 # config.py
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 from pydantic import Field
 
 class AppConfig(BaseConfig):
@@ -48,7 +48,7 @@ CACHE_REDIS_URL=redis://localhost:6379/0
 
 ```python
 # config.py
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 from pydantic import Field
 
 # ========== 应用配置 ==========
@@ -103,7 +103,7 @@ database_url = config.database.url
 ```python
 # config.py
 import os
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 from pydantic import Field
 
 class AppConfig(BaseConfig):

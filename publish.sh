@@ -140,10 +140,10 @@ publish() {
     echo ""
     if [ "$TARGET" = "test" ]; then
         echo "测试安装命令:"
-        echo "  uv add --index-url https://test.pypi.org/simple/ aurimyth-foundation-kit"
+        echo "  uv add --index-url https://test.pypi.org/simple/ aury-boot"
     else
         echo "安装命令:"
-        echo "  uv add aurimyth-foundation-kit"
+        echo "  uv add aury-boot"
     fi
 }
 

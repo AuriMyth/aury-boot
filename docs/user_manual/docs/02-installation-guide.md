@@ -25,22 +25,22 @@ cd my-service
 
 **安装 Kit（从 PyPI）**：
 ```bash
-uv add aurimyth-foundation-kit
+uv add aury-boot
 ```
 
 **安装 Kit（从 Git - 开发版本）**：
 ```bash
-uv add git+https://github.com/AuriMythNeo/aurimyth-foundation-kit.git
+uv add git+https://github.com/AUMNeo/aury-boot.git
 ```
 
 ### 方式 2：使用 pip
 
 ```bash
 # 从 PyPI
-pip install aurimyth-foundation-kit
+pip install aury-boot
 
 # 从 Git
-pip install git+https://github.com/AuriMythNeo/aurimyth-foundation-kit.git
+pip install git+https://github.com/AUMNeo/aury-boot.git
 ```
 
 ### 方式 3：本地开发安装
@@ -49,8 +49,8 @@ pip install git+https://github.com/AuriMythNeo/aurimyth-foundation-kit.git
 
 ```bash
 # 克隆仓库
-git clone https://github.com/AuriMythNeo/aurimyth-foundation-kit.git
-cd aurimyth-foundation-kit
+git clone https://github.com/AUMNeo/aury-boot.git
+cd aury-boot
 
 # 使用 uv 安装到本地可编辑模式
 uv sync
@@ -58,7 +58,7 @@ uv sync
 # 在你的项目中引用本地路径
 # pyproject.toml:
 # dependencies = [
-#     "aurimyth-foundation-kit @ file:///path/to/aurimyth-foundation-kit"
+#     "aury-boot @ file:///path/to/aury-boot"
 # ]
 ```
 
@@ -70,16 +70,16 @@ Foundation Kit 采用模块化的可选依赖设计，按需安装。
 
 ```bash
 # 核心（只有核心框架，不含数据库/缓存等驱动）
-uv add aurimyth-foundation-kit
+uv add aury-boot
 
 # 推荐（PostgreSQL + Redis + 任务队列 + 调度器）
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 按需组合
-uv add "aurimyth-foundation-kit[postgres,redis,scheduler]"
+uv add "aury-boot[postgres,redis,scheduler]"
 
 # 全部依赖
-uv add "aurimyth-foundation-kit[all]"
+uv add "aury-boot[all]"
 ```
 
 ### 可选依赖清单
@@ -103,16 +103,16 @@ uv add "aurimyth-foundation-kit[all]"
 
 ```bash
 # Web API 服务（数据库 + 缓存）
-uv add "aurimyth-foundation-kit[postgres,redis]"
+uv add "aury-boot[postgres,redis]"
 
 # 后台任务服务（数据库 + 任务队列 + RabbitMQ）
-uv add "aurimyth-foundation-kit[postgres,tasks,rabbitmq]"
+uv add "aury-boot[postgres,tasks,rabbitmq]"
 
 # 定时任务服务（数据库 + 调度器）
-uv add "aurimyth-foundation-kit[postgres,scheduler]"
+uv add "aury-boot[postgres,scheduler]"
 
 # 完整微服务（推荐）
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 ```
 
 ### 完整 pyproject.toml 示例
@@ -125,7 +125,7 @@ build-backend = "hatchling.build"
 [project]
 name = "my-service"
 version = "0.1.0"
-description = "My AuriMyth service"
+description = "My Aury service"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [
@@ -133,7 +133,7 @@ authors = [
 ]
 
 dependencies = [
-    "aurimyth-foundation-kit[recommended]",
+    "aury-boot[recommended]",
 ]
 
 [project.optional-dependencies]
@@ -158,8 +158,8 @@ strict = true
 创建 `test_install.py`：
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
 
 class Config(BaseConfig):
     pass

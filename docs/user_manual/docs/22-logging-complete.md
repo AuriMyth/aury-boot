@@ -25,7 +25,7 @@ LOG_ENABLE_CONSOLE=true                 # 输出到控制台
 ### 程序化配置
 
 ```python
-from aurimyth.foundation_kit.common.logging import setup_logging
+from aury.boot.common.logging import setup_logging
 
 setup_logging(
     log_level="INFO",
@@ -44,7 +44,7 @@ setup_logging(
 ### 日志级别
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 # DEBUG - 详细的诊断信息
 logger.debug("调试信息")
@@ -89,7 +89,7 @@ except Exception as e:
 ### 自动 Trace ID
 
 ```python
-from aurimyth.foundation_kit.common.logging import get_trace_id, logger
+from aury.boot.common.logging import get_trace_id, logger
 
 @router.get("/users/{user_id}")
 async def get_user(user_id: str):
@@ -106,7 +106,7 @@ async def get_user(user_id: str):
 ### RPC 调用中的追踪
 
 ```python
-from aurimyth.foundation_kit.application.rpc.client import create_rpc_client
+from aury.boot.application.rpc.client import create_rpc_client
 
 @router.get("/orders/{order_id}")
 async def get_order(order_id: str):
@@ -125,7 +125,7 @@ async def get_order(order_id: str):
 ### 异步任务中的追踪
 
 ```python
-from aurimyth.foundation_kit.common.logging import set_trace_id, get_trace_id
+from aury.boot.common.logging import set_trace_id, get_trace_id
 
 @tm.conditional_task()
 async def process_order(order_id: str, trace_id: str = None):
@@ -156,7 +156,7 @@ process_order.send(order_id="order123", trace_id=trace_id)
 
 ```python
 import time
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 async def slow_operation():
     start_time = time.time()
@@ -205,7 +205,7 @@ async def expensive_operation():
 ### 结构化异常日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 try:
     await external_api.call()
@@ -275,7 +275,7 @@ log/
 
 ```python
 from fastapi import Request
-from aurimyth.foundation_kit.common.logging import logger, get_trace_id
+from aury.boot.common.logging import logger, get_trace_id
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):

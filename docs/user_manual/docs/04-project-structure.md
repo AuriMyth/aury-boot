@@ -85,7 +85,7 @@ my-service/
 ```python
 # api/v1/users.py
 from fastapi import APIRouter, Depends
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 
 router = APIRouter()
 
@@ -135,7 +135,7 @@ class UserService:
 
 ```python
 # repositories/user_repository.py
-from aurimyth.foundation_kit.domain.repository.impl import BaseRepository
+from aury.boot.domain.repository.impl import BaseRepository
 
 class UserRepository(BaseRepository[User]):
     async def get_by_email(self, email: str) -> Optional[User]:
@@ -159,7 +159,7 @@ class UserRepository(BaseRepository[User]):
 # models/user.py
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
-from aurimyth.foundation_kit.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import UUIDAuditableStateModel
 
 class User(UUIDAuditableStateModel):
     """用户模型。
@@ -235,7 +235,7 @@ __all__ = ["UserService", "OrderService"]
 
 ```python
 # config.py
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 from pydantic import Field
 
 class AppConfig(BaseConfig):
@@ -252,7 +252,7 @@ class AppConfig(BaseConfig):
 ```python
 # main.py
 from config import AppConfig
-from aurimyth.foundation_kit.application.app.base import FoundationApp
+from aury.boot.application.app.base import FoundationApp
 
 config = AppConfig()
 app = FoundationApp(
@@ -307,7 +307,7 @@ async def create_user(request: UserCreateRequest):
 
 ```python
 # main.py
-from aurimyth.foundation_kit.infrastructure.di import Container
+from aury.boot.infrastructure.di import Container
 
 container = Container.get_instance()
 
@@ -343,7 +343,7 @@ async def get_user(
 
 ```python
 # exceptions/custom_errors.py
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     NotFoundError,
     UnauthorizedError,
 )

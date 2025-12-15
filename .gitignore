@@ -42,4 +42,4 @@ log/
 # OS
 .DS_Store
 Thumbs.db
-aurimyth/foundation_kit/_version.py
+aury/foundation_kit/_version.py

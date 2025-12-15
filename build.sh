@@ -70,7 +70,7 @@ check_git() {
 # 清理构建产物
 clean() {
     info "清理旧的构建文件..."
-    rm -rf build/ dist/ *.egg-info aurimyth/*.egg-info aurimyth/foundation_kit/_version.py
+    rm -rf build/ dist/ *.egg-info aury/*.egg-info aury/foundation_kit/_version.py
     success "清理完成"
 }
 

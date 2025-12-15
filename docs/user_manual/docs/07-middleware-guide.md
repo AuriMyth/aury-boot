@@ -41,8 +41,8 @@ class MyApp(FoundationApp):
 ### 基类定义
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Middleware
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.app.base import Middleware
+from aury.boot.application.config import BaseConfig
 from starlette.middleware import Middleware as StarletteMiddleware
 
 class Middleware(ABC):
@@ -76,7 +76,7 @@ class Middleware(ABC):
 HTTP 请求日志中间件，自动记录所有请求的详细信息。
 
 ```python
-from aurimyth.foundation_kit.application.app.middlewares import RequestLoggingMiddleware
+from aury.boot.application.app.middlewares import RequestLoggingMiddleware
 
 class MyApp(FoundationApp):
     middlewares = [
@@ -104,7 +104,7 @@ class MyApp(FoundationApp):
 CORS 跨域处理中间件。
 
 ```python
-from aurimyth.foundation_kit.application.app.middlewares import CORSMiddleware
+from aury.boot.application.app.middlewares import CORSMiddleware
 
 class MyApp(FoundationApp):
     middlewares = [
@@ -128,8 +128,8 @@ class MyApp(FoundationApp):
 ### 基本结构
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Middleware
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.app.base import Middleware
+from aury.boot.application.config import BaseConfig
 from starlette.middleware import Middleware as StarletteMiddleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 
@@ -212,8 +212,8 @@ class RequestIDMiddleware(Middleware):
 ### 方式 1：类属性（推荐）
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.app.middlewares import (
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.app.middlewares import (
     RequestLoggingMiddleware,
     CORSMiddleware,
 )

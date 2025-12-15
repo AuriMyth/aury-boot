@@ -9,10 +9,10 @@ Kit 提供了两套服务器运行系统：**ApplicationServer 类** 和 **CLI �
 ### 基础使用
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
-from aurimyth.foundation_kit.application.server import ApplicationServer
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.server import ApplicationServer
+from aury.boot.application.interfaces.egress import BaseResponse
 
 class AppConfig(BaseConfig):
     pass
@@ -106,7 +106,7 @@ server.run()
 
 ```python
 import asyncio
-from aurimyth.foundation_kit.application.server import ApplicationServer
+from aury.boot.application.server import ApplicationServer
 
 async def run_server_async():
     server = ApplicationServer(
@@ -143,8 +143,8 @@ print(f"工作进程: {config.workers}")
 ### 基础使用
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.server import run_app
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.server import run_app
 
 app = FoundationApp(title="My Service")
 
@@ -188,41 +188,41 @@ python main.py
 
 ```bash
 # 开发服务器（热重载）
-aum server dev
+aury server dev
 # 或使用短别名
-aum server dev
+aury server dev
 
 # 通用运行命令
-aum server run
+aury server run
 
 # 生产服务器（多进程）
-aum server prod
+aury server prod
 ```
 
 **方式 2：使用 Python 模块**
 
 ```bash
 # 开发服务器
-uv run aum server dev
+uv run aury server dev
 
 # 通用运行
-uv run aum server run
+uv run aury server run
 
 # 生产服务器
-uv run aum server prod
+uv run aury server prod
 ```
 
 ### dev 命令（开发模式）
 
 ```bash
 # 基础用法
-aum server dev
+aury server dev
 
 # 指定端口
-aum server dev --port 9000
+aury server dev --port 9000
 
 # 指定地址和端口
-aum server dev --host 0.0.0.0 --port 9000
+aury server dev --host 0.0.0.0 --port 9000
 ```
 
 **特点**：
@@ -235,24 +235,24 @@ aum server dev --host 0.0.0.0 --port 9000
 
 ```bash
 # 基础用法
-aum server run
+aury server run
 
 # 指定工作进程
-aum server run --workers 4
+aury server run --workers 4
 
 # 启用热重载
-aum server run --reload
+aury server run --reload
 
 # 指定热重载监控目录
-aum server run --reload --reload-dir src --reload-dir tests
+aury server run --reload --reload-dir src --reload-dir tests
 
 # HTTPS
-aum server run \
+aury server run \
     --ssl-keyfile key.pem \
     --ssl-certfile cert.pem
 
 # 完整示例
-aum server run \
+aury server run \
     --host 0.0.0.0 \
     --port 8000 \
     --workers 4 \
@@ -280,13 +280,13 @@ aum server run \
 
 ```bash
 # 基础用法（自动使用 CPU 核心数）
-aum server prod
+aury server prod
 
 # 指定工作进程数
-aum server prod --workers 8
+aury server prod --workers 8
 
 # 指定地址和端口
-aum server prod --host 0.0.0.0 --port 8000
+aury server prod --host 0.0.0.0 --port 8000
 ```
 
 **特点**：
@@ -314,7 +314,7 @@ export SERVER_WORKERS=4
 export SERVER_RELOAD=false
 export DEBUG=false
 
-aum server run
+aury server run
 ```
 
 ## 项目 main.py 结构
@@ -324,10 +324,10 @@ aum server run
 ```python
 """应用入口点。"""
 
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
-from aurimyth.foundation_kit.application.server import run_app
-from aurimyth.foundation_kit.application.app.components import (
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.server import run_app
+from aury.boot.application.app.components import (
     RequestLoggingComponent,
     DatabaseComponent,
     CacheComponent,
@@ -381,7 +381,7 @@ if __name__ == "__main__":
 uv run python main.py
 
 # 或使用 CLI 命令（推荐）
-aum server dev
+aury server dev
 
 # 或指定 uvicorn
 uvicorn main:app --reload
@@ -463,10 +463,10 @@ docker-compose logs -f app
 
 ```bash
 # 使用 CPU 核心数
-aum server prod
+aury server prod
 
 # 或指定具体数值
-aum server run --workers 8
+aury server run --workers 8
 ```
 
 ### 2. 事件循环优化
@@ -475,7 +475,7 @@ aum server run --workers 8
 # uvloop 已通过 uvicorn[standard] 依赖自动安装
 
 # 使用 uvloop
-aum server run --loop uvloop --http httptools
+aury server run --loop uvloop --http httptools
 ```
 
 ### 3. 内存管理
@@ -507,7 +507,7 @@ class AppConfig(BaseConfig):
 
 A: 使用 SSL 证书：
 ```bash
-aum server run \
+aury server run \
     --ssl-keyfile /path/to/key.pem \
     --ssl-certfile /path/to/cert.pem
 ```

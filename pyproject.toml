@@ -1,7 +1,7 @@
 [project]
-name = "aurimyth-foundation-kit"
+name = "aury-boot"
 dynamic = ["version"]
-description = "AuriMyth Foundation Kit - 核心基础架构工具包"
+description = "Aury Boot - 基于 FastAPI 生态的企业级 API 开发框架"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -47,7 +47,7 @@ sqlite = ["aiosqlite>=0.21.0"]
 redis = ["redis>=7.1.0"]
 
 # ============ 对象存储 ============
-s3 = ["aurimyth-storage-sdk[aws]>=0.0.1"]
+s3 = ["aury-sdk-storage[aws]>=0.0.1"]
 
 # ============ 任务队列 ============
 tasks = [
@@ -77,7 +77,7 @@ recommended = [
     "kombu>=5.6.1",
     "dramatiq-kombu-broker>=0.2.2",
     "apscheduler>=3.11.1",
-    "aurimyth-storage-sdk[aws]>=0.0.1",
+    "aury-sdk-storage[aws]>=0.0.1",
 ]
 # 完整：所有可选依赖
 all = [
@@ -85,7 +85,7 @@ all = [
     "aiomysql>=0.3.2",
     "aiosqlite>=0.21.0",
     "redis>=7.1.0",
-    "aurimyth-storage-sdk[aws]>=0.0.1",
+    "aury-sdk-storage[aws]>=0.0.1",
     "dramatiq>=1.18.0",
     "kombu>=5.6.1",
     "dramatiq-kombu-broker>=0.2.2",
@@ -94,8 +94,7 @@ all = [
 ]
 
 [project.scripts]
-aurimyth = "aurimyth.foundation_kit.commands:main"
-aum = "aurimyth.foundation_kit.commands:main"
+aury = "aury.boot.commands:main"
 
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -179,7 +178,7 @@ keep-runtime-typing = false  # 允许将 typing 模块类型改为内置类型
 
 [tool.ruff.lint.isort]
 known-first-party = [
-    "aurimyth",
+    "aury",
 ]
 force-sort-within-sections = true
 split-on-trailing-comma = true
@@ -216,16 +215,16 @@ build-backend = "hatchling.build"
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "aurimyth/foundation_kit/_version.py"
+version-file = "aury/boot/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "aurimyth",
+    "aury",
 ]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "aurimyth/",
+    "aum/",
     "pyproject.toml",
     "README.md",
     "LICENSE",

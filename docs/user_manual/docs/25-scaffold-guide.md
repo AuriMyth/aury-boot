@@ -1,6 +1,6 @@
 # 25. 脚手架使用指南
 
-本指南介绍如何使用 AuriMyth Foundation Kit 的脚手架快速创建项目和生成代码。
+本指南介绍如何使用 Aury Boot 的脚手架快速创建项目和生成代码。
 
 ## 快速开始
 
@@ -11,21 +11,21 @@
 mkdir my-service && cd my-service
 uv init . --name my_service --no-package --python 3.13
 
-# 2. 安装 AuriMyth Foundation Kit
-uv add "aurimyth-foundation-kit[recommended]"
+# 2. 安装 Aury Boot
+uv add "aury-boot[recommended]"
 
 # 3. 初始化脚手架
-aum init                 # 交互式模式（默认），会询问配置选项
-aum init -y              # 跳过交互，使用默认配置
-aum init my_package      # 使用顶层包结构
-aum init --docker        # 同时生成 Docker 配置
+aury init                 # 交互式模式（默认），会询问配置选项
+aury init -y              # 跳过交互，使用默认配置
+aury init my_package      # 使用顶层包结构
+aury init --docker        # 同时生成 Docker 配置
 
 # 4. 配置环境变量
 cp .env.example .env
 # 编辑 .env 文件配置数据库等
 
 # 5. 启动开发服务器
-aum server dev
+aury server dev
 ```
 
 > **注意**：`init` 会覆盖 `uv init` 创建的默认 `main.py`，这是正常行为。
@@ -36,17 +36,17 @@ aum server dev
 
 ```bash
 # 一键生成完整 CRUD（带字段定义）
-aum generate crud user email:str:unique age:int? status:str=active
+aury generate crud user email:str:unique age:int? status:str=active
 
 # 在 main.py 中注册路由
 # from api import user
 # app.include_router(user.router, prefix="/api/users", tags=["User"])
 
 # 生成数据库迁移
-aum migrate make -m "add user table"
+aury migrate make -m "add user table"
 
 # 执行迁移
-aum migrate up
+aury migrate up
 ```
 
 ### 字段语法
@@ -57,16 +57,16 @@ aum migrate up
 # 修饰符: ? (可空), unique, index, =默认值
 
 # 更多示例
-aum generate crud article title:str(200) content:text status:str=draft
-aum generate crud product name:str:unique price:decimal stock:int=0
+aury generate crud article title:str(200) content:text status:str=draft
+aury generate crud product name:str:unique price:decimal stock:int=0
 
 # 交互式模式
-aum generate crud user -i
+aury generate crud user -i
 ```
 
 ## 交互式模式详解
 
-`aum init` 默认使用交互式模式，会依次询问：
+`aury init` 默认使用交互式模式，会依次询问：
 
 1. **项目结构**
    - 平铺结构：文件直接在项目根目录（简单项目）
@@ -101,7 +101,7 @@ aum generate crud user -i
 
 ### 平铺结构（默认）
 
-执行 `aum init` 后：
+执行 `aury init` 后：
 
 ```
 my-service/
@@ -138,7 +138,7 @@ my-service/
 
 ### 顶层包结构
 
-执行 `aum init my_package` 后：
+执行 `aury init my_package` 后：
 
 ```
 my-service/
@@ -161,7 +161,7 @@ my-service/
 
 ## 分层架构
 
-AuriMyth 采用分层架构，代码生成器会按规范生成代码：
+Aury 采用分层架构，代码生成器会按规范生成代码：
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -191,10 +191,10 @@ AuriMyth 采用分层架构，代码生成器会按规范生成代码：
 
 ```bash
 # 基本用法
-aum generate model user
+aury generate model user
 
 # 带字段定义
-aum generate model user email:str:unique age:int? status:str=active
+aury generate model user email:str:unique age:int? status:str=active
 ```
 
 生成 `models/user.py`：
@@ -203,7 +203,7 @@ aum generate model user email:str:unique age:int? status:str=active
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aurimyth.foundation_kit.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import UUIDAuditableStateModel
 
 
 class User(UUIDAuditableStateModel):
@@ -227,16 +227,16 @@ class User(UUIDAuditableStateModel):
 
 ```bash
 # 基本用法
-aum generate repo user
+aury generate repo user
 
 # 带 unique 字段（自动生成 get_by_xxx 方法）
-aum generate repo user email:str:unique
+aury generate repo user email:str:unique
 ```
 
 生成 `repositories/user_repository.py`：
 
 ```python
-from aurimyth.foundation_kit.domain.repository.impl import BaseRepository
+from aury.boot.domain.repository.impl import BaseRepository
 
 from models.user import User
 
@@ -263,10 +263,10 @@ class UserRepository(BaseRepository[User]):
 
 ```bash
 # 基本用法
-aum generate service user
+aury generate service user
 
 # 带 unique 字段（自动生成重复检测）
-aum generate service user email:str:unique
+aury generate service user email:str:unique
 ```
 
 生成 `services/user_service.py`：
@@ -274,9 +274,9 @@ aum generate service user email:str:unique
 ```python
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aurimyth.foundation_kit.application.errors import AlreadyExistsError, NotFoundError
-from aurimyth.foundation_kit.domain.service.base import BaseService
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.application.errors import AlreadyExistsError, NotFoundError
+from aury.boot.domain.service.base import BaseService
+from aury.boot.domain.transaction import transactional
 
 from models.user import User
 from repositories.user_repository import UserRepository
@@ -313,7 +313,7 @@ class UserService(BaseService):
 ### 生成 Schema
 
 ```bash
-aum generate schema user
+aury generate schema user
 ```
 
 生成 `schemas/user.py`：
@@ -354,7 +354,7 @@ class UserResponse(UserBase):
 ### 生成 API
 
 ```bash
-aum generate api user
+aury generate api user
 ```
 
 生成 `api/user.py`，包含完整的 CRUD 路由：
@@ -369,23 +369,23 @@ aum generate api user
 
 ```bash
 # 无字段
-aum generate crud user
+aury generate crud user
 
 # 带字段定义（推荐）
-aum generate crud user email:str:unique age:int? status:str=active
+aury generate crud user email:str:unique age:int? status:str=active
 
 # 交互式
-aum generate crud user -i
+aury generate crud user -i
 ```
 
 等同于依次执行：
 
 ```bash
-aum generate model user email:str:unique age:int? status:str=active
-aum generate repo user email:str:unique
-aum generate service user email:str:unique
-aum generate schema user email:str:unique age:int? status:str=active
-aum generate api user
+aury generate model user email:str:unique age:int? status:str=active
+aury generate repo user email:str:unique
+aury generate service user email:str:unique
+aury generate schema user email:str:unique age:int? status:str=active
+aury generate api user
 ```
 
 ## 注册路由
@@ -405,13 +405,13 @@ app.include_router(user.router, prefix="/api/users", tags=["User"])
 
 ```bash
 # 生成迁移文件
-aum migrate make -m "add user table"
+aury migrate make -m "add user table"
 
 # 执行迁移
-aum migrate up
+aury migrate up
 
 # 查看状态
-aum migrate status
+aury migrate status
 ```
 
 ## 自定义生成的代码
@@ -488,7 +488,7 @@ class UserService(BaseService):
 使用框架提供的异常类：
 
 ```python
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     NotFoundError,
     AlreadyExistsError,
     ValidationError,
@@ -502,7 +502,7 @@ from aurimyth.foundation_kit.application.errors import (
 使用 `@transactional` 装饰器：
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 
 @transactional
 async def create_user_with_profile(self, data):
@@ -521,7 +521,7 @@ async def create_user_with_profile(self, data):
 使用 `--force` 选项：
 
 ```bash
-aum generate crud user --force
+aury generate crud user --force
 ```
 
 ### Q: 如何生成不同类型的主键？
@@ -530,16 +530,16 @@ aum generate crud user --force
 
 ```bash
 # UUID 主键 + 软删除（默认推荐）
-aum generate crud user -b UUIDAuditableStateModel
+aury generate crud user -b UUIDAuditableStateModel
 
 # int 主键 + 时间戳
-aum generate crud user -b Model
+aury generate crud user -b Model
 
 # int 主键 + 软删除
-aum generate crud user -b AuditableStateModel
+aury generate crud user -b AuditableStateModel
 
 # UUID 主键 + 乐观锁
-aum generate crud user -b VersionedUUIDModel
+aury generate crud user -b VersionedUUIDModel
 ```
 
 可用基类：

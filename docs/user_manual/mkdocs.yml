@@ -1,8 +1,8 @@
-site_name: AuriMyth Foundation Kit
+site_name: AUM Foundation Kit
 site_description: 现代化微服务基础架构框架用户开发手册
-site_author: AuriMyth Team
-repo_url: https://github.com/AuriMythNeo/aurimyth-foundation-kit
-repo_name: aurimyth-foundation-kit
+site_author: AUM Team
+repo_url: https://github.com/AUMNeo/aury-foundation-kit
+repo_name: aury-foundation-kit
 docs_dir: docs
 
 theme:
@@ -108,9 +108,9 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/AuriMythNeo/aurimyth-foundation-kit
+      link: https://github.com/AUMNeo/aury-foundation-kit
       name: GitHub
 
-copyright: Copyright &copy; 2024 AuriMyth Team
+copyright: Copyright &copy; 2024 AUM Team
 
 

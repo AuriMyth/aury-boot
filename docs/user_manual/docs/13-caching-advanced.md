@@ -7,7 +7,7 @@
 ### 获取缓存实例
 
 ```python
-from aurimyth.foundation_kit.infrastructure.cache import CacheManager
+from aury.boot.infrastructure.cache import CacheManager
 
 # 默认实例
 cache = CacheManager.get_instance()
@@ -268,7 +268,7 @@ async def get_hot_data(data_id: str):
 ### 缓存日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 async def get_user_with_logging(user_id: str):
     cache_key = f"user:{user_id}"

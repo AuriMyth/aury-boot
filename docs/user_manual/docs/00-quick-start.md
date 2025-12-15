@@ -1,6 +1,6 @@
-# AuriMyth Foundation Kit 用户开发手册
+# Aury Boot 用户开发手册
 
-欢迎使用 AuriMyth Foundation Kit！这是一款专为构建现代化、高性能微服务而设计的 Python 基础设施框架。
+欢迎使用 Aury Boot！这是一款专为构建现代化、高性能微服务而设计的 Python 基础设施框架。
 
 ## 目录（快速开始）
 
@@ -35,7 +35,7 @@
 
 ## 1. 简介
 
-AuriMyth Foundation Kit 是 FastAPI 的增强层，提供微服务开发所需的"电池"：
+Aury Boot 是 FastAPI 的增强层，提供微服务开发所需的"电池"：
 
 - **统一的组件管理**：生命周期自动管理（数据库、缓存、任务等）
 - **标准化架构**：Domain/Infrastructure 分离，Repository 模式
@@ -61,27 +61,27 @@ index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 EOF
 
 # 3. 安装框架
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 4. 初始化脚手架
-aum init                 # 交互式模式（默认），会询问配置选项
-aum init -y              # 跳过交互，使用默认配置
-aum init my_package      # 使用顶层包结构
-aum init --docker        # 同时生成 Docker 配置
+aury init                 # 交互式模式（默认），会询问配置选项
+aury init -y              # 跳过交互，使用默认配置
+aury init my_package      # 使用顶层包结构
+aury init --docker        # 同时生成 Docker 配置
 
 # 5. 配置环境变量
 cp .env.example .env
 # 编辑 .env 配置数据库连接
 
 # 6. 生成 CRUD 代码
-aum generate crud user email:str:unique age:int? status:str=active
+aury generate crud user email:str:unique age:int? status:str=active
 
 # 7. 生成并执行数据库迁移
-aum migrate make -m "initial"
-aum migrate up
+aury migrate make -m "initial"
+aury migrate up
 
 # 8. 启动开发服务器
-aum server dev
+aury server dev
 ```
 
 > **注意**：`init` 会覆盖 `uv init` 创建的默认 `main.py`，这是正常行为。
@@ -94,7 +94,7 @@ aum server dev
 
 ```bash
 # 安装扩展依赖
-uv add "aurimyth-foundation-kit[admin]"
+uv add "aury-boot[admin]"
 
 # 在 .env 中启用并设置 basic 认证
 ADMIN_ENABLED=true
@@ -115,11 +115,11 @@ ADMIN_AUTH_BASIC_PASSWORD=change_me
 # 修饰符: ? (可空), unique, index, =默认值
 
 # 示例
-aum generate crud article title:str(200) content:text status:str=draft
-aum generate crud product name:str:unique price:decimal stock:int=0
+aury generate crud article title:str(200) content:text status:str=draft
+aury generate crud product name:str:unique price:decimal stock:int=0
 
 # 交互式模式
-aum generate crud user -i
+aury generate crud user -i
 ```
 
 ---
@@ -130,19 +130,19 @@ aum generate crud user -i
 
 ```bash
 # 推荐：PostgreSQL + Redis + 任务队列 + 调度器
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 或按需组合
-uv add "aurimyth-foundation-kit[postgres,redis]"
+uv add "aury-boot[postgres,redis]"
 ```
 
 ### Hello World
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
-from aurimyth.foundation_kit.application.server import run_app
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.server import run_app
+from aury.boot.application.interfaces.egress import BaseResponse
 
 class AppConfig(BaseConfig):
     pass
@@ -155,7 +155,7 @@ app = FoundationApp(
 
 @app.get("/")
 def hello():
-    return BaseResponse(code=200, message="Hello", data={"message": "Hello AuriMyth!"})
+    return BaseResponse(code=200, message="Hello", data={"message": "Hello AUM!"})
 
 if __name__ == "__main__":
     run_app(app, host="0.0.0.0", port=8000)
@@ -165,10 +165,10 @@ if __name__ == "__main__":
 
 ```bash
 # 开发模式（热重载）
-aum server dev
+aury server dev
 
 # 生产模式（多进程）
-aum server prod
+aury server prod
 ```
 
 ---
@@ -179,10 +179,10 @@ aum server prod
 
 ```bash
 # 开发模式（热重载）
-aum server dev
+aury server dev
 
 # 生产模式（多进程）
-aum server prod
+aury server prod
 ```
 
 > 📖 **详细配置**：参考 [03-server-deployment.md](./03-server-deployment.md)
@@ -259,7 +259,7 @@ LOG_DIR=log
 ### 自定义配置
 
 ```python
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 from pydantic import Field
 
 class MyConfig(BaseConfig):
@@ -283,7 +283,7 @@ Kit 提供企业级 **DI 容器**
 ### 快速开始
 
 ```python
-from aurimyth.foundation_kit.infrastructure.di import Container
+from aury.boot.infrastructure.di import Container
 
 container = Container.get_instance()
 
@@ -308,7 +308,7 @@ Kit 将功能单元分为两类：
 ### 内置中间件
 
 ```python
-from aurimyth.foundation_kit.application.app.middlewares import (
+from aury.boot.application.app.middlewares import (
     RequestLoggingMiddleware,  # HTTP 请求日志
     CORSMiddleware,            # CORS 跨域
 )
@@ -317,7 +317,7 @@ from aurimyth.foundation_kit.application.app.middlewares import (
 ### 内置组件
 
 ```python
-from aurimyth.foundation_kit.application.app.components import (
+from aury.boot.application.app.components import (
     DatabaseComponent,        # 数据库
     CacheComponent,           # 缓存
     TaskComponent,            # 异步任务
@@ -329,7 +329,7 @@ from aurimyth.foundation_kit.application.app.components import (
 ### 自定义组件
 
 ```python
-from aurimyth.foundation_kit.application.app.base import Component, FoundationApp
+from aury.boot.application.app.base import Component, FoundationApp
 
 class MyComponent(Component):
     name = "my_component"
@@ -369,7 +369,7 @@ app = MyApp(config=config)
 ### 请求模型（Ingress）
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.ingress import (
+from aury.boot.application.interfaces.ingress import (
     BaseRequest,
     PaginationRequest
 )
@@ -384,7 +384,7 @@ class UserCreateRequest(BaseRequest):
 ### 统一响应格式（Egress）
 
 ```python
-from aurimyth.foundation_kit.application.interfaces.egress import (
+from aury.boot.application.interfaces.egress import (
     BaseResponse,
     PaginationResponse,
     Pagination,
@@ -402,8 +402,8 @@ return PaginationResponse(code=200, message="获取成功", data=pagination)
 
 ```python
 from fastapi import APIRouter, Depends
-from aurimyth.foundation_kit.infrastructure.di import Container
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.infrastructure.di import Container
+from aury.boot.application.interfaces.egress import BaseResponse
 
 router = APIRouter()
 container = Container.get_instance()
@@ -429,7 +429,7 @@ async def create_user(
 ### 异常体系与继承规则
 
 ```python
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     BaseError,
     NotFoundError,
     AlreadyExistsError,
@@ -462,7 +462,7 @@ async def get_user(user_id: str):
 
 ```python
 # ✅ 正确：定义错误代码枚举，继承 ErrorCode
-from aurimyth.foundation_kit.application.errors.codes import ErrorCode
+from aury.boot.application.errors.codes import ErrorCode
 
 class IdentityErrorCode(ErrorCode):
     INVALID_CREDENTIALS = "5001"
@@ -496,7 +496,7 @@ class BadError(NotFoundError):
 ### 推荐方式：装饰器
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 @transactional
@@ -518,7 +518,7 @@ async def create_user_with_profile(session: AsyncSession, name: str):
 ```python
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String
-from aurimyth.foundation_kit.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import UUIDAuditableStateModel
 
 class User(UUIDAuditableStateModel):
     """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
@@ -537,7 +537,7 @@ class User(UUIDAuditableStateModel):
 ### 创建仓储
 
 ```python
-from aurimyth.foundation_kit.domain.repository.impl import BaseRepository
+from aury.boot.domain.repository.impl import BaseRepository
 
 class UserRepository(BaseRepository[User]):
     async def get_by_email(self, email: str):
@@ -547,7 +547,7 @@ class UserRepository(BaseRepository[User]):
 ### 在 API 中使用
 
 ```python
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.database import DatabaseManager
 
 db_manager = DatabaseManager.get_instance()
 
@@ -571,7 +571,7 @@ async def get_user(user_id: str, repo=Depends(get_user_repo)):
 ### 基本用法
 
 ```python
-from aurimyth.foundation_kit.infrastructure.cache import CacheManager
+from aury.boot.infrastructure.cache import CacheManager
 
 cache = CacheManager.get_instance()
 
@@ -594,7 +594,7 @@ await cache.delete("user:1")
 ### 定义任务
 
 ```python
-from aurimyth.foundation_kit.infrastructure.tasks.manager import TaskManager
+from aury.boot.infrastructure.tasks.manager import TaskManager
 
 tm = TaskManager.get_instance()
 
@@ -619,8 +619,8 @@ send_email_task.send("test@example.com", "Hello!")
 ### 定义和订阅
 
 ```python
-from aurimyth.foundation_kit.infrastructure.events.bus import EventBus
-from aurimyth.foundation_kit.infrastructure.events import Event
+from aury.boot.infrastructure.events.bus import EventBus
+from aury.boot.infrastructure.events import Event
 
 class OrderCreatedEvent(Event):
     order_id: str
@@ -650,7 +650,7 @@ await bus.publish(OrderCreatedEvent(order_id="1001", amount=99.9))
 ## 16. 定时调度
 
 ```python
-from aurimyth.foundation_kit.infrastructure.scheduler.manager import SchedulerManager
+from aury.boot.infrastructure.scheduler.manager import SchedulerManager
 from datetime import datetime
 
 scheduler = SchedulerManager.get_instance()
@@ -687,7 +687,7 @@ RPC_CLIENT_SERVICES={"order-service": "http://order-service:8000"}
 ### 发起调用
 
 ```python
-from aurimyth.foundation_kit.application.rpc.client import create_rpc_client
+from aury.boot.application.rpc.client import create_rpc_client
 
 client = create_rpc_client(service_name="order-service")
 response = await client.get("/api/orders/123")
@@ -696,7 +696,7 @@ response = await client.get("/api/orders/123")
 ### 自动分布式链路追踪
 
 ```python
-from aurimyth.foundation_kit.common.logging import get_trace_id, logger
+from aury.boot.common.logging import get_trace_id, logger
 
 trace_id = get_trace_id()
 logger.info(f"处理请求 | Trace-ID: {trace_id}")
@@ -713,7 +713,7 @@ logger.info(f"处理请求 | Trace-ID: {trace_id}")
 
 ```python
 from fastapi import APIRouter, WebSocket
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.database import DatabaseManager
 
 router = APIRouter()
 db_manager = DatabaseManager.get_instance()
@@ -741,16 +741,16 @@ async def websocket_chat(websocket: WebSocket, room_id: str):
 
 ## 19. 对象存储
 
-基于 [aurimyth-storage-sdk](https://github.com/AuriMythNeo/aurimyth-storage-sdk)，支持 S3 兼容存储和 STS 临时凭证。
+基于 [aury-sdk-storage](https://github.com/AUMNeo/aury-sdk-storage)，支持 S3 兼容存储和 STS 临时凭证。
 
 ```bash
 # 安装
-uv add "aurimyth-storage-sdk[aws]"
+uv add "aury-sdk-storage[aws]"
 ```
 
 ```python
 from io import BytesIO
-from aurimyth.foundation_kit.infrastructure.storage import (
+from aury.boot.infrastructure.storage import (
     StorageManager, StorageConfig, StorageBackend, StorageFile,
 )
 
@@ -784,7 +784,7 @@ url = await storage.upload_file(
 ## 20. 国际化
 
 ```python
-from aurimyth.foundation_kit.common.i18n.translator import translate, load_translations
+from aury.boot.common.i18n.translator import translate, load_translations
 
 # 加载翻译
 load_translations({
@@ -807,7 +807,7 @@ msg = translate("error.not_found", name="User", locale="zh_CN")
 应用启动时自动执行迁移：
 
 ```python
-from aurimyth.foundation_kit.application.app.components import MigrationComponent
+from aury.boot.application.app.components import MigrationComponent
 
 class MyApp(FoundationApp):
     components = [
@@ -826,13 +826,13 @@ class MyApp(FoundationApp):
 alembic init -t async alembic
 
 # 生成迁移
-aum migrate make -m "Add users table"
+aury migrate make -m "Add users table"
 
 # 执行迁移
-aum migrate up
+aury migrate up
 
 # 查看状态
-aum migrate status
+aury migrate status
 ```
 
 > 📖 **详细说明**：参考 [21-migration-guide.md](./21-migration-guide.md)
@@ -853,7 +853,7 @@ LOG_RETENTION_DAYS=7
 ### 使用日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger, get_trace_id
+from aury.boot.common.logging import logger, get_trace_id
 
 logger.info("信息")
 logger.warning("警告")
@@ -872,28 +872,28 @@ logger.info(f"处理请求 | Trace-ID: {trace_id}")
 
 ### 统一入口
 
-安装后可使用 `aurimyth` 统一命令：
+安装后可使用 `aury` 统一命令：
 
 ```bash
 # 项目初始化（先用 uv 创建项目）
 uv init . --name my_service --no-package --python 3.13
-uv add "aurimyth-foundation-kit[recommended]"
-aum init -i              # 交互式模式（推荐）
-aum init                 # 默认配置
-aum init my_package      # 顶层包结构
-aum init --docker        # 包含 Docker 配置
+uv add "aury-boot[recommended]"
+aury init -i              # 交互式模式（推荐）
+aury init                 # 默认配置
+aury init my_package      # 顶层包结构
+aury init --docker        # 包含 Docker 配置
 
 # 代码生成
-aum generate crud user
+aury generate crud user
 
 # 服务器
-aum server dev
-aum server prod
+aury server dev
+aury server prod
 
 # 数据库迁移
-aum migrate make -m "add user"
-aum migrate up
-aum migrate status
+aury migrate make -m "add user"
+aury migrate up
+aury migrate status
 
 # Shell 补全
 aum --install-completion
@@ -910,7 +910,7 @@ aum --install-completion
 Foundation Kit 提供多个预定义模型组合，推荐直接使用而不是 `Base`：
 
 ```python
-from aurimyth.foundation_kit.domain.models import (
+from aury.boot.domain.models import (
     UUIDAuditableStateModel,  # 【推荐】UUID主键 + 时间戳 + 软删除
     UUIDModel,                # UUID主键 + 时间戳
     Model,                    # 整数主键 + 时间戳
@@ -998,7 +998,7 @@ class UserRepository(BaseRepository[User]):
 
 ```bash
 uv init my-service
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 uv lock
 ```
 

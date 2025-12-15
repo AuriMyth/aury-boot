@@ -44,7 +44,7 @@ async def create_order(request: OrderRequest, session=Depends(...)):
     await session.commit()
 
 # ✅ 正确做法
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 
 @router.post("/orders")
 async def create_order(
@@ -154,7 +154,7 @@ class UserService:
 ### 使用结构化异常
 
 ```python
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     NotFoundError,
     AlreadyExistsError,
     UnauthorizedError,
@@ -238,7 +238,7 @@ await cache.delete(f"user_profile:{user_id}")
 ### 结构化日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 # ✅ 好的日志
 logger.info("用户登录成功", extra={
@@ -254,7 +254,7 @@ logger.info(f"User {user.id} logged in from {request.client.host}")
 ### 分布式追踪
 
 ```python
-from aurimyth.foundation_kit.common.logging import get_trace_id, logger
+from aury.boot.common.logging import get_trace_id, logger
 
 @app.get("/users/{user_id}")
 async def get_user(user_id: str):
@@ -272,7 +272,7 @@ async def get_user(user_id: str):
 ### 性能监控
 
 ```python
-from aurimyth.foundation_kit.common.logging import log_performance
+from aury.boot.common.logging import log_performance
 
 @log_performance(threshold=0.5)  # 超过 0.5 秒记录警告
 async def slow_operation():
@@ -327,7 +327,7 @@ async def test_create_user_integration(db_session):
 ### RPC 调用最佳实践
 
 ```python
-from aurimyth.foundation_kit.application.rpc.client import create_rpc_client
+from aury.boot.application.rpc.client import create_rpc_client
 
 @app.get("/orders/{order_id}")
 async def get_order_details(order_id: str):

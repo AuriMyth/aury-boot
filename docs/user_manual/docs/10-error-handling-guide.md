@@ -17,7 +17,7 @@ Kit 提供了标准化的异常体系，覆盖常见的应用场景。
 ### 标准异常
 
 ```python
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     NotFoundError,              # 404 资源不存在
     AlreadyExistsError,         # 409 资源已存在
     UnauthorizedError,          # 401 未授权
@@ -65,7 +65,7 @@ ServiceUnavailableError → 503
 
 ```python
 # ✅ 正确：业务异常继承 Foundation Kit 的异常类
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     BusinessError,
     NotFoundError,
     AlreadyExistsError,
@@ -131,11 +131,11 @@ async def pay_order(order_id: str, service=Depends(get_order_service)):
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from aurimyth.foundation_kit.application.interfaces.egress import (
+from aury.boot.application.interfaces.egress import (
     ErrorResponse,
     ResponseBuilder
 )
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 app = FastAPI()
 
@@ -256,7 +256,7 @@ async def create_user(request: UserCreateRequest, service=Depends(...)):
 ### 结构化错误日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 @router.post("/orders")
 async def create_order(request: OrderRequest, service=Depends(...)):
@@ -312,7 +312,7 @@ async def create_user(request: UserCreateRequest, service=Depends(...)):
 ### Context Manager 模式（事务相关）
 
 ```python
-from aurimyth.foundation_kit.domain.transaction import transactional_context
+from aury.boot.domain.transaction import transactional_context
 
 @router.post("/orders")
 async def create_order(request: OrderRequest, session=Depends(...)):
@@ -474,7 +474,7 @@ except DatabaseError as e:
 **错误代码继承链**：定义错误代码枚举时必须继承 Foundation Kit 的 `ErrorCode`
 
 ```python
-from aurimyth.foundation_kit.application.errors.codes import ErrorCode
+from aury.boot.application.errors.codes import ErrorCode
 
 # ✅ 正确的继承方式 - 继承 ErrorCode，在 5xxx 范围内定义
 class IdentityErrorCode(ErrorCode):
@@ -497,7 +497,7 @@ class IdentityErrorCode(ErrorCode):
 **异常继承链**：定义异常时必须显式继承 Foundation Kit 的异常类，并在 metadata 中使用错误代码
 
 ```python
-from aurimyth.foundation_kit.application.errors import (
+from aury.boot.application.errors import (
     UnauthorizedError,      # 401
     NotFoundError,          # 404
     AlreadyExistsError,     # 409
@@ -867,7 +867,7 @@ class UserService:
 
 ```python
 from fastapi import APIRouter
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 from app.constants import UserNotFoundError, DuplicateUserError
 
 router = APIRouter()
@@ -946,7 +946,7 @@ raise UserNotFoundError(user_id=user_id)
 
 ```python
 # ✅ 好：继承 Foundation Kit 的异常
-from aurimyth.foundation_kit.application.errors import NotFoundError
+from aury.boot.application.errors import NotFoundError
 
 class MyServiceNotFoundError(NotFoundError):
     pass

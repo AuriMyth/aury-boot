@@ -7,7 +7,7 @@
 ### 基础任务
 
 ```python
-from aurimyth.foundation_kit.infrastructure.tasks.manager import TaskManager
+from aury.boot.infrastructure.tasks.manager import TaskManager
 
 tm = TaskManager.get_instance()
 
@@ -150,7 +150,7 @@ async def generate_report(report_id: str):
 ### 定时任务集成
 
 ```python
-from aurimyth.foundation_kit.infrastructure.scheduler.manager import SchedulerManager
+from aury.boot.infrastructure.scheduler.manager import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
 
@@ -206,7 +206,7 @@ TASK_TIMEOUT=600
 ### 任务日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 @tm.conditional_task(max_retries=3)
 async def monitored_task(data: str):

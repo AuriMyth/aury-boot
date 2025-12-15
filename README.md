@@ -1,6 +1,6 @@
-# AuriMyth Foundation Kit
+# Aury Boot
 
-这是AuriMyth项目的核心基础架构工具包，提供所有微服务共用的基础设施组件。
+这是AUM项目的基于 FastAPI 生态的企业级 API 开发框架，提供所有微服务共用的基础设施组件。
 
 ## 功能模块
 
@@ -23,7 +23,7 @@
 提供完整的多语言支持，包括文本翻译、日期/数字本地化等：
 
 ```python
-from aurimyth.foundation_kit.i18n import Translator, translate, set_locale
+from aury.boot.i18n import Translator, translate, set_locale
 
 # 设置语言环境
 set_locale("zh_CN")
@@ -46,7 +46,7 @@ def get_user_title():
 提供便捷的测试工具，包括测试基类、测试客户端、数据工厂等：
 
 ```python
-from aurimyth.foundation_kit.testing import TestCase, TestClient, Factory
+from aury.boot.testing import TestCase, TestClient, Factory
 
 class UserServiceTest(TestCase):
     """测试基类，自动处理数据库事务回滚"""
@@ -68,7 +68,7 @@ class UserServiceTest(TestCase):
 提供便捷的数据库迁移管理，类似 Django 的命令行接口：
 
 ```python
-from aurimyth.foundation_kit.migrations import MigrationManager
+from aury.boot.migrations import MigrationManager
 
 # 使用 Python API
 migration_manager = MigrationManager()
@@ -82,19 +82,19 @@ status = await migration_manager.status()
 
 ```bash
 # 生成迁移文件
-aurimyth-migrate make -m "add user table"
+aury migrate make -m "add user table"
 
 # 执行迁移
-aurimyth-migrate up
+aury migrate up
 
 # 回滚迁移
-aurimyth-migrate down
+aury migrate down
 
 # 查看状态
-aurimyth-migrate status
+aury migrate status
 
 # 显示迁移历史
-aurimyth-migrate show
+aury migrate show
 ```
 
 ### 4. 代码生成器
@@ -103,20 +103,20 @@ aurimyth-migrate show
 
 ```bash
 # 生成完整 CRUD（Model + Repository + Service + API）
-aum generate crud user
+aury generate crud user
 
 # 单独生成各层代码
-aum generate model user      # SQLAlchemy 模型
-aum generate repo user       # Repository 仓储层
-aum generate service user    # Service 服务层
-aum generate api user        # API 路由
+aury generate model user      # SQLAlchemy 模型
+aury generate repo user       # Repository 仓储层
+aury generate service user    # Service 服务层
+aury generate api user        # API 路由
 
 # 交互式生成（推荐）：逐步选择字段、类型、验证规则
-aum generate crud user -i
-aum generate model user -i
+aury generate crud user -i
+aury generate model user -i
 
 # 指定字段（非交互式）
-aum generate model user --fields "name:str,email:str,age:int"
+aury generate model user --fields "name:str,email:str,age:int"
 ```
 
 **交互式模式 (`-i`)** 会引导你：
@@ -129,14 +129,14 @@ aum generate model user --fields "name:str,email:str,age:int"
 
 ## 使用方式
 
-在AuriMyth工作区内的其他包中，可以直接导入：
+在AUM工作区内的其他包中，可以直接导入：
 
 ```python
-from aurimyth.foundation_kit.infrastructure.database import DatabaseManager
-from aurimyth.foundation_kit.infrastructure.logging import logger
-from aurimyth.foundation_kit.core import BaseModel, BaseRepository, BaseService
-from aurimyth.foundation_kit.interfaces import BaseRequest, BaseResponse
-from aurimyth.foundation_kit.application.rpc import RPCClient
+from aury.boot.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.logging import logger
+from aury.boot.core import BaseModel, BaseRepository, BaseService
+from aury.boot.interfaces import BaseRequest, BaseResponse
+from aury.boot.application.rpc import RPCClient
 ```
 
 ## 开发指南
@@ -147,13 +147,13 @@ from aurimyth.foundation_kit.application.rpc import RPCClient
 
 ```bash
 # 推荐（PostgreSQL + Redis + 任务队列 + 调度器）
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 或按需组合
-uv add "aurimyth-foundation-kit[postgres,redis]"
+uv add "aury-boot[postgres,redis]"
 
 # 全部依赖
-uv add "aurimyth-foundation-kit[all]"
+uv add "aury-boot[all]"
 ```
 
 ### 可选依赖
@@ -175,8 +175,8 @@ uv add "aurimyth-foundation-kit[all]"
 
 ```bash
 # 克隆仓库
-git clone https://github.com/AuriMythNeo/aurimyth-foundation-kit.git
-cd aurimyth-foundation-kit
+git clone https://github.com/AUMNeo/aury-boot.git
+cd aury-boot
 
 # 安装依赖
 uv sync --group dev
@@ -186,7 +186,7 @@ pytest
 
 # 代码检查
 ruff check .
-mypy aurimyth/
+mypy aury/
 ```
 
 

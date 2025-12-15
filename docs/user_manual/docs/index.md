@@ -1,6 +1,6 @@
-# 🚀 AuriMyth Foundation Kit
+# 🚀 Aury Boot
 
-欢迎使用 **AuriMyth Foundation Kit** - 现代化微服务基础架构框架！
+欢迎使用 **Aury Boot** - 现代化微服务基础架构框架！
 
 这是一款专为构建高性能、可扩展微服务而设计的 Python 框架，提供了开箱即用的企业级功能。
 
@@ -10,19 +10,19 @@
 
 ```bash
 # 推荐（PostgreSQL + Redis + 任务队列 + 调度器）
-uv add "aurimyth-foundation-kit[recommended]"
+uv add "aury-boot[recommended]"
 
 # 或按需组合
-uv add "aurimyth-foundation-kit[postgres,redis]"
+uv add "aury-boot[postgres,redis]"
 ```
 
 ### Hello World
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
-from aurimyth.foundation_kit.application.server import run_app
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.server import run_app
+from aury.boot.application.interfaces.egress import BaseResponse
 
 class AppConfig(BaseConfig):
     pass
@@ -35,7 +35,7 @@ app = FoundationApp(
 
 @app.get("/")
 def hello():
-    return BaseResponse(code=200, message="Hello", data={"message": "Hello AuriMyth!"})
+    return BaseResponse(code=200, message="Hello", data={"message": "Hello AUM!"})
 
 if __name__ == "__main__":
     run_app(app, host="0.0.0.0", port=8000)
@@ -45,10 +45,10 @@ if __name__ == "__main__":
 
 ```bash
 # 开发模式（热重载）
-aurimyth-server dev
+aury server dev
 
 # 生产模式（多进程）
-aurimyth-server prod
+aury server prod
 ```
 
 访问 http://localhost:8000
@@ -181,8 +181,8 @@ A: 查看 [服务器运行](./03-server-deployment.md) 中的生产模式配置�
 ## 📞 支持
 
 - 📖 [完整文档](./00-quick-start.md)
-- 🐛 [GitHub Issues](https://github.com/AuriMythNeo/aurimyth-foundation-kit/issues)
-- 💬 [GitHub Discussions](https://github.com/AuriMythNeo/aurimyth-foundation-kit/discussions)
+- 🐛 [GitHub Issues](https://github.com/AUMNeo/aury-boot/issues)
+- 💬 [GitHub Discussions](https://github.com/AUMNeo/aury-boot/discussions)
 
 ---
 

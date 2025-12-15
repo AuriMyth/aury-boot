@@ -1,8 +1,8 @@
-# 1. 简介 - 深入理解 AuriMyth Foundation Kit
+# 1. 简介 - 深入理解 Aury Boot
 
-## 什么是 AuriMyth Foundation Kit？
+## 什么是 Aury Boot？
 
-AuriMyth Foundation Kit 是一个**微服务开发框架**，基于 FastAPI，但提供了企业级的基础设施支持。它不是替代 FastAPI，而是在其基础上增加了生产环境必需的功能。
+Aury Boot 是一个**微服务开发框架**，基于 FastAPI，但提供了企业级的基础设施支持。它不是替代 FastAPI，而是在其基础上增加了生产环境必需的功能。
 
 ### 框架的核心理念
 
@@ -180,7 +180,7 @@ API 层 (api/)
 ## 依赖关系
 
 ```
-aurimyth-foundation-kit
+aury-boot
 ├── FastAPI >= 0.122.0
 ├── SQLAlchemy >= 2.0.44
 ├── pydantic >= 2.12

@@ -4,26 +4,26 @@
 
 ## Kit 提供的迁移命令
 
-AuriMyth Foundation Kit 提供了完整的迁移管理命令，类似 Django 的 `migrate` 命令：
+Aury Boot 提供了完整的迁移管理命令，类似 Django 的 `migrate` 命令：
 
 ```bash
 # 生成迁移文件
-aurimyth-migrate make -m "Add users table"
+aury migrate make -m "Add users table"
 
 # 执行迁移
-aurimyth-migrate up
+aury migrate up
 
 # 回滚迁移
-aurimyth-migrate down -1
+aury migrate down -1
 
 # 查看迁移状态
-aurimyth-migrate status
+aury migrate status
 
 # 显示所有迁移
-aurimyth-migrate show
+aury migrate show
 
 # 检查迁移问题
-aurimyth-migrate check
+aury migrate check
 ```
 
 ## 自动迁移（推荐）
@@ -31,9 +31,9 @@ aurimyth-migrate check
 Kit 提供了 `MigrationComponent`，可以在应用启动时自动执行迁移：
 
 ```python
-from aurimyth.foundation_kit.application.app.base import FoundationApp
-from aurimyth.foundation_kit.application.config import BaseConfig
-from aurimyth.foundation_kit.application.app.components import MigrationComponent
+from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.app.components import MigrationComponent
 
 class AppConfig(BaseConfig):
     pass
@@ -76,7 +76,7 @@ class MyApp(FoundationApp):
     ]
 
 # 然后手动执行
-aurimyth-migrate up
+aury migrate up
 ```
 
 ## 初始化项目
@@ -148,7 +148,7 @@ else:
 # models/user.py
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String
-from aurimyth.foundation_kit.domain.models.base import Base, GUID
+from aury.boot.domain.models.base import Base, GUID
 
 class User(Base):
     __tablename__ = "users"
@@ -163,7 +163,7 @@ class User(Base):
 
 ```bash
 # 只检测变更，不生成文件
-aurimyth-migrate make -m "Add users table" --dry-run
+aury migrate make -m "Add users table" --dry-run
 ```
 
 输出：
@@ -178,7 +178,7 @@ aurimyth-migrate make -m "Add users table" --dry-run
 
 ```bash
 # 自动生成迁移脚本
-aurimyth-migrate make -m "Add users table"
+aury migrate make -m "Add users table"
 
 # 输出: ✅ 迁移文件已生成: alembic/versions/2024_01_01_120000_add_users_table.py
 ```
@@ -189,17 +189,17 @@ aurimyth-migrate make -m "Add users table"
 
 ```bash
 # 执行到最新版本
-aurimyth-migrate up
+aury migrate up
 
 # 或指定版本
-aurimyth-migrate up -r "2024_01_01_120000"
+aury migrate up -r "2024_01_01_120000"
 ```
 
 ### 2. 查看迁移状态
 
 ```bash
 # 查看当前状态
-aurimyth-migrate status
+aury migrate status
 
 # 输出:
 # 📊 迁移状态:
@@ -214,7 +214,7 @@ aurimyth-migrate status
 
 ```bash
 # 显示迁移列表
-aurimyth-migrate show
+aury migrate show
 
 # 输出表格显示所有迁移
 ```
@@ -223,23 +223,23 @@ aurimyth-migrate show
 
 ```bash
 # 回滚一个版本
-aurimyth-migrate down -1
+aury migrate down -1
 
 # 回滚到前一个版本
-aurimyth-migrate down previous
+aury migrate down previous
 
 # 回滚到指定版本
-aurimyth-migrate down "2024_01_01_100000"
+aury migrate down "2024_01_01_100000"
 
 # 干运行（只显示会回滚的迁移，不实际执行）
-aurimyth-migrate down -1 --dry-run
+aury migrate down -1 --dry-run
 ```
 
 ### 5. 检查迁移问题
 
 ```bash
 # 检查迁移文件是否有问题
-aurimyth-migrate check
+aury migrate check
 
 # 输出:
 # ✅ 迁移检查通过
@@ -253,10 +253,10 @@ aurimyth-migrate check
 
 ```bash
 # 显示迁移历史
-aurimyth-migrate history
+aury migrate history
 
 # 详细模式
-aurimyth-migrate history --verbose
+aury migrate history --verbose
 ```
 
 ## 常见场景
@@ -269,10 +269,10 @@ aurimyth-migrate history --verbose
 #     new_field: Mapped[str] = mapped_column(String(100), nullable=True)
 
 # 2. 生成迁移
-aurimyth-migrate make -m "Add new_field to users"
+aury migrate make -m "Add new_field to users"
 
 # 3. 执行迁移
-aurimyth-migrate up
+aury migrate up
 ```
 
 ### 删除列
@@ -283,10 +283,10 @@ aurimyth-migrate up
 #     # 删除 new_field
 
 # 2. 生成迁移
-aurimyth-migrate make -m "Remove new_field from users"
+aury migrate make -m "Remove new_field from users"
 
 # 3. 执行迁移
-aurimyth-migrate up
+aury migrate up
 ```
 
 ### 添加索引
@@ -297,10 +297,10 @@ aurimyth-migrate up
 #     email: Mapped[str] = mapped_column(String(100), index=True)
 
 # 2. 生成迁移
-aurimyth-migrate make -m "Add index on users.email"
+aury migrate make -m "Add index on users.email"
 
 # 3. 执行迁移
-aurimyth-migrate up
+aury migrate up
 ```
 
 ### 添加外键
@@ -314,10 +314,10 @@ aurimyth-migrate up
 #     profile: Mapped['Profile'] = relationship('Profile')
 
 # 2. 生成迁移
-aurimyth-migrate make -m "Add profile_id to users"
+aury migrate make -m "Add profile_id to users"
 
 # 3. 执行迁移
-aurimyth-migrate up
+aury migrate up
 ```
 
 ### 修改列类型
@@ -328,10 +328,10 @@ aurimyth-migrate up
 #     username: Mapped[str] = mapped_column(String(100))  # 从 50 改为 100
 
 # 2. 生成迁移
-aurimyth-migrate make -m "Increase username length"
+aury migrate make -m "Increase username length"
 
 # 3. 执行迁移
-aurimyth-migrate up
+aury migrate up
 ```
 
 ## 环境变量配置
@@ -355,7 +355,7 @@ DATABASE_URL=postgresql+asyncpg://user:pass@proddb:5432/mydb_prod
 
 ```bash
 # 创建空迁移文件
-aurimyth-migrate make -m "Custom migration" --no-autogenerate
+aury migrate make -m "Custom migration" --no-autogenerate
 
 # 编辑生成的文件：alembic/versions/xxx_custom_migration.py
 ```
@@ -388,15 +388,15 @@ def downgrade():
 
 3. ✅ **团队协作**
    - 每个特性分支一个迁移
-   - 使用 `aurimyth-migrate merge` 合并冲突的迁移
+   - 使用 `aury migrate merge` 合并冲突的迁移
    - 定期合并迁移
 
 4. ✅ **生产部署**
    ```bash
    # 部署前先在测试环境验证
-   aurimyth-migrate status         # 查看待执行迁移
-   aurimyth-migrate up --dry-run   # 检查会执行的迁移
-   aurimyth-migrate up             # 执行迁移
+   aury migrate status         # 查看待执行迁移
+   aury migrate up --dry-run   # 检查会执行的迁移
+   aury migrate up             # 执行迁移
    ```
 
 ## 常见问题
@@ -404,40 +404,40 @@ def downgrade():
 ### Q: 如何查看待执行的 SQL？
 ```bash
 # 检查状态
-aurimyth-migrate status
+aury migrate status
 
 # 干运行
-aurimyth-migrate up --dry-run
+aury migrate up --dry-run
 ```
 
 ### Q: 迁移失败了怎么办？
 ```bash
 # 1. 查看当前状态
-aurimyth-migrate status
+aury migrate status
 
 # 2. 查看错误日志
 # 3. 修复问题后重试
-aurimyth-migrate up
+aury migrate up
 ```
 
 ### Q: 如何解决迁移冲突？
 ```bash
 # 当有多个分支的迁移时，使用 merge 合并
-aurimyth-migrate merge "abc123,def456" -m "merge branches"
+aury migrate merge "abc123,def456" -m "merge branches"
 ```
 
 ### Q: 如何检查迁移的有效性？
 ```bash
 # 检查迁移文件
-aurimyth-migrate check
+aury migrate check
 
 # 显示所有迁移
-aurimyth-migrate show
+aury migrate show
 
 # 显示历史
-aurimyth-migrate history --verbose
+aury migrate history --verbose
 ```
 
 ---
 
-**总结**：使用 `aurimyth-migrate make -m "description"` 自动生成迁移，Kit 会自动检测模型变更并生成必要的 SQL。无需手动编写 SQL，安全且高效！
+**总结**：使用 `aury migrate make -m "description"` 自动生成迁移，Kit 会自动检测模型变更并生成必要的 SQL。无需手动编写 SQL，安全且高效！

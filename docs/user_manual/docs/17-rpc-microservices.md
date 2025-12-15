@@ -30,7 +30,7 @@ RPC_CLIENT_RETRY_DELAY=1
 ### 基础用法
 
 ```python
-from aurimyth.foundation_kit.application.rpc.client import create_rpc_client
+from aury.boot.application.rpc.client import create_rpc_client
 
 # 创建客户端
 client = create_rpc_client(service_name="order-service")
@@ -93,7 +93,7 @@ response = await client.delete("/api/v1/users/123")
 ### 基础错误处理
 
 ```python
-from aurimyth.foundation_kit.application.rpc.exceptions import (
+from aury.boot.application.rpc.exceptions import (
     RPCConnectionError,
     RPCTimeoutError,
     RPCResponseError,
@@ -136,7 +136,7 @@ async def call_with_retry(client, endpoint: str, max_retries: int = 3):
 ### 自动追踪
 
 ```python
-from aurimyth.foundation_kit.common.logging import get_trace_id, logger
+from aury.boot.common.logging import get_trace_id, logger
 
 # RPC 调用会自动添加 X-Trace-ID 请求头
 @router.get("/orders/{order_id}")
@@ -155,7 +155,7 @@ async def get_order(order_id: str):
 ### 手动设置 Trace-ID
 
 ```python
-from aurimyth.foundation_kit.common.logging import set_trace_id, get_trace_id
+from aury.boot.common.logging import set_trace_id, get_trace_id
 
 async def process_task(task_id: str, custom_trace_id: str = None):
     """异步任务中使用自定义 Trace-ID"""
@@ -315,7 +315,7 @@ client = create_rpc_client("order-service")
 ### 请求日志
 
 ```python
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 async def logged_rpc_call():
     logger.info("发起 RPC 调用: order-service")
@@ -330,7 +330,7 @@ async def logged_rpc_call():
 
 ```python
 import time
-from aurimyth.foundation_kit.common.logging import logger
+from aury.boot.common.logging import logger
 
 async def monitored_rpc_call():
     start_time = time.time()
@@ -366,7 +366,7 @@ async def call_order_service():
 ### 3. 缓存结果
 
 ```python
-from aurimyth.foundation_kit.infrastructure.cache import CacheManager
+from aury.boot.infrastructure.cache import CacheManager
 
 cache = CacheManager.get_instance()
 

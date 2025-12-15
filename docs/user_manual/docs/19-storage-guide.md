@@ -1,14 +1,14 @@
 # 19. 对象存储指南
 
-对象存储模块基于 [aurimyth-storage-sdk](https://github.com/AuriMythNeo/aurimyth-storage-sdk) 实现，支持 S3 兼容存储（AWS S3、腾讯云 COS、阿里云 OSS、MinIO 等）和 STS 临时凭证签发。
+对象存储模块基于 [aury-sdk-storage](https://github.com/AUMNeo/aury-sdk-storage) 实现，支持 S3 兼容存储（AWS S3、腾讯云 COS、阿里云 OSS、MinIO 等）和 STS 临时凭证签发。
 
 ## 安装
 
 ```bash
 # 完整安装（S3/COS/OSS + STS 支持）
-uv add "aurimyth-storage-sdk[aws]"
+uv add "aury-sdk-storage[aws]"
 # 或
-pip install "aurimyth-storage-sdk[aws]"
+pip install "aury-sdk-storage[aws]"
 ```
 
 ## 基本用法（StorageManager）
@@ -17,7 +17,7 @@ pip install "aurimyth-storage-sdk[aws]"
 
 ```python
 from io import BytesIO
-from aurimyth.foundation_kit.infrastructure.storage import (
+from aury.boot.infrastructure.storage import (
     StorageManager, StorageConfig, StorageBackend, StorageFile,
 )
 
@@ -69,7 +69,7 @@ await storage.delete_file("user/123/avatar.png")
 ## 本地存储（开发测试）
 
 ```python
-from aurimyth.foundation_kit.infrastructure.storage import (
+from aury.boot.infrastructure.storage import (
     StorageManager, StorageConfig, StorageBackend, StorageFile,
 )
 
@@ -93,7 +93,7 @@ STS（Security Token Service）用于生成临时访问凭证，适合以下场�
 - **最小权限**：只授予必要的操作权限
 
 ```python
-from aurimyth_storage_sdk.sts import (
+from aury.sdk.storage.sts import (
     STSProviderFactory, ProviderType, STSRequest, ActionType,
 )
 
@@ -130,7 +130,7 @@ return {
 ### 操作类型
 
 ```python
-from aurimyth_storage_sdk.sts import ActionType
+from aury.sdk.storage.sts import ActionType
 
 # 只读权限（下载/查看）
 ActionType.READ
@@ -149,8 +149,8 @@ ActionType.ALL
 ```python
 from io import BytesIO
 from fastapi import File, UploadFile
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
-from aurimyth.foundation_kit.infrastructure.storage import StorageManager, StorageFile
+from aury.boot.application.interfaces.egress import BaseResponse
+from aury.boot.infrastructure.storage import StorageManager, StorageFile
 
 storage = StorageManager.get_instance()
 
@@ -187,7 +187,7 @@ async def upload_avatar(
 
 ```python
 from pydantic import BaseModel
-from aurimyth_storage_sdk.sts import (
+from aury.sdk.storage.sts import (
     STSProviderFactory, ProviderType, STSRequest, ActionType, STSRequestError,
 )
 
@@ -266,7 +266,7 @@ async def download_file(file_id: str):
 如果不需要 `StorageManager`，可以直接使用 SDK：
 
 ```python
-from aurimyth_storage_sdk.storage import (
+from aury.sdk.storage.storage import (
     S3Storage, StorageConfig, StorageBackend, StorageFile,
 )
 
@@ -336,7 +336,7 @@ STORAGE_BUCKET_NAME=my-bucket-1250000000
 ## 错误处理
 
 ```python
-from aurimyth_storage_sdk import (
+from aury.sdk.storage import (
     StorageSDKError,
     STSError,
     STSRequestError,

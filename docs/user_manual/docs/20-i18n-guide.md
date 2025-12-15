@@ -7,7 +7,7 @@
 ### 基础翻译
 
 ```python
-from aurimyth.foundation_kit.common.i18n.translator import translate, load_translations
+from aury.boot.common.i18n.translator import translate, load_translations
 
 # 加载翻译
 load_translations({
@@ -95,7 +95,7 @@ msg = translate("hello")  # 使用默认语言
 
 ```python
 from fastapi import APIRouter, Header
-from aurimyth.foundation_kit.application.interfaces.egress import BaseResponse
+from aury.boot.application.interfaces.egress import BaseResponse
 
 router = APIRouter()
 
@@ -131,7 +131,7 @@ async def get_user(user_id: str, accept_language: str = Header(default="zh-CN"))
 ### 错误消息国际化
 
 ```python
-from aurimyth.foundation_kit.application.errors import NotFoundError
+from aury.boot.application.errors import NotFoundError
 
 def get_locale_from_request(request):
     """从请求中提取语言"""
