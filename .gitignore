@@ -42,4 +42,6 @@ log/
 # OS
 .DS_Store
 Thumbs.db
-aury/foundation_kit/_version.py
+
+# Generated version files
+*/_version.py
