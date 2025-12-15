@@ -1,6 +1,6 @@
 # {project_name}
 
-基于 [Aury Boot](https://github.com/AUMNeo/aury-boot) 构建的微服务。
+基于 [Aury Boot](https://github.com/AuriMyth/aury-boot) 构建的 API 服务。
 
 ## 快速开始
 
@@ -108,4 +108,4 @@ aury worker
 
 - [DEVELOPMENT.md](./DEVELOPMENT.md) - 开发指南（代码组织与规范）
 - [CLI.md](./CLI.md) - CLI 命令参考
-- [Aury Boot 文档](https://github.com/AUMNeo/aury-boot)
+- [Aury Boot 文档](https://github.com/AuriMyth/aury-boot)

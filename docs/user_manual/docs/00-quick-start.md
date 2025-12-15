@@ -741,7 +741,7 @@ async def websocket_chat(websocket: WebSocket, room_id: str):
 
 ## 19. 对象存储
 
-基于 [aury-sdk-storage](https://github.com/AUMNeo/aury-sdk-storage)，支持 S3 兼容存储和 STS 临时凭证。
+基于 [aury-sdk-storage](https://github.com/AuriMyth/aury-sdk-storage)，支持 S3 兼容存储和 STS 临时凭证。
 
 ```bash
 # 安装

@@ -1,6 +1,6 @@
 # {project_name} CLI 命令参考
 
-本文档基于 [Aury Boot](https://github.com/AUMNeo/aury-boot) 框架。
+本文档基于 [Aury Boot](https://github.com/AuriMyth/aury-boot) 框架。
 
 ## 服务器命令
 

@@ -884,7 +884,7 @@ def init(
     console.print()
     console.print("[dim]💡 使用 -i 参数可交互式配置字段、类型、约束等[/dim]")
     console.print()
-    console.print("[dim]详细文档: https://github.com/AUMNeo/aury-boot[/dim]")
+    console.print("[dim]详细文档: https://github.com/AuriMyth/aury-boot[/dim]")
 
 
 __all__ = ["init", "init_admin_console_module"]

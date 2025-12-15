@@ -175,7 +175,7 @@ uv add "aury-boot[all]"
 
 ```bash
 # 克隆仓库
-git clone https://github.com/AUMNeo/aury-boot.git
+git clone https://github.com/AuriMyth/aury-boot.git
 cd aury-boot
 
 # 安装依赖

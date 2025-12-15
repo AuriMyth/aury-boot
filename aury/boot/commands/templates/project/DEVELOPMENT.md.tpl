@@ -1,6 +1,6 @@
 # {project_name} 开发指南
 
-本文档基于 [Aury Boot](https://github.com/AUMNeo/aury-boot) 框架。
+本文档基于 [Aury Boot](https://github.com/AuriMyth/aury-boot) 框架。
 
 CLI 命令参考请查看 [CLI.md](./CLI.md)。
 

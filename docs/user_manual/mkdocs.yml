@@ -1,8 +1,8 @@
-site_name: AUM Foundation Kit
-site_description: 现代化微服务基础架构框架用户开发手册
-site_author: AUM Team
-repo_url: https://github.com/AUMNeo/aury-foundation-kit
-repo_name: aury-foundation-kit
+site_name: Aury Boot
+site_description: 基于 FastAPI 生态的企业级 API 开发框架用户手册
+site_author: Aury Team
+repo_url: https://github.com/AuriMyth/aury-boot
+repo_name: aury-boot
 docs_dir: docs
 
 theme:
@@ -108,9 +108,9 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/AUMNeo/aury-foundation-kit
+      link: https://github.com/AuriMyth/aury-boot
       name: GitHub
 
-copyright: Copyright &copy; 2024 AUM Team
+copyright: Copyright &copy; 2024 Aury Team
 
 

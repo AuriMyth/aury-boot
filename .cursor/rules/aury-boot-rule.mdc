@@ -1,7 +1,7 @@
 ---
 alwaysApply: false
 ---
-# AuriMyth Foundation Kit 开发规范
+# Aury Boot 开发规范
 
 **核心原则：永远不要考虑向后兼容**
 

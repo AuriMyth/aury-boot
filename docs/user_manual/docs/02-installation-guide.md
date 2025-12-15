@@ -30,7 +30,7 @@ uv add aury-boot
 
 **安装 Kit（从 Git - 开发版本）**：
 ```bash
-uv add git+https://github.com/AUMNeo/aury-boot.git
+uv add git+https://github.com/AuriMyth/aury-boot.git
 ```
 
 ### 方式 2：使用 pip
@@ -40,7 +40,7 @@ uv add git+https://github.com/AUMNeo/aury-boot.git
 pip install aury-boot
 
 # 从 Git
-pip install git+https://github.com/AUMNeo/aury-boot.git
+pip install git+https://github.com/AuriMyth/aury-boot.git
 ```
 
 ### 方式 3：本地开发安装
@@ -49,7 +49,7 @@ pip install git+https://github.com/AUMNeo/aury-boot.git
 
 ```bash
 # 克隆仓库
-git clone https://github.com/AUMNeo/aury-boot.git
+git clone https://github.com/AuriMyth/aury-boot.git
 cd aury-boot
 
 # 使用 uv 安装到本地可编辑模式

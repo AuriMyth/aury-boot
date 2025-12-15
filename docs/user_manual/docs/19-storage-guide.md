@@ -1,6 +1,6 @@
 # 19. 对象存储指南
 
-对象存储模块基于 [aury-sdk-storage](https://github.com/AUMNeo/aury-sdk-storage) 实现，支持 S3 兼容存储（AWS S3、腾讯云 COS、阿里云 OSS、MinIO 等）和 STS 临时凭证签发。
+对象存储模块基于 [aury-sdk-storage](https://github.com/AuriMyth/aury-sdk-storage) 实现，支持 S3 兼容存储（AWS S3、腾讯云 COS、阿里云 OSS、MinIO 等）和 STS 临时凭证签发。
 
 ## 安装
 

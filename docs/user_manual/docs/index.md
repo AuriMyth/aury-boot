@@ -181,8 +181,8 @@ A: 查看 [服务器运行](./03-server-deployment.md) 中的生产模式配置�
 ## 📞 支持
 
 - 📖 [完整文档](./00-quick-start.md)
-- 🐛 [GitHub Issues](https://github.com/AUMNeo/aury-boot/issues)
-- 💬 [GitHub Discussions](https://github.com/AUMNeo/aury-boot/discussions)
+- 🐛 [GitHub Issues](https://github.com/AuriMyth/aury-boot/issues)
+- 💬 [GitHub Discussions](https://github.com/AuriMyth/aury-boot/discussions)
 
 ---
 
