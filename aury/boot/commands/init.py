@@ -760,7 +760,9 @@ def init(
         content = re.sub(r'```python(.*?)```', process_code_block, content, flags=re.DOTALL)
         
         # 格式化模板（替换 {project_name} 等占位符）
-        content = content.format(**template_vars)
+        # 合并 template_vars 和 dict_placeholders，防止 KeyError
+        format_vars = {**template_vars, **dict_placeholders}
+        content = content.format(**format_vars)
 
         # 若启用管理后台，默认在 .env.example 中打开 ADMIN_ENABLED，并给出基础示例
         if template_name == ".env.example" and with_admin_console:
