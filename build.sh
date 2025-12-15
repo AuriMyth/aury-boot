@@ -61,8 +61,8 @@ check_git() {
         info "开发版本: ${CYAN}${VERSION}${NC}"
     fi
     
-    # 检查是否有未提交的更改
-    if [[ -n $(git status --porcelain) ]]; then
+    # 检查是否有未提交的更改（只检查已追踪的文件，忽略未追踪文件）
+    if [[ -n $(git status --porcelain | grep -v "^??") ]]; then
         warning "存在未提交的更改，版本号将带有 +dirty 后缀"
     fi
 }
