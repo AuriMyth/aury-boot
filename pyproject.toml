@@ -225,7 +225,7 @@ packages = [
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "aum/",
+    "aury/",
     "pyproject.toml",
     "README.md",
     "LICENSE",

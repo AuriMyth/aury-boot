@@ -130,11 +130,20 @@ publish() {
     fi
     
     info "开始上传..."
+    # 构建 uv publish 命令
+    local publish_cmd="uv publish"
+    
     if [ "$TARGET" = "test" ]; then
-        uv publish --publish-url "$pypi_url" --username __token__
-    else
-        uv publish --username __token__
+        publish_cmd="$publish_cmd --publish-url '$pypi_url'"
     fi
+    
+    # 添加认证信息（优先使用 token）
+    if [ -n "$UV_PUBLISH_TOKEN" ]; then
+        publish_cmd="$publish_cmd --token '$UV_PUBLISH_TOKEN'"
+    fi
+    
+    # 执行发布命令
+    eval "$publish_cmd"
     
     success "发布完成！"
     echo ""
