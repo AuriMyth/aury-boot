@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -121,9 +122,12 @@ class BaseErrorHandler(ErrorHandler):
         
         errors = [detail.model_dump() for detail in exception.details] if exception.details else None
         
+        # 兼容 ErrorCode 枚举和字符串
+        code_value = exception.code.value if hasattr(exception.code, "value") else exception.code
+        
         response = ResponseBuilder.fail(
             message=exception.message,
-            code=int(exception.code.value),
+            code=int(code_value),
             errors=errors,
         )
         
@@ -160,11 +164,14 @@ class HTTPExceptionHandler(ErrorHandler):
 
 
 class ValidationErrorHandler(ErrorHandler):
-    """Pydantic验证异常处理器。"""
+    """验证异常处理器。
+    
+    处理 Pydantic ValidationError 和 FastAPI RequestValidationError。
+    """
     
     def can_handle(self, exception: Exception) -> bool:
         """判断是否为验证异常。"""
-        return isinstance(exception, ValidationError)
+        return isinstance(exception, ValidationError | RequestValidationError)
     
     async def handle(self, exception: Exception, request: Request) -> JSONResponse:
         """处理验证异常。"""

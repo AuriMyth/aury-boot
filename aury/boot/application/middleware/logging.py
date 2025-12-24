@@ -16,7 +16,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from aury.boot.common.logging import get_trace_id, logger, set_trace_id
+from aury.boot.application.errors import global_exception_handler
+from aury.boot.common.logging import logger, set_trace_id
 
 
 def log_request[T](func: Callable[..., T]) -> Callable[..., T]:
@@ -208,7 +209,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 f"请求处理失败: {request.method} {request.url.path} | "
                 f"耗时: {duration:.3f}s | Trace-ID: {trace_id}"
             )
-            raise
+            # 使用全局异常处理器生成响应，而不是直接抛出异常
+            # BaseHTTPMiddleware 中直接 raise 会绕过 FastAPI 的异常处理器
+            response = await global_exception_handler(request, exc)
+            response.headers["x-trace-id"] = trace_id
+            return response
 
 
 class WebSocketLoggingMiddleware:
