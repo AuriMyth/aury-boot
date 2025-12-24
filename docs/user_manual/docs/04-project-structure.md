@@ -426,7 +426,7 @@ DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 
 # 缓存
 CACHE_TYPE=redis
-CACHE_REDIS_URL=redis://localhost:6379/0
+CACHE_URL=redis://localhost:6379/0
 
 # 日志
 LOG_LEVEL=INFO

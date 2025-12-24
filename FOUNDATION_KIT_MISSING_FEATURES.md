@@ -2,7 +2,7 @@
 
 ## 🎯 文档目标
 
-全面对比 AuriMyth Foundation Kit 与主流顶级框架的功能差距，明确：
+全面对比 Aury Boot 与主流顶级框架的功能差距，明确：
 - ✅ **真实差距**：顶级框架原生提供，Kit 缺失的功能
 - ✅ **企业级通用需求**：所有框架都需要第三方支持的功能
 - ✅ **Core 层优化**：框架核心能力的深度优化建议
@@ -117,7 +117,7 @@
 #### 使用方式：
 ```python
 # 通过 RPC 调用用户服务
-from aurimyth.foundation_kit.application.rpc import RPCClient
+from aury.boot.application.rpc import RPCClient
 
 rpc_client = RPCClient("user-service")
 
@@ -160,7 +160,7 @@ has_permission = await rpc_client.call("auth.check_permission",
 ##### 2.1 健康检查增强
 ```python
 # 应该提供
-from aurimyth.foundation_kit.observability.health import health_check, HealthStatus
+from aury.boot.observability.health import health_check, HealthStatus
 
 @router.get("/health")
 async def health():
@@ -175,7 +175,7 @@ async def health():
 ##### 2.2 指标收集（Prometheus）
 ```python
 # 应该提供
-from aurimyth.foundation_kit.observability.metrics import MetricsCollector
+from aury.boot.observability.metrics import MetricsCollector
 
 metrics = MetricsCollector()
 metrics.increment("http.requests", tags={"method": "GET", "status": "200"})
@@ -186,7 +186,7 @@ metrics.gauge("active.connections", count)
 ##### 2.3 分布式追踪（OpenTelemetry）
 ```python
 # 应该提供
-from aurimyth.foundation_kit.observability.tracing import trace
+from aury.boot.observability.tracing import trace
 
 @trace("user_service.create_user")
 async def create_user(data):
@@ -272,7 +272,7 @@ async def create_user(data):
 **建议补充**：
 ```python
 # 应该提供
-from aurimyth.foundation_kit.security.masking import mask_phone, mask_email, mask_id_card
+from aury.boot.security.masking import mask_phone, mask_email, mask_id_card
 
 masked = mask_phone("13800138000")  # "138****8000"
 masked = mask_email("user@example.com")  # "u***@example.com"
@@ -310,7 +310,7 @@ masked = mask_id_card("110101199001011234")  # "110101********1234"
 #### 建议补充：
 ```python
 # 应该提供
-from aurimyth.foundation_kit.testing import TestCase, TestClient, Factory, Fixtures
+from aury.boot.testing import TestCase, TestClient, Factory, Fixtures
 
 class UserServiceTest(TestCase):
     fixtures = ["users.json", "roles.json"]  # 自动加载 Fixtures
@@ -344,7 +344,7 @@ class UserServiceTest(TestCase):
 
 #### Kit 现状：
 - ✅ **完整支持**（已实现）
-- ✅ 有完整的命令行工具（`aurimyth-migrate`）
+- ✅ 有完整的命令行工具（`aury migrate`）
 - ✅ 支持所有核心功能：
   - `make` - 生成迁移文件（自动检测模型变更）
   - `up` - 执行迁移
@@ -361,28 +361,28 @@ class UserServiceTest(TestCase):
 #### 已实现功能：
 ```bash
 # 生成迁移
-aurimyth-migrate make -m "add user table"
+aury migrate make -m "add user table"
 
 # 执行迁移
-aurimyth-migrate up
+aury migrate up
 
 # 回滚迁移
-aurimyth-migrate down previous
+aury migrate down previous
 
 # 查看状态
-aurimyth-migrate status
+aury migrate status
 
 # 显示所有迁移（Rich 表格）
-aurimyth-migrate show
+aury migrate show
 
 # 检查迁移
-aurimyth-migrate check
+aury migrate check
 
 # 合并迁移
-aurimyth-migrate merge "abc123,def456"
+aury migrate merge "abc123,def456"
 
 # 显示历史
-aurimyth-migrate history
+aury migrate history
 ```
 
 #### 可选增强（非必需）：
@@ -479,13 +479,13 @@ config/
    - 不提交到 Git
 
 **插件提供（可选）**：
-1. **Vault 插件**（`aurimyth-foundation-kit-vault`）
+1. **Vault 插件**（`aury-boot-vault`）
    - 集成 HashiCorp Vault
    - 支持动态密钥
    - 支持密钥轮换
    - 支持审计日志
 
-2. **AWS Secrets Manager 插件**（`aurimyth-foundation-kit-aws-secrets`）
+2. **AWS Secrets Manager 插件**（`aury-boot-aws-secrets`）
    - 集成 AWS Secrets Manager
    - 与 AWS 服务集成
    - 自动加密
@@ -549,8 +549,8 @@ python main.py
 
 **方式二：代码中指定**
 ```python
-from aurimyth.foundation_kit.config import ConfigManager
-from aurimyth.foundation_kit.config.secrets import FileSecretManager
+from aury.boot.config import ConfigManager
+from aury.boot.config.secrets import FileSecretManager
 
 # 使用框架内的文件密钥源
 config = ConfigManager(
@@ -560,7 +560,7 @@ config = ConfigManager(
 )
 
 # 或使用 Vault 插件
-from aurimyth_foundation_kit_vault import VaultSecretManager
+from aurimyth_kit_vault import VaultSecretManager
 
 config = ConfigManager(
     env="production",
@@ -572,7 +572,7 @@ config = ConfigManager(
 
 **方式三：继承 BaseConfig**
 ```python
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 
 # 自动检测环境并加载配置
 config = BaseConfig()  # 从 ENV 环境变量获取环境
@@ -645,14 +645,14 @@ class SecretManager(ABC):
 
 **插件实现（可选）**：
 
-**Vault 插件**（`aurimyth-foundation-kit-vault`）：
+**Vault 插件**（`aury-boot-vault`）：
 - 使用 `hvac` 库连接 Vault
 - 支持 KV v1 和 KV v2
 - 支持动态密钥（如数据库凭证）
 - 支持密钥轮换监听
 - 实现 `VaultSecretManager`
 
-**AWS Secrets Manager 插件**（`aurimyth-foundation-kit-aws-secrets`）：
+**AWS Secrets Manager 插件**（`aury-boot-aws-secrets`）：
 - 使用 `boto3` 连接 AWS
 - 支持区域选择
 - 支持密钥版本管理
@@ -702,13 +702,13 @@ class SecretManager(ABC):
 5. 支持密钥引用（`${secret:database/password}`）
 
 **阶段三：Vault 插件（独立插件包）**
-1. 创建 `aurimyth-foundation-kit-vault` 插件包
+1. 创建 `aury-boot-vault` 插件包
 2. 实现 `VaultSecretManager`
 3. 集成 HashiCorp Vault
 4. 支持动态密钥和密钥轮换
 
 **阶段四：AWS Secrets Manager 插件（独立插件包）**
-1. 创建 `aurimyth-foundation-kit-aws-secrets` 插件包
+1. 创建 `aury-boot-aws-secrets` 插件包
 2. 实现 `AWSSecretManager`
 3. 集成 AWS Secrets Manager
 4. 支持区域和版本管理
@@ -716,10 +716,10 @@ class SecretManager(ABC):
 **插件使用方式**：
 ```python
 # 安装插件
-pip install aurimyth-foundation-kit-vault
+pip install aury-boot-vault
 
 # 使用插件
-from aurimyth_foundation_kit_vault import VaultSecretManager
+from aurimyth_kit_vault import VaultSecretManager
 
 config = ConfigManager(
     env="production",
@@ -767,7 +767,7 @@ created_at = Column(DateTime, server_default=func.now())  # ✅ 推荐
 ##### 1.2 软删除机制扩展
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.models import SoftDeleteModel
+from aury.boot.core.models import SoftDeleteModel
 
 class User(SoftDeleteModel):
     # 自动包含 deleted_at 字段
@@ -781,7 +781,7 @@ await repo.hard_delete(user)   # 物理删除
 ##### 1.3 UUID 主键支持
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.models import UUIDModel
+from aury.boot.core.models import UUIDModel
 
 class User(UUIDModel):
     # 自动使用 UUID 主键
@@ -791,7 +791,7 @@ class User(UUIDModel):
 ##### 1.4 版本控制（乐观锁）
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.models import VersionedModel
+from aury.boot.core.models import VersionedModel
 
 class User(VersionedModel):
     # 自动包含 version 字段
@@ -832,7 +832,7 @@ await repo.update(user, data)  # 如果 version 不匹配，抛出 StaleObjectEr
 ##### 2.1 ORM 抽象层
 ```python
 # 应该提供 ORM 抽象接口
-from aurimyth.foundation_kit.core.orm import ORMAdapter, Session, Query
+from aury.boot.core.orm import ORMAdapter, Session, Query
 
 # ORM 适配器接口
 class ORMAdapter(ABC):
@@ -864,7 +864,7 @@ class TortoiseAdapter(ORMAdapter):
 ##### 2.2 模型基类抽象
 ```python
 # 应该提供 ORM 无关的模型基类
-from aurimyth.foundation_kit.core.models import BaseModel, ModelMeta
+from aury.boot.core.models import BaseModel, ModelMeta
 
 class BaseModel(ABC):
     """ORM 无关的模型基类。"""
@@ -895,7 +895,7 @@ class TortoiseModel(BaseModel):
 ##### 2.3 Repository 抽象
 ```python
 # 应该提供 ORM 无关的 Repository
-from aurimyth.foundation_kit.core.repository import BaseRepository, Session
+from aury.boot.core.repository import BaseRepository, Session
 
 class BaseRepository(IRepository[ModelType]):
     """ORM 无关的 Repository 基类。"""
@@ -920,7 +920,7 @@ class BaseRepository(IRepository[ModelType]):
 ##### 2.4 配置化 ORM 选择
 ```python
 # 应该支持配置化选择 ORM
-from aurimyth.foundation_kit.application.config import BaseConfig
+from aury.boot.application.config import BaseConfig
 
 class DatabaseSettings(BaseConfig):
     orm_type: str = "sqlalchemy"  # 或 "tortoise", "peewee", "sqlmodel"
@@ -931,14 +931,14 @@ class DatabaseSettings(BaseConfig):
 ##### 2.5 多 ORM 支持示例
 ```python
 # 使用 SQLAlchemy
-from aurimyth.foundation_kit.core.models.sqlalchemy import SQLAlchemyModel
+from aury.boot.core.models.sqlalchemy import SQLAlchemyModel
 
 class User(SQLAlchemyModel):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
 
 # 使用 Tortoise ORM
-from aurimyth.foundation_kit.core.models.tortoise import TortoiseModel
+from aury.boot.core.models.tortoise import TortoiseModel
 
 class User(TortoiseModel):
     id = fields.IntField(pk=True)
@@ -971,7 +971,7 @@ repo = UserRepository(session)  # 自动使用对应的 ORM 适配器
 ##### 2.1 查询构建器增强
 ```python
 # 应该支持
-from aurimyth.foundation_kit.core.repository import BaseRepository
+from aury.boot.core.repository import BaseRepository
 
 repo = UserRepository(session)
 
@@ -993,7 +993,7 @@ await repo.bulk_upsert([...])   # 批量插入或更新
 ##### 2.3 分页和排序标准化
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.repository import PaginationParams, SortParams
+from aury.boot.core.repository import PaginationParams, SortParams
 
 result = await repo.paginate(
     PaginationParams(page=1, page_size=20),
@@ -1005,7 +1005,7 @@ result = await repo.paginate(
 ##### 2.4 事务边界检查
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.repository import requires_transaction
+from aury.boot.core.repository import requires_transaction
 
 @requires_transaction
 async def update_user(repo, user, data):
@@ -1016,7 +1016,7 @@ async def update_user(repo, user, data):
 ##### 2.5 查询缓存
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.repository import cache_query
+from aury.boot.core.repository import cache_query
 
 @cache_query(ttl=300, key_prefix="user")
 async def get_user_by_id(self, id: int):
@@ -1026,7 +1026,7 @@ async def get_user_by_id(self, id: int):
 ##### 2.6 QueryInterceptor 接口
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.repository import QueryInterceptor
+from aury.boot.core.repository import QueryInterceptor
 
 class AuditInterceptor(QueryInterceptor):
     async def before_query(self, query, **kwargs):
@@ -1069,7 +1069,7 @@ users = await repo.list(**UserFilter(name="张三", age=18))
 ##### 3.1 Repository 自动注入
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import BaseService, inject_repository
+from aury.boot.core.service import BaseService, inject_repository
 
 class UserService(BaseService):
     # 自动注入，支持多个 Repository
@@ -1080,7 +1080,7 @@ class UserService(BaseService):
 ##### 3.2 事务管理增强
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import transactional, readonly
+from aury.boot.core.service import transactional, readonly
 
 @transactional(propagation=Propagation.REQUIRES_NEW)
 async def create_user(self, data):
@@ -1096,7 +1096,7 @@ async def get_user(self, id: int):
 ##### 3.3 业务事件发布
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import publish_event
+from aury.boot.core.service import publish_event
 
 @publish_event("user.created", after_commit=True)
 @transactional
@@ -1108,7 +1108,7 @@ async def create_user(self, data):
 ##### 3.4 验证装饰器
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import validate
+from aury.boot.core.service import validate
 from pydantic import BaseModel
 
 class CreateUserRequest(BaseModel):
@@ -1124,7 +1124,7 @@ async def create_user(self, data: CreateUserRequest):
 ##### 3.5 服务层缓存
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import cache_result
+from aury.boot.core.service import cache_result
 
 @cache_result(ttl=300, key=lambda self, id: f"user:{id}")
 async def get_user(self, id: int):
@@ -1134,7 +1134,7 @@ async def get_user(self, id: int):
 ##### 3.6 性能监控装饰器
 ```python
 # 应该提供
-from aurimyth.foundation_kit.core.service import monitor
+from aury.boot.core.service import monitor
 
 @monitor(metrics=True, slow_threshold=1.0)
 async def create_user(self, data):

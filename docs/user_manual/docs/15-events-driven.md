@@ -267,16 +267,64 @@ async def retry_subscriber(event: OrderCreatedEvent):
 
 ## 事件配置
 
-在 `.env` 中配置：
+### 后端类型
+
+事件总线支持三种后端：
+
+- `memory` - 单进程内存（默认，开发用）
+- `redis` - Redis Pub/Sub（多进程/分布式）
+- `rabbitmq` - RabbitMQ（生产推荐）
+
+### 环境变量
 
 ```bash
-# AMQP 事件总线
-EVENT_BROKER_URL=amqp://guest:guest@localhost:5672/
-EVENT_EXCHANGE_NAME=aury_events
-EVENT_MAX_RETRIES=3
+# 后端类型
+EVENT_BACKEND=memory
 
-# Redis 事件总线
-EVENT_BROKER_URL=redis://localhost:6379/0
+# Redis 后端
+EVENT_BACKEND=redis
+EVENT_URL=redis://localhost:6379/0
+EVENT_KEY_PREFIX=events:
+
+# RabbitMQ 后端
+EVENT_BACKEND=rabbitmq
+EVENT_URL=amqp://guest:guest@localhost:5672/
+EVENT_EXCHANGE_NAME=aury.events
+EVENT_EXCHANGE_TYPE=topic
+```
+
+### 多实例配置
+
+支持多实例，环境变量格式：`EVENT_{INSTANCE}_{FIELD}`
+
+```bash
+# 默认实例
+EVENT_DEFAULT_BACKEND=redis
+EVENT_DEFAULT_URL=redis://localhost:6379/5
+
+# domain 实例
+EVENT_DOMAIN_BACKEND=rabbitmq
+EVENT_DOMAIN_URL=amqp://guest:guest@localhost:5672/
+EVENT_DOMAIN_EXCHANGE_NAME=domain.events
+```
+
+### 代码中配置（EventBusManager）
+
+```python
+from aury.boot.infrastructure.events import EventBusManager
+
+# 获取实例
+bus = EventBusManager.get_instance()
+domain_bus = EventBusManager.get_instance("domain")
+
+# 配置
+bus.configure(
+    backend="redis",
+    url="redis://localhost:6379/0",
+    key_prefix="events:"
+)
+
+await bus.initialize()
 ```
 
 ## 监控和调试

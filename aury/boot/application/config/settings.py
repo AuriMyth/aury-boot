@@ -9,11 +9,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .multi_instance import MultiInstanceConfigLoader, MultiInstanceSettings
 
 
 def _load_env_file(env_file: str | Path) -> bool:
@@ -21,11 +23,169 @@ def _load_env_file(env_file: str | Path) -> bool:
     return load_dotenv(env_file, override=True)
 
 
-class DatabaseSettings(BaseSettings):
-    """数据库配置。
+# =============================================================================
+# 多实例配置基类
+# =============================================================================
+
+
+class DatabaseInstanceConfig(MultiInstanceSettings):
+    """数据库实例配置。
     
-    环境变量前缀: DATABASE_
-    示例: DATABASE_URL, DATABASE_ECHO, DATABASE_POOL_SIZE
+    环境变量格式: DATABASE_{INSTANCE}_{FIELD}
+    示例:
+        DATABASE_DEFAULT_URL=postgresql://main...
+        DATABASE_DEFAULT_POOL_SIZE=10
+        DATABASE_ANALYTICS_URL=postgresql://analytics...
+    """
+    
+    url: str = Field(
+        default="sqlite+aiosqlite:///./app.db",
+        description="数据库连接字符串"
+    )
+    echo: bool = Field(
+        default=False,
+        description="是否输出 SQL 语句"
+    )
+    pool_size: int = Field(
+        default=5,
+        description="数据库连接池大小"
+    )
+    max_overflow: int = Field(
+        default=10,
+        description="连接池最大溢出连接数"
+    )
+    pool_recycle: int = Field(
+        default=3600,
+        description="连接回收时间（秒）"
+    )
+    pool_timeout: int = Field(
+        default=30,
+        description="获取连接超时时间（秒）"
+    )
+    pool_pre_ping: bool = Field(
+        default=True,
+        description="是否在获取连接前进行 PING"
+    )
+
+
+class CacheInstanceConfig(MultiInstanceSettings):
+    """缓存实例配置。
+    
+    环境变量格式: CACHE_{INSTANCE}_{FIELD}
+    示例:
+        CACHE_DEFAULT_BACKEND=redis
+        CACHE_DEFAULT_URL=redis://localhost:6379/0
+        CACHE_LOCAL_BACKEND=memory
+        CACHE_LOCAL_MAX_SIZE=5000
+    """
+    
+    backend: str = Field(
+        default="memory",
+        description="缓存后端 (memory/redis/memcached)"
+    )
+    url: str | None = Field(
+        default=None,
+        description="缓存服务 URL"
+    )
+    max_size: int = Field(
+        default=1000,
+        description="内存缓存最大大小"
+    )
+
+
+class StorageInstanceConfig(MultiInstanceSettings):
+    """对象存储实例配置。
+    
+    环境变量格式: STORAGE_{INSTANCE}_{FIELD}
+    示例:
+        STORAGE_DEFAULT_BACKEND=s3
+        STORAGE_DEFAULT_BUCKET=main-bucket
+        STORAGE_BACKUP_BACKEND=local
+        STORAGE_BACKUP_BASE_PATH=/backup
+    """
+    
+    backend: Literal["local", "s3", "oss", "cos"] = Field(
+        default="local",
+        description="存储后端"
+    )
+    # S3 配置
+    access_key_id: str | None = Field(default=None)
+    access_key_secret: str | None = Field(default=None)
+    endpoint: str | None = Field(default=None)
+    region: str | None = Field(default=None)
+    bucket_name: str | None = Field(default=None)
+    # 本地存储
+    base_path: str = Field(default="./storage")
+
+
+class ChannelInstanceConfig(MultiInstanceSettings):
+    """通道实例配置。
+    
+    环境变量格式: CHANNEL_{INSTANCE}_{FIELD}
+    示例:
+        CHANNEL_DEFAULT_BACKEND=memory
+        CHANNEL_SHARED_BACKEND=redis
+        CHANNEL_SHARED_URL=redis://localhost:6379/3
+    """
+    
+    backend: str = Field(
+        default="memory",
+        description="通道后端 (memory/redis)"
+    )
+    url: str | None = Field(
+        default=None,
+        description="Redis URL（当 backend=redis 时需要）"
+    )
+
+
+class MQInstanceConfig(MultiInstanceSettings):
+    """消息队列实例配置。
+    
+    环境变量格式: MQ_{INSTANCE}_{FIELD}
+    示例:
+        MQ_DEFAULT_BACKEND=redis
+        MQ_DEFAULT_URL=redis://localhost:6379/4
+    """
+    
+    backend: str = Field(
+        default="redis",
+        description="消息队列后端 (redis/rabbitmq)"
+    )
+    url: str | None = Field(
+        default=None,
+        description="连接 URL"
+    )
+
+
+class EventInstanceConfig(MultiInstanceSettings):
+    """事件总线实例配置。
+    
+    环境变量格式: EVENT_{INSTANCE}_{FIELD}
+    示例:
+        EVENT_DEFAULT_BACKEND=memory
+        EVENT_DISTRIBUTED_BACKEND=redis
+        EVENT_DISTRIBUTED_URL=redis://localhost:6379/5
+    """
+    
+    backend: str = Field(
+        default="memory",
+        description="事件后端 (memory/redis/rabbitmq)"
+    )
+    url: str | None = Field(
+        default=None,
+        description="连接 URL"
+    )
+
+
+# =============================================================================
+# 单实例配置
+# =============================================================================
+
+
+class DatabaseSettings(BaseSettings):
+    """数据库配置（单实例）。
+    
+    推荐使用多实例配置: DATABASE_{INSTANCE}_{FIELD}
     """
     
     url: str = Field(
@@ -350,6 +510,49 @@ class EventSettings(BaseSettings):
     )
 
 
+class MessageQueueSettings(BaseSettings):
+    """消息队列配置。
+    
+    环境变量前缀: MQ_
+    示例: MQ_BROKER_URL, MQ_DEFAULT_QUEUE, MQ_SERIALIZER
+    
+    与 Task（任务队列）的区别：
+    - Task: 基于 Dramatiq，用于异步任务处理（API + Worker 模式）
+    - MQ: 通用消息队列，用于服务间通信、事件驱动架构
+    
+    支持的后端（通过 Kombu）：
+    - Redis: redis://localhost:6379/0
+    - RabbitMQ: amqp://guest:guest@localhost:5672//
+    - Amazon SQS: sqs://
+    """
+    
+    enabled: bool = Field(
+        default=False,
+        description="是否启用消息队列组件"
+    )
+    broker_url: str | None = Field(
+        default=None,
+        description="消息队列代理 URL"
+    )
+    default_queue: str = Field(
+        default="default",
+        description="默认队列名称"
+    )
+    serializer: str = Field(
+        default="json",
+        description="序列化方式（json/pickle/msgpack）"
+    )
+    prefetch_count: int = Field(
+        default=1,
+        description="预取消息数量"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="MQ_",
+        case_sensitive=False,
+    )
+
+
 class MigrationSettings(BaseSettings):
     """数据库迁移配置。
     
@@ -566,8 +769,28 @@ class BaseConfig(BaseSettings):
     所有应用配置的基类，提供通用配置项。
     初始化时自动从 .env 文件加载环境变量，然后由 pydantic-settings 读取环境变量。
     
+    多实例配置:
+    框架支持多种组件的多实例配置，使用统一的环境变量格式:
+        {PREFIX}_{INSTANCE}_{FIELD}=value
+    
+    示例:
+        DATABASE_DEFAULT_URL=postgresql://main...
+        DATABASE_ANALYTICS_URL=postgresql://analytics...
+        CACHE_DEFAULT_BACKEND=redis
+        CACHE_DEFAULT_URL=redis://localhost:6379/1
+        MQ_DEFAULT_URL=redis://localhost:6379/2
+        EVENT_DEFAULT_BACKEND=memory
+    
     注意：Application 层配置完全独立，不依赖 Infrastructure 层。
     """
+    
+    # 多实例配置缓存
+    _databases: dict[str, DatabaseInstanceConfig] | None = None
+    _caches: dict[str, CacheInstanceConfig] | None = None
+    _storages: dict[str, StorageInstanceConfig] | None = None
+    _channels: dict[str, ChannelInstanceConfig] | None = None
+    _mqs: dict[str, MQInstanceConfig] | None = None
+    _events: dict[str, EventInstanceConfig] | None = None
     
     def __init__(self, _env_file: str | Path = ".env", **kwargs) -> None:
         """初始化配置。
@@ -597,13 +820,8 @@ class BaseConfig(BaseSettings):
     admin: AdminConsoleSettings = Field(default_factory=AdminConsoleSettings)
     
     # ========== 数据与缓存 ==========
-    # 数据库配置
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
-    
-    # 缓存配置
     cache: CacheSettings = Field(default_factory=CacheSettings)
-
-    # 对象存储配置（接入用；storage SDK 本身不读取 env）
     storage: StorageSettings = Field(default_factory=StorageSettings)
     
     # 迁移配置
@@ -617,10 +835,7 @@ class BaseConfig(BaseSettings):
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     
     # ========== 异步与事件 ==========
-    # 任务队列配置
     task: TaskSettings = Field(default_factory=TaskSettings)
-    
-    # 事件总线配置
     event: EventSettings = Field(default_factory=EventSettings)
     
     # ========== 微服务通信 ==========
@@ -635,6 +850,111 @@ class BaseConfig(BaseSettings):
         extra="ignore",
     )
     
+    # ========== 多实例配置访问方法 ==========
+    
+    def get_databases(self) -> dict[str, DatabaseInstanceConfig]:
+        """获取所有数据库实例配置。
+        
+        从环境变量解析 DATABASE_{INSTANCE}_{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
+        """
+        if self._databases is None:
+            loader = MultiInstanceConfigLoader("DATABASE", DatabaseInstanceConfig)
+            self._databases = loader.load()
+            if not self._databases:
+                self._databases = {
+                    "default": DatabaseInstanceConfig(
+                        url=self.database.url,
+                        echo=self.database.echo,
+                        pool_size=self.database.pool_size,
+                        max_overflow=self.database.max_overflow,
+                        pool_recycle=self.database.pool_recycle,
+                        pool_timeout=self.database.pool_timeout,
+                        pool_pre_ping=self.database.pool_pre_ping,
+                    )
+                }
+        return self._databases
+    
+    def get_caches(self) -> dict[str, CacheInstanceConfig]:
+        """获取所有缓存实例配置。
+        
+        从环境变量解析 CACHE_{INSTANCE}_{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
+        """
+        if self._caches is None:
+            loader = MultiInstanceConfigLoader("CACHE", CacheInstanceConfig)
+            self._caches = loader.load()
+            if not self._caches:
+                self._caches = {
+                    "default": CacheInstanceConfig(
+                        backend=self.cache.cache_type,
+                        url=self.cache.url,
+                        max_size=self.cache.max_size,
+                    )
+                }
+        return self._caches
+    
+    def get_storages(self) -> dict[str, StorageInstanceConfig]:
+        """获取所有存储实例配置。
+        
+        从环境变量解析 STORAGE_{INSTANCE}_{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
+        """
+        if self._storages is None:
+            loader = MultiInstanceConfigLoader("STORAGE", StorageInstanceConfig)
+            self._storages = loader.load()
+            if not self._storages:
+                self._storages = {
+                    "default": StorageInstanceConfig(
+                        backend=self.storage.type,
+                        access_key_id=self.storage.access_key_id,
+                        access_key_secret=self.storage.access_key_secret,
+                        endpoint=self.storage.endpoint,
+                        region=self.storage.region,
+                        bucket_name=self.storage.bucket_name,
+                        base_path=self.storage.base_path,
+                    )
+                }
+        return self._storages
+    
+    def get_channels(self) -> dict[str, ChannelInstanceConfig]:
+        """获取所有通道实例配置。
+        
+        从环境变量解析 CHANNEL_{INSTANCE}_{FIELD} 格式的配置。
+        """
+        if self._channels is None:
+            loader = MultiInstanceConfigLoader("CHANNEL", ChannelInstanceConfig)
+            self._channels = loader.load()
+        return self._channels
+    
+    def get_mqs(self) -> dict[str, MQInstanceConfig]:
+        """获取所有消息队列实例配置。
+        
+        从环境变量解析 MQ_{INSTANCE}_{FIELD} 格式的配置。
+        """
+        if self._mqs is None:
+            loader = MultiInstanceConfigLoader("MQ", MQInstanceConfig)
+            self._mqs = loader.load()
+        return self._mqs
+    
+    def get_events(self) -> dict[str, EventInstanceConfig]:
+        """获取所有事件总线实例配置。
+        
+        从环境变量解析 EVENT_{INSTANCE}_{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
+        """
+        if self._events is None:
+            loader = MultiInstanceConfigLoader("EVENT", EventInstanceConfig)
+            self._events = loader.load()
+            if not self._events and self.event.broker_url:
+                self._events = {
+                    "default": EventInstanceConfig(
+                        backend="redis" if "redis" in (self.event.broker_url or "") else "rabbitmq",
+                        url=self.event.broker_url,
+                    )
+                }
+        return self._events
+    
     @property
     def is_production(self) -> bool:
         """是否为生产环境。"""
@@ -642,21 +962,30 @@ class BaseConfig(BaseSettings):
 
 
 __all__ = [
+    # 配置类
     "AdminAuthSettings",
     "AdminConsoleSettings",
     "BaseConfig",
     "CORSSettings",
+    # 多实例配置类
+    "CacheInstanceConfig",
     "CacheSettings",
+    "ChannelInstanceConfig",
+    "DatabaseInstanceConfig",
     "DatabaseSettings",
+    "EventInstanceConfig",
     "EventSettings",
     "HealthCheckSettings",
     "LogSettings",
+    "MQInstanceConfig",
+    "MessageQueueSettings",
     "MigrationSettings",
     "RPCClientSettings",
     "RPCServiceSettings",
     "SchedulerSettings",
     "ServerSettings",
     "ServiceSettings",
+    "StorageInstanceConfig",
     "StorageSettings",
     "TaskSettings",
 ]

@@ -13,7 +13,7 @@
 # from aury.boot.infrastructure.tasks import conditional_task
 #
 #
-# @conditional_task
+# @conditional_task()
 # def example_task():
 #     """示例异步任务。"""
 #     logger.info("异步任务执行中...")

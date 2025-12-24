@@ -106,6 +106,6 @@ aury worker
 
 ## 文档
 
-- [DEVELOPMENT.md](./DEVELOPMENT.md) - 开发指南（代码组织与规范）
-- [CLI.md](./CLI.md) - CLI 命令参考
+- [AGENTS.md](./AGENTS.md) - AI 编程助手上下文
+- [aury_docs/](./aury_docs/) - 开发文档（包含 Model/Service/API 等指南）
 - [Aury Boot 文档](https://github.com/AuriMyth/aury-boot)

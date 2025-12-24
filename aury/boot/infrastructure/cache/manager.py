@@ -21,16 +21,12 @@ from .factory import CacheFactory
 class CacheManager:
     """缓存管理器（命名多实例）。
     
-    类似Flask-Cache的API设计，优雅简洁。
     支持多个命名实例，如不同的 Redis 实例或缓存策略。
     
     使用示例:
         # 默认实例
         cache = CacheManager.get_instance()
-        await cache.init_app({
-            "CACHE_TYPE": "redis",
-            "CACHE_URL": "redis://localhost:6379"
-        })
+        await cache.initialize(backend="redis", url="redis://localhost:6379")
         
         # 命名实例
         session_cache = CacheManager.get_instance("session")
@@ -81,109 +77,77 @@ class CacheManager:
         elif name in cls._instances:
             del cls._instances[name]
     
-    async def init_app(self, config: dict[str, Any]) -> None:
-        """初始化缓存（类似Flask-Cache）。
-        
-        Args:
-            config: 配置字典
-                - CACHE_TYPE: 缓存类型（redis/memory/memcached）
-                - CACHE_URL: 缓存服务 URL（通用）
-                - CACHE_MAX_SIZE: 内存缓存最大容量
-                - CACHE_SERIALIZER: 序列化方式（json/pickle）
-        """
-        self._config = config.copy()
-        cache_type = config.get("CACHE_TYPE", "redis")
-        
-        # 构建后端配置
-        backend_config = self._build_backend_config(cache_type, config)
-        
-        # 使用工厂创建后端
-        self._backend = await CacheFactory.create(cache_type, **backend_config)
-        logger.info(f"缓存管理器初始化完成: {cache_type}")
-    
-    def _build_backend_config(self, cache_type: str, config: dict[str, Any]) -> dict[str, Any]:
-        """构建后端配置。
-        
-        使用函数式编程处理配置构建逻辑。
-        """
-        # 配置构建函数字典（函数式编程）
-        config_builders: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
-            "redis": lambda cfg: {
-                "url": cfg.get("CACHE_URL"),
-                "serializer": cfg.get("CACHE_SERIALIZER", "json"),
-            },
-            "memory": lambda cfg: {
-                "max_size": cfg.get("CACHE_MAX_SIZE", 1000),
-            },
-            "memcached": lambda cfg: {
-                "servers": cfg.get("CACHE_URL"),  # memcached 也用 URL
-            },
-        }
-        
-        if cache_type not in config_builders:
-            available = ", ".join(config_builders.keys())
-            raise ValueError(
-                f"不支持的缓存类型: {cache_type}。可用类型: {available}"
-            )
-        
-        builder = config_builders[cache_type]
-        backend_config = builder(config)
-        
-        # 验证必需配置
-        if cache_type == "redis" and not backend_config.get("url"):
-            raise ValueError("缓存 URL 未配置，请设置 CACHE_URL")
-        if cache_type == "memcached" and not backend_config.get("servers"):
-            raise ValueError("缓存 URL 未配置，请设置 CACHE_URL")
-        
-        return backend_config
-    
     async def initialize(
         self,
-        backend: CacheBackend = CacheBackend.REDIS,
+        backend: CacheBackend | str = CacheBackend.REDIS,
         *,
         url: str | None = None,
         max_size: int = 1000,
         serializer: str = "json",
         servers: list[str] | None = None,
-    ) -> None:
-        """初始化缓存。
+    ) -> CacheManager:
+        """初始化缓存（链式调用）。
         
         Args:
-            backend: 缓存后端类型
-            url: Redis连接URL
-            max_size: 最大缓存项数
-            serializer: 序列化方式
-            servers: Memcached服务器列表
+            backend: 缓存后端类型（redis/memory/memcached）
+            url: Redis/Memcached 连接 URL
+            max_size: 内存缓存最大容量（仅 memory 后端）
+            serializer: 序列化方式（json/pickle）
+            servers: Memcached 服务器列表（已弃用，请使用 url）
+            
+        Returns:
+            self: 支持链式调用
         """
-        # 转换为配置字典（使用函数式编程）
-        backend_config_map: dict[CacheBackend, Callable[[], dict[str, Any]]] = {
-            CacheBackend.REDIS: lambda: {
-                "CACHE_TYPE": backend.value,
-                "CACHE_REDIS_URL": url,  # TODO: 从应用配置中获取默认值
-                "CACHE_SERIALIZER": serializer,
-            },
-            CacheBackend.MEMORY: lambda: {
-                "CACHE_TYPE": backend.value,
-                "CACHE_MAX_SIZE": max_size,
-            },
-            CacheBackend.MEMCACHED: lambda: {
-                "CACHE_TYPE": backend.value,
-                "CACHE_MEMCACHED_SERVERS": servers,
-            },
-        }
+        if self._backend is not None:
+            logger.warning(f"缓存管理器 [{self.name}] 已初始化，跳过")
+            return self
         
-        config_builder = backend_config_map.get(backend)
-        if config_builder is None:
-            raise ValueError(f"不支持的缓存后端: {backend}")
+        # 处理字符串类型的 backend
+        if isinstance(backend, str):
+            try:
+                backend = CacheBackend(backend.lower())
+            except ValueError:
+                supported = ", ".join(b.value for b in CacheBackend)
+                raise ValueError(f"不支持的缓存后端: {backend}。支持: {supported}")
         
-        config = config_builder()
-        await self.init_app(config)
+        # 保存配置
+        self._config = {"CACHE_TYPE": backend.value}
+        
+        # 根据后端类型构建配置并创建后端
+        if backend == CacheBackend.REDIS:
+            if not url:
+                raise ValueError("Redis 缓存需要提供 url 参数")
+            self._backend = await CacheFactory.create(
+                "redis", url=url, serializer=serializer
+            )
+        elif backend == CacheBackend.MEMORY:
+            self._backend = await CacheFactory.create(
+                "memory", max_size=max_size
+            )
+        elif backend == CacheBackend.MEMCACHED:
+            cache_url = url or (servers[0] if servers else None)
+            if not cache_url:
+                raise ValueError("Memcached 缓存需要提供 url 参数")
+            self._backend = await CacheFactory.create(
+                "memcached", servers=cache_url
+            )
+        else:
+            supported = ", ".join(b.value for b in CacheBackend)
+            raise ValueError(f"不支持的缓存后端: {backend}。支持: {supported}")
+        
+        logger.info(f"缓存管理器 [{self.name}] 初始化完成: {backend.value}")
+        return self
+    
+    @property
+    def is_initialized(self) -> bool:
+        """检查是否已初始化。"""
+        return self._backend is not None
     
     @property
     def backend(self) -> ICache:
         """获取缓存后端。"""
         if self._backend is None:
-            raise RuntimeError("缓存管理器未初始化，请先调用 init_app() 或 initialize()")
+            raise RuntimeError("缓存管理器未初始化，请先调用 initialize()")
         return self._backend
     
     @property
@@ -215,6 +179,24 @@ class CacheManager:
     async def clear(self) -> None:
         """清空所有缓存。"""
         await self.backend.clear()
+    
+    async def delete_pattern(self, pattern: str) -> int:
+        """按模式删除缓存。
+        
+        Args:
+            pattern: 通配符模式，如 "todo:*" 或 "api:todo:list:*"
+            
+        Returns:
+            int: 删除的键数量
+            
+        示例:
+            # 删除所有 todo 相关缓存
+            await cache.delete_pattern("todo:*")
+            
+            # 删除所有列表缓存
+            await cache.delete_pattern("api:todo:list:*")
+        """
+        return await self.backend.delete_pattern(pattern)
     
     def cached[T](
         self,
@@ -249,6 +231,86 @@ class CacheManager:
                 # 存入缓存
                 await self.set(cache_key, result, expire)
                 logger.debug(f"缓存更新: {cache_key}")
+                
+                return result
+            
+            return wrapper
+        return decorator
+    
+    def cache_response[T](
+        self,
+        expire: int | timedelta | None = 300,
+        *,
+        key_builder: Callable[..., str] | None = None,
+        key_prefix: str = "api",
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
+        """API 响应缓存装饰器。
+        
+        专为 FastAPI 路由设计，自动从路径参数和查询参数生成缓存键。
+        
+        Args:
+            expire: 过期时间（秒），默认 300 秒
+            key_builder: 自定义缓存键生成函数，接收与被装饰函数相同的参数
+            key_prefix: 缓存键前缀，默认 "api"
+            
+        示例:
+            cache = CacheManager.get_instance()
+            
+            # 基本用法：自动生成缓存键
+            @router.get("/todos/{{id}}")
+            @cache.cache_response(expire=300)
+            async def get_todo(id: UUID):
+                return await service.get(id)
+            # 缓存键: api:get_todo:<hash>
+            
+            # 自定义缓存键
+            @router.get("/todos/{{id}}")
+            @cache.cache_response(
+                expire=300,
+                key_builder=lambda id: f"todo:{{id}}"
+            )
+            async def get_todo(id: UUID):
+                return await service.get(id)
+            # 缓存键: api:todo:<id>
+        """
+        def decorator(func: Callable[..., T]) -> Callable[..., T]:
+            @wraps(func)
+            async def wrapper(*args, **kwargs) -> T:
+                # 生成缓存键
+                if key_builder:
+                    # 使用自定义的 key_builder
+                    custom_key = key_builder(*args, **kwargs)
+                    cache_key = f"{key_prefix}:{custom_key}" if key_prefix else custom_key
+                else:
+                    # 自动生成：函数名 + 参数哈希
+                    func_name = func.__name__
+                    args_str = str(args) + str(sorted(kwargs.items()))
+                    key_hash = hashlib.md5(args_str.encode()).hexdigest()[:8]
+                    cache_key = f"{key_prefix}:{func_name}:{key_hash}"
+                
+                # 尝试从缓存获取
+                cached_value = await self.get(cache_key)
+                if cached_value is not None:
+                    logger.debug(f"API 缓存命中: {cache_key}")
+                    return cached_value
+                
+                # 执行函数
+                result = await func(*args, **kwargs)
+                
+                # 存入缓存（尝试序列化）
+                try:
+                    # 如果结果有 model_dump 方法（Pydantic model），先序列化
+                    if hasattr(result, "model_dump"):
+                        cache_data = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        cache_data = result.dict()
+                    else:
+                        cache_data = result
+                    
+                    await self.set(cache_key, cache_data, expire)
+                    logger.debug(f"API 缓存更新: {cache_key}")
+                except Exception as e:
+                    logger.warning(f"API 缓存存储失败: {cache_key}, {e}")
                 
                 return result
             

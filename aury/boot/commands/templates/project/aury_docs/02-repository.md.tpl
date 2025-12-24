@@ -58,11 +58,19 @@ exists = await repo.exists(email="a@b.com")       # 是否存在
 from aury.boot.domain.pagination import PaginationParams, SortParams
 
 result = await repo.paginate(
-    pagination_params=PaginationParams(page=1, size=20),
-    sort_params=SortParams(sorts=[("created_at", "desc")]),
+    pagination_params=PaginationParams(page=1, page_size=20),
+    sort_params=SortParams.from_string("-created_at"),
     is_active=True,
 )
-# result.items, result.total, result.page, result.size, result.pages
+
+# PaginationResult 结构：
+# - result.items: list[T]      # 数据列表
+# - result.total: int          # 总记录数
+# - result.page: int           # 当前页码
+# - result.page_size: int      # 每页数量
+# - result.total_pages: int    # 总页数
+# - result.has_next: bool      # 是否有下一页
+# - result.has_prev: bool      # 是否有上一页
 
 # === 创建 ===
 user = await repo.create({{"name": "Alice", "email": "a@b.com"}})
@@ -101,7 +109,30 @@ user = await repo.get_by(status__ne="archived")
 
 > 注意：filters 条件之间用 AND 组合；如需 AND/OR/NOT 的复杂组合，请使用 `QueryBuilder`（见 2.4）。
 
-### 2.2.2 查询全部（limit=None）
+### 2.2.2 排序参数（SortParams）
+
+`SortParams.from_string()` 支持两种语法：
+
+```python
+from aury.boot.domain.pagination import SortParams
+
+# 简洁语法："-" 前缀表示降序
+sort_params = SortParams.from_string("-created_at")
+sort_params = SortParams.from_string("-created_at,priority")  # 多字段
+
+# 完整语法：字段:方向
+sort_params = SortParams.from_string("created_at:desc,priority:asc")
+
+# 带字段白名单验证（防止 SQL 注入）
+ALLOWED_FIELDS = {{"id", "created_at", "priority", "status"}}
+sort_params = SortParams.from_string(
+    "-created_at",
+    allowed_fields=ALLOWED_FIELDS
+)
+# 传入非法字段会抛出 ValueError
+```
+
+### 2.2.3 查询全部（limit=None）
 
 `list()` 支持 `limit=None` 返回全部记录（谨慎使用大表）：
 

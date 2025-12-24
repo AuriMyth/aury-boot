@@ -349,6 +349,18 @@ class FoundationApp(FastAPI):
                     raise
 
             logger.info("应用启动完成")
+            
+            # 打印启动横幅和组件状态
+            from aury.boot.application.app.startup import (
+                collect_component_status,
+                print_startup_banner,
+            )
+            components = collect_component_status()
+            print_startup_banner(
+                app_name=self.title,
+                version=self.version,
+                components=components,
+            )
 
         except Exception as e:
             logger.error(f"应用启动异常: {e}")

@@ -14,7 +14,6 @@ from sqlalchemy.exc import DisconnectionError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from aury.boot.common.logging import logger
-from aury.boot.infrastructure.database.config import DatabaseConfig
 
 
 class DatabaseManager:
@@ -55,7 +54,6 @@ class DatabaseManager:
         """
         self.name = name
         self._initialized: bool = False
-        self._config: DatabaseConfig | None = None
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker | None = None
         self._max_retries: int = 3
@@ -88,14 +86,6 @@ class DatabaseManager:
             cls._instances.clear()
         elif name in cls._instances:
             del cls._instances[name]
-    
-    def configure(self, config: DatabaseConfig) -> None:
-        """配置数据库管理器。
-        
-        Args:
-            config: 数据库配置
-        """
-        self._config = config
     
     @property
     def engine(self) -> AsyncEngine:
@@ -142,33 +132,21 @@ class DatabaseManager:
             logger.warning("数据库管理器已初始化，跳过重复初始化")
             return
         
-        # 使用提供的参数或配置中的默认值
-        db_isolation_level: str | None = None
-        if self._config is not None:
-            database_url = url or self._config.url
-            db_echo = echo if echo is not None else self._config.echo
-            db_pool_size = pool_size or self._config.pool_size
-            db_max_overflow = max_overflow or self._config.max_overflow
-            db_pool_timeout = pool_timeout or self._config.pool_timeout
-            db_pool_recycle = pool_recycle or self._config.pool_recycle
-            db_isolation_level = isolation_level or self._config.isolation_level
-        else:
-            # 如果没有配置，使用环境变量
-            import os
-            database_url = url or os.getenv("DATABASE_URL")
-            if not database_url:
-                raise ValueError(
-                    "数据库 URL 未配置。请通过以下方式之一提供："
-                    "1. 使用 DatabaseManager.configure() 设置配置"
-                    "2. 通过 initialize(url=...) 参数传入"
-                    "3. 设置环境变量 DATABASE_URL"
-                )
-            db_echo = echo if echo is not None else os.getenv("DB_ECHO", "false").lower() == "true"
-            db_pool_size = pool_size or int(os.getenv("DB_POOL_SIZE", "5"))
-            db_max_overflow = max_overflow or int(os.getenv("DB_MAX_OVERFLOW", "10"))
-            db_pool_timeout = pool_timeout or int(os.getenv("DB_POOL_TIMEOUT", "30"))
-            db_pool_recycle = pool_recycle or int(os.getenv("DB_POOL_RECYCLE", "1800"))
-            db_isolation_level = isolation_level or os.getenv("DATABASE_ISOLATION_LEVEL")
+        # 使用提供的参数或环境变量默认值
+        import os
+        database_url = url or os.getenv("DATABASE_URL")
+        if not database_url:
+            raise ValueError(
+                "数据库 URL 未配置。请通过以下方式之一提供："
+                "1. 通过 initialize(url=...) 参数传入"
+                "2. 设置环境变量 DATABASE_URL"
+            )
+        db_echo = echo if echo is not None else os.getenv("DB_ECHO", "false").lower() == "true"
+        db_pool_size = pool_size or int(os.getenv("DB_POOL_SIZE", "5"))
+        db_max_overflow = max_overflow or int(os.getenv("DB_MAX_OVERFLOW", "10"))
+        db_pool_timeout = pool_timeout or int(os.getenv("DB_POOL_TIMEOUT", "30"))
+        db_pool_recycle = pool_recycle or int(os.getenv("DB_POOL_RECYCLE", "1800"))
+        db_isolation_level = isolation_level or os.getenv("DATABASE_ISOLATION_LEVEL")
         
         # 构建引擎参数
         engine_kwargs: dict = {
@@ -279,7 +257,7 @@ class DatabaseManager:
         await self._check_session_connection(session)
         return session
     
-    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+    async def get_session(self) -> AsyncGenerator[AsyncSession]:
         """FastAPI 依赖注入专用的会话获取器。
         
         Yields:

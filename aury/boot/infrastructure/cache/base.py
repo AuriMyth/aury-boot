@@ -56,6 +56,18 @@ class ICache(ABC):
         pass
     
     @abstractmethod
+    async def delete_pattern(self, pattern: str) -> int:
+        """按模式删除缓存。
+        
+        Args:
+            pattern: 通配符模式，如 "todo:*" 或 "api:todo:list:*"
+            
+        Returns:
+            int: 删除的键数量
+        """
+        pass
+    
+    @abstractmethod
     async def close(self) -> None:
         """关闭连接。"""
         pass

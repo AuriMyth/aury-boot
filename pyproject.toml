@@ -144,6 +144,7 @@ ignore = [
     "SIM108", # 使用三元表达式（某些情况下可读性更好）
     "B904",   # 裸 except（某些情况下需要）
     "W293",   # 空行包含空白字符（某些情况下需要）
+    "N806",   # 函数内类引用变量大写（如 RedisClient = None）
     "UP007",  # 已由 pyupgrade 自动处理
     "UP035",  # 已由 pyupgrade 自动处理
     "UP037",  # 已由 pyupgrade 自动处理
@@ -164,6 +165,12 @@ keep-runtime-typing = false  # 允许将 typing 模块类型改为内置类型
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = [
     "F401",
+]
+"_version.py" = [
+    "I001",   # 自动生成的版本文件
+    "UP006",  # 自动生成的版本文件
+    "UP007",  # 自动生成的版本文件
+    "RUF022", # 自动生成的版本文件
 ]
 "tests/**/*.py" = [
     "T201",

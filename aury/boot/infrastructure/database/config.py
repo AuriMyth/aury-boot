@@ -8,7 +8,6 @@ from __future__ import annotations
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 # 支持的事务隔离级别
 ISOLATION_LEVELS = (
     "READ UNCOMMITTED",
@@ -63,8 +62,8 @@ class DatabaseConfig(BaseSettings):
 
 
 __all__ = [
-    "DatabaseConfig",
     "ISOLATION_LEVELS",
+    "DatabaseConfig",
 ]
 
 

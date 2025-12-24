@@ -52,7 +52,7 @@ def __getattr__(name: str):
 
 def __dir__():
     """返回可用属性列表。"""
-    return list(_SUBMODULES) + ["__version__"]
+    return [*list(_SUBMODULES), "__version__"]
 
 
 __all__ = [
@@ -61,6 +61,6 @@ __all__ = [
     "common",
     "domain",
     "infrastructure",
-    "toolkit",
     "testing",
+    "toolkit",
 ]

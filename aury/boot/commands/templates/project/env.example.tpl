@@ -25,8 +25,10 @@ SERVICE_NAME={project_name_snake}
 # =============================================================================
 # 数据库配置 (DATABASE_)
 # =============================================================================
-# 数据库连接字符串（默认 SQLite）
+# 支持多实例配置，格式: DATABASE_{{INSTANCE}}_{{FIELD}}
+# 默认实例 (default):
 # DATABASE_URL=sqlite+aiosqlite:///./dev.db
+# DATABASE_DEFAULT_URL=sqlite+aiosqlite:///./dev.db
 # PostgreSQL: postgresql+asyncpg://user:pass@localhost:5432/{project_name_snake}
 # MySQL: mysql+aiomysql://user:pass@localhost:3306/{project_name_snake}
 
@@ -43,15 +45,25 @@ SERVICE_NAME={project_name_snake}
 # 是否输出 SQL 语句（调试用）
 # DATABASE_ECHO=false
 
+# 多实例示例 (readonly):
+# DATABASE_READONLY_URL=postgresql+asyncpg://user:pass@replica:5432/{project_name_snake}
+# DATABASE_READONLY_POOL_SIZE=10
+
 # =============================================================================
 # 缓存配置 (CACHE_)
 # =============================================================================
+# 支持多实例配置，格式: CACHE_{{INSTANCE}}_{{FIELD}}
 # 缓存类型: memory / redis / memcached
 # CACHE_TYPE=memory
-# Redis/Memcached URL
 # CACHE_URL=redis://localhost:6379/0
 # 内存缓存最大大小
 # CACHE_MAX_SIZE=1000
+# 默认 TTL（秒）
+# CACHE_DEFAULT_TTL=300
+#
+# 多实例示例 (session):
+# CACHE_SESSION_TYPE=redis
+# CACHE_SESSION_URL=redis://localhost:6379/2
 
 # =============================================================================
 # 日志配置 (LOG_)
@@ -139,12 +151,68 @@ SERVICE_NAME={project_name_snake}
 # TASK_TIMEOUT=3600
 
 # =============================================================================
+# 流式通道配置 (CHANNEL_) - SSE/实时通信
+# =============================================================================
+# 支持多实例配置，格式: CHANNEL_{{INSTANCE}}_{{FIELD}}
+# 后端类型: memory / redis
+# CHANNEL_BACKEND=memory
+# CHANNEL_DEFAULT_BACKEND=memory
+#
+# Redis 后端配置:
+# CHANNEL_DEFAULT_BACKEND=redis
+# CHANNEL_DEFAULT_URL=redis://localhost:6379/3
+# CHANNEL_DEFAULT_KEY_PREFIX=channel:
+# CHANNEL_DEFAULT_TTL=86400
+#
+# 多实例示例 (notifications):
+# CHANNEL_NOTIFICATIONS_BACKEND=redis
+# CHANNEL_NOTIFICATIONS_URL=redis://localhost:6379/3
+
+# =============================================================================
+# 消息队列配置 (MQ_)
+# =============================================================================
+# 支持多实例配置，格式: MQ_{{INSTANCE}}_{{FIELD}}
+# 后端类型: redis / rabbitmq
+# MQ_BACKEND=redis
+# MQ_DEFAULT_BACKEND=redis
+#
+# Redis 后端配置:
+# MQ_DEFAULT_URL=redis://localhost:6379/4
+# MQ_DEFAULT_MAX_CONNECTIONS=10
+#
+# RabbitMQ 后端配置:
+# MQ_DEFAULT_BACKEND=rabbitmq
+# MQ_DEFAULT_URL=amqp://guest:guest@localhost:5672/
+# MQ_DEFAULT_PREFETCH_COUNT=10
+# MQ_DEFAULT_HEARTBEAT=60
+#
+# 多实例示例 (orders):
+# MQ_ORDERS_BACKEND=rabbitmq
+# MQ_ORDERS_URL=amqp://guest:guest@localhost:5672/orders
+
+# =============================================================================
 # 事件总线配置 (EVENT_)
 # =============================================================================
-# 事件总线代理 URL（如 RabbitMQ）
-# EVENT_BROKER_URL=amqp://guest:guest@localhost:5672/
-# 事件交换机名称
+# 支持多实例配置，格式: EVENT_{{INSTANCE}}_{{FIELD}}
+# 后端类型: memory / redis / rabbitmq
+# EVENT_BACKEND=memory
+# EVENT_DEFAULT_BACKEND=memory
+#
+# Redis Pub/Sub 后端:
+# EVENT_DEFAULT_BACKEND=redis
+# EVENT_DEFAULT_URL=redis://localhost:6379/5
+# EVENT_DEFAULT_KEY_PREFIX=events:
+#
+# RabbitMQ 后端:
+# EVENT_DEFAULT_BACKEND=rabbitmq
+# EVENT_DEFAULT_URL=amqp://guest:guest@localhost:5672/
 # EVENT_EXCHANGE_NAME=aury.events
+# EVENT_DEFAULT_EXCHANGE_TYPE=topic
+#
+# 多实例示例 (domain):
+# EVENT_DOMAIN_BACKEND=rabbitmq
+# EVENT_DOMAIN_URL=amqp://guest:guest@localhost:5672/
+# EVENT_DOMAIN_EXCHANGE_NAME=domain.events
 
 # =============================================================================
 # 数据库迁移配置 (MIGRATION_)

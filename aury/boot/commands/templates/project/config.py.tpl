@@ -5,7 +5,7 @@
 环境变量示例：
     DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
     CACHE_TYPE=redis
-    CACHE_REDIS_URL=redis://localhost:6379/0
+    CACHE_URL=redis://localhost:6379/0
     LOG_LEVEL=INFO
 """
 

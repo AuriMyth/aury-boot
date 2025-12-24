@@ -38,7 +38,10 @@
 > │   ├── 09-tasks.md       # 异步任务指南
 > │   ├── 10-storage.md     # 对象存储指南
 > │   ├── 11-logging.md     # 日志指南
-> │   └── 12-admin.md       # 管理后台指南
+> │   ├── 12-admin.md       # 管理后台指南
+> │   ├── 13-channel.md     # 流式通道指南（Pub/Sub、SSE、进程间通信）
+> │   ├── 14-mq.md          # 消息队列指南
+> │   └── 15-events.md      # 事件总线指南
 > ├── CLI.md              # CLI 命令参考
 > └── .env.example        # 环境变量示例
 > ```
@@ -87,6 +90,7 @@
 22. [日志系统](#22-日志系统) - 查看详细版：[22-logging-complete.md](./22-logging-complete.md)
 23. [CLI 命令](#23-cli-命令) - 查看详细版：[24-cli-commands.md](./24-cli-commands.md)
 24. [最佳实践](#24-最佳实践) - 查看详细版：[23-best-practices.md](./23-best-practices.md)
+25. [基础设施高级](#25-基础设施高级) - 查看详细版：[26-infrastructure-advanced.md](./26-infrastructure-advanced.md)（Channel、MQ、多实例配置）
 
 ---
 
@@ -300,7 +304,7 @@ DATABASE_POOL_SIZE=10
 
 # 缓存
 CACHE_TYPE=redis
-CACHE_REDIS_URL=redis://localhost:6379/0
+CACHE_URL=redis://localhost:6379/0
 
 # 任务队列
 TASK_BROKER_URL=redis://localhost:6379/0
@@ -1057,3 +1061,75 @@ uv lock
 ```
 
 > 📖 **详细说明**：参考 [23-best-practices.md](./23-best-practices.md)
+
+---
+
+## 25. 基础设施高级
+
+### 多实例配置
+
+所有 Manager 支持多实例，环境变量格式：`{PREFIX}_{INSTANCE}_{FIELD}`
+
+```bash
+# 数据库多实例
+DATABASE_DEFAULT_URL=postgresql+asyncpg://localhost/mydb
+DATABASE_READONLY_URL=postgresql+asyncpg://replica/mydb
+
+# Redis 多实例
+REDIS_CACHE_URL=redis://localhost:6379/1
+REDIS_SESSION_URL=redis://localhost:6379/2
+```
+
+### 流式通道（Channel）
+
+用于 Pub/Sub、SSE 和进程间通信：
+
+```python
+from aury.boot.infrastructure.channel import ChannelManager
+
+channel = ChannelManager.get_instance()
+await channel.configure(backend="redis", redis_url="redis://localhost:6379/0").initialize()
+
+# 发布
+await channel.publish("user:123", {"event": "message"})
+
+# 订阅
+async for msg in channel.subscribe("user:123"):
+    print(msg)
+```
+
+### 消息队列（MQ）
+
+支持 Redis 和 RabbitMQ 后端：
+
+```python
+from aury.boot.infrastructure.mq import MQManager
+
+mq = MQManager.get_instance()
+await mq.configure(backend="redis", url="redis://localhost:6379/0").initialize()
+
+# 生产者
+await mq.publish("orders", {"order_id": "123"})
+
+# 消费者
+await mq.consume("orders", handler)
+```
+
+### 事件总线后端
+
+支持 memory、redis、rabbitmq 后端：
+
+```bash
+# 内存后端（单进程）
+EVENT_BACKEND=memory
+
+# Redis Pub/Sub
+EVENT_BACKEND=redis
+EVENT_URL=redis://localhost:6379/0
+
+# RabbitMQ
+EVENT_BACKEND=rabbitmq
+EVENT_URL=amqp://guest:guest@localhost:5672/
+```
+
+> 📖 **详细说明**：参考 [26-infrastructure-advanced.md](./26-infrastructure-advanced.md)

@@ -8,7 +8,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 from aury.boot.common.logging import logger
-
 from aury.sdk.storage.storage import IStorage, LocalStorage
 
 

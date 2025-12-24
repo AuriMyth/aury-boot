@@ -75,9 +75,103 @@ class SortParams(BaseModel):
     """排序参数。
     
     定义排序的字段和方向。
+    
+    支持两种语法：
+    - 简洁语法: "-created_at" (前缀 - 表示降序)
+    - 完整语法: "created_at:desc"
+    
+    示例:
+        # 从字符串解析
+        sort_params = SortParams.from_string("-created_at,priority")
+        sort_params = SortParams.from_string("created_at:desc,priority:asc")
+        
+        # 带白名单验证
+        sort_params = SortParams.from_string(
+            "-created_at",
+            allowed_fields={"id", "created_at", "priority"}
+        )
+        
+        # 程序化构建
+        sort_params = SortParams(sorts=[("-created_at",), ("priority", "asc")])
     """
     
     sorts: list[tuple[str, str]] = Field(default_factory=list, description="排序字段列表")
+    
+    @classmethod
+    def from_string(
+        cls,
+        sort_str: str | None,
+        *,
+        allowed_fields: set[str] | None = None,
+        default_direction: str = "desc",
+    ) -> SortParams:
+        """从字符串解析排序参数。
+        
+        支持两种语法：
+        - 简洁语法: "-created_at" (前缀 - 表示降序)
+        - 完整语法: "created_at:desc"
+        
+        Args:
+            sort_str: 排序字符串，如 "-created_at,priority" 或 "created_at:desc,priority:asc"
+            allowed_fields: 允许的字段白名单（可选，用于安全校验）
+            default_direction: 默认排序方向（当不指定方向时使用）
+            
+        Returns:
+            SortParams: 排序参数对象
+            
+        Raises:
+            ValueError: 字段不在白名单中 或 方向无效
+            
+        示例:
+            >>> SortParams.from_string("-created_at,priority")
+            SortParams(sorts=[('created_at', 'desc'), ('priority', 'desc')])
+            
+            >>> SortParams.from_string("created_at:desc,priority:asc")
+            SortParams(sorts=[('created_at', 'desc'), ('priority', 'asc')])
+            
+            >>> SortParams.from_string("-id", allowed_fields={"id", "name"})
+            SortParams(sorts=[('id', 'desc')])
+            
+            >>> SortParams.from_string("-invalid", allowed_fields={"id", "name"})
+            ValueError: 不允许的排序字段: invalid，允许的字段: id, name
+        """
+        if not sort_str:
+            return cls(sorts=[])
+        
+        sorts = []
+        for part in sort_str.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            
+            # 解析字段和方向
+            if part.startswith("-"):
+                # 简洁语法: -created_at
+                field = part[1:]
+                direction = "desc"
+            elif ":" in part:
+                # 完整语法: created_at:desc
+                field, direction = part.split(":", 1)
+            else:
+                # 无方向指示，使用默认
+                field = part
+                direction = default_direction
+            
+            field = field.strip()
+            direction = direction.strip().lower()
+            
+            # 字段白名单校验
+            if allowed_fields and field not in allowed_fields:
+                allowed_list = ", ".join(sorted(allowed_fields))
+                raise ValueError(f"不允许的排序字段: {field}，允许的字段: {allowed_list}")
+            
+            # 方向校验
+            if direction not in ("asc", "desc"):
+                raise ValueError(f"排序方向必须是 'asc' 或 'desc'，得到: {direction}")
+            
+            sorts.append((field, direction))
+        
+        return cls(sorts=sorts)
     
     def add_sort(self, field: str, direction: str = "asc") -> None:
         """添加排序字段。

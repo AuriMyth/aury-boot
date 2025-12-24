@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aury.boot.common.logging import logger
 from aury.boot.domain.exceptions import VersionConflictError
 from aury.boot.domain.models import GUID, Base
-from aury.boot.domain.transaction import _transaction_depth
 from aury.boot.domain.pagination import (
     PaginationParams,
     PaginationResult,
@@ -25,6 +24,7 @@ from aury.boot.domain.pagination import (
 )
 from aury.boot.domain.repository.interface import IRepository
 from aury.boot.domain.repository.query_builder import QueryBuilder
+from aury.boot.domain.transaction import _transaction_depth
 
 if TYPE_CHECKING:
     from typing import Self

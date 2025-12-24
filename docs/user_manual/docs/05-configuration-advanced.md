@@ -39,7 +39,61 @@ DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 
 # 缓存配置
 CACHE_TYPE=redis
-CACHE_REDIS_URL=redis://localhost:6379/0
+CACHE_URL=redis://localhost:6379/0
+```
+
+## 多实例配置
+
+框架支持多实例配置，环境变量格式：`{PREFIX}_{INSTANCE}_{FIELD}`
+
+### 数据库多实例
+
+```bash
+# 默认实例
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+# 等同于
+DATABASE_DEFAULT_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+
+# 只读实例
+DATABASE_READONLY_URL=postgresql+asyncpg://user:pass@replica:5432/mydb
+DATABASE_READONLY_POOL_SIZE=20
+```
+
+### 缓存多实例
+
+```bash
+# 默认实例
+CACHE_TYPE=redis
+CACHE_URL=redis://localhost:6379/0
+
+# 会话缓存实例
+CACHE_SESSION_TYPE=redis
+CACHE_SESSION_URL=redis://localhost:6379/2
+CACHE_SESSION_MAX_SIZE=5000
+```
+
+### 在代码中获取多实例配置
+
+```python
+from aury.boot.application.config import BaseConfig
+
+config = BaseConfig()
+
+# 获取所有数据库实例配置
+db_instances = config.get_database_instances()
+# 返回: {"default": DatabaseInstanceConfig(...), "readonly": DatabaseInstanceConfig(...)}
+
+# 获取所有缓存实例配置
+cache_instances = config.get_cache_instances()
+# 返回: {"default": CacheInstanceConfig(...), "session": CacheInstanceConfig(...)}
+
+# 支持的多实例类型：
+# - get_database_instances()
+# - get_cache_instances()
+# - get_storage_instances()
+# - get_channel_instances()
+# - get_mq_instances()
+# - get_event_instances()
 ```
 
 ## 分层配置

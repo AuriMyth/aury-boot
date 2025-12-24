@@ -17,10 +17,15 @@ from aury.boot.domain.transaction import (
 from aury.boot.infrastructure.di import Container, Lifetime, Scope, ServiceDescriptor
 from aury.boot.infrastructure.events import (
     Event,
-    EventBus,
-    EventConsumer,
-    EventLoggingMiddleware,
-    EventMiddleware,
+    EventBackend,
+    EventBusManager,
+    EventHandler,
+    EventType,
+    IEventBus,
+    # 后端实现
+    MemoryEventBus,
+    RabbitMQEventBus,
+    RedisEventBus,
 )
 
 from . import interfaces, rpc
@@ -62,59 +67,63 @@ from .scheduler import run_scheduler, run_scheduler_sync
 from .server import ApplicationServer, run_app
 
 __all__ = [
+    # 服务器集成
+    "ApplicationServer",
     # 配置
     "BaseConfig",
-    "CORSSettings",
-    "CacheSettings",
-    "LogSettings",
-    "ServerSettings",
-    # 常量
-    "ComponentName",
-    "MiddlewareName",
-    "SchedulerMode",
-    "ServiceType",
-    # 应用框架
-    "FoundationApp",
-    # 基类
-    "Component",
-    "Middleware",
     # 中间件
     "CORSMiddleware",
-    "RequestLoggingMiddleware",
+    "CORSSettings",
     # 组件
     "CacheComponent",
-    "DatabaseComponent",
-    "MigrationComponent",
-    "SchedulerComponent",
-    "TaskComponent",
+    "CacheSettings",
+    # 基类
+    "Component",
+    # 常量
+    "ComponentName",
     # 依赖注入容器
     "Container",
-    "Lifetime",
-    "Scope",
-    "ServiceDescriptor",
+    "DatabaseComponent",
     # 事件系统
     "Event",
-    "EventBus",
-    "EventConsumer",
-    "EventLoggingMiddleware",
-    "EventMiddleware",
+    "EventBackend",
+    "EventBusManager",
+    "EventHandler",
+    "EventType",
+    # 应用框架
+    "FoundationApp",
+    "IEventBus",
+    "Lifetime",
+    "LogSettings",
+    "MemoryEventBus",
+    "Middleware",
+    "MiddlewareName",
+    "MigrationComponent",
     # 迁移
     "MigrationManager",
-    # HTTP 中间件装饰器
-    "log_request",
+    "RabbitMQEventBus",
+    "RedisEventBus",
+    "RequestLoggingMiddleware",
+    "SchedulerComponent",
+    "SchedulerMode",
+    "Scope",
+    "ServerSettings",
+    "ServiceDescriptor",
+    "ServiceType",
+    "TaskComponent",
     # 事务管理
     "TransactionManager",
     "TransactionRequiredError",
     "ensure_transaction",
-    "transactional",
-    "transactional_context",
+    # HTTP 中间件装饰器
+    "log_request",
     # RPC通信
     "rpc",
+    "run_app",
     # 调度器启动器
     "run_scheduler",
     "run_scheduler_sync",
-    # 服务器集成
-    "ApplicationServer",
-    "run_app",
+    "transactional",
+    "transactional_context",
 ]
 

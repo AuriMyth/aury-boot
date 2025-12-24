@@ -8,6 +8,8 @@ from .components import (
     AdminConsoleComponent,
     CacheComponent,
     DatabaseComponent,
+    EventBusComponent,
+    MessageQueueComponent,
     MigrationComponent,
     SchedulerComponent,
     TaskComponent,
@@ -18,19 +20,21 @@ from .middlewares import (
 )
 
 __all__ = [
-    # 应用框架
-    "FoundationApp",
-    # 基类
-    "Component",
-    "Middleware",
-    # 中间件
-    "CORSMiddleware",
-    "RequestLoggingMiddleware",
     # 组件
     "AdminConsoleComponent",
+    # 中间件
+    "CORSMiddleware",
     "CacheComponent",
+    # 基类
+    "Component",
     "DatabaseComponent",
+    "EventBusComponent",
+    # 应用框架
+    "FoundationApp",
+    "MessageQueueComponent",
+    "Middleware",
     "MigrationComponent",
+    "RequestLoggingMiddleware",
     "SchedulerComponent",
     "TaskComponent",
 ]

@@ -49,6 +49,12 @@ mypy {package_name}/
 └── main.py                   # 应用入口
 ```
 
+## 重要提醒
+
+> **修改代码前，必须先阅读对应的文档！**
+> 
+> 框架的 API 可能与常见框架不同，不要猜测。请查看 `aury_docs/` 下对应的文档。
+
 ## 开发任务文档索引
 
 根据你要开发的功能类型，**必须阅读**对应的文档：
@@ -96,11 +102,14 @@ mypy {package_name}/
 - **[aury_docs/10-storage.md](./aury_docs/10-storage.md)** - 对象存储（S3/COS/OSS）
 - **[aury_docs/11-logging.md](./aury_docs/11-logging.md)** - 日志
 - **[aury_docs/12-admin.md](./aury_docs/12-admin.md)** - 管理后台（SQLAdmin）
+- **[aury_docs/13-channel.md](./aury_docs/13-channel.md)** - 流式通道（SSE）
+- **[aury_docs/14-mq.md](./aury_docs/14-mq.md)** - 消息队列
+- **[aury_docs/15-events.md](./aury_docs/15-events.md)** - 事件总线
 
 ### 配置 / CLI / 环境变量
 
 - **[aury_docs/00-overview.md](./aury_docs/00-overview.md)** - 项目概览与最佳实践
-- **[CLI.md](./CLI.md)** - CLI 命令参考
+- **[aury_docs/99-cli.md](./aury_docs/99-cli.md)** - CLI 命令参考
 - **[.env.example](./.env.example)** - 所有可用环境变量
 
 ## 代码规范
@@ -141,6 +150,27 @@ class UserService(BaseService):
     async def create(self, data: UserCreate) -> User:
         # 自动事务管理
         return await self.repo.create(data.model_dump())
+```
+
+### Manager API 规范
+
+所有基础设施 Manager 统一使用 `initialize()` 方法初始化：
+
+```python
+# ✅ 正确
+from aury.boot.infrastructure.cache import CacheManager
+cache = CacheManager.get_instance()
+await cache.initialize(backend="redis", url="redis://localhost:6379")
+
+from aury.boot.infrastructure.storage import StorageManager, StorageConfig
+storage = StorageManager.get_instance()
+await storage.initialize(StorageConfig(...))
+
+from aury.boot.infrastructure.events import EventBusManager
+events = EventBusManager.get_instance()
+await events.initialize(backend="memory")
+
+# ❗ 注意：没有 configure() 方法，配置直接传入 initialize()
 ```
 
 ### 异常规范

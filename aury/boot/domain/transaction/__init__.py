@@ -9,9 +9,9 @@
 
 from __future__ import annotations
 
-import contextvars
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
+import contextvars
 from functools import wraps
 from inspect import signature
 from typing import Any
@@ -24,9 +24,9 @@ from aury.boot.domain.exceptions import TransactionRequiredError
 # 用于跟踪嵌套事务的上下文变量
 _transaction_depth: contextvars.ContextVar[int] = contextvars.ContextVar("transaction_depth", default=0)
 
-# 用于存储 on_commit 回调的上下文变量
-_on_commit_callbacks: contextvars.ContextVar[list[Callable[[], Any] | Callable[[], Awaitable[Any]]]] = (
-    contextvars.ContextVar("on_commit_callbacks", default=[])
+# 用于存储 on_commit 回调的上下文变量（不设置 default，避免可变对象问题）
+_on_commit_callbacks: contextvars.ContextVar[list[Callable[[], Any] | Callable[[], Awaitable[Any]]] | None] = (
+    contextvars.ContextVar("on_commit_callbacks", default=None)
 )
 
 
@@ -51,8 +51,7 @@ def on_commit(callback: Callable[[], Any] | Callable[[], Awaitable[Any]]) -> Non
         - 嵌套事务中注册的回调，只在最外层事务提交后执行
     """
     callbacks = _on_commit_callbacks.get()
-    # 创建新列表避免修改默认值
-    if not callbacks:
+    if callbacks is None:
         callbacks = []
         _on_commit_callbacks.set(callbacks)
     callbacks.append(callback)
@@ -65,7 +64,7 @@ async def _execute_on_commit_callbacks() -> None:
         return
     
     # 清空回调列表
-    _on_commit_callbacks.set([])
+    _on_commit_callbacks.set(None)
     
     for callback in callbacks:
         try:
@@ -106,7 +105,7 @@ async def transactional_context(session: AsyncSession, auto_commit: bool = True)
     
     # 最外层事务初始化回调列表
     if is_outermost:
-        _on_commit_callbacks.set([])
+        _on_commit_callbacks.set(None)
     
     try:
         yield session
@@ -121,7 +120,7 @@ async def transactional_context(session: AsyncSession, auto_commit: bool = True)
         if is_outermost:
             await session.rollback()
             # 回滚时清空回调列表（不执行）
-            _on_commit_callbacks.set([])
+            _on_commit_callbacks.set(None)
             logger.error(f"事务回滚: {exc}")
         raise
     finally:

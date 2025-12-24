@@ -103,7 +103,7 @@ class TestCase(ABC):  # noqa: B024
 
 
 # Pytest fixtures 支持
-@pytest.fixture()
+@pytest.fixture
 async def test_case():
     """Pytest fixture，提供测试用例实例。"""
     case = TestCase()
@@ -115,7 +115,7 @@ async def test_case():
         await case._cleanup()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def db_session(test_case: TestCase):
     """Pytest fixture，提供数据库会话。"""
     await test_case.setup_db()

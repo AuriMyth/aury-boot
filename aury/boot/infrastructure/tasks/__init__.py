@@ -9,7 +9,7 @@ from .exceptions import (
     TaskExecutionError,
     TaskQueueError,
 )
-from .manager import TaskManager, TaskProxy, conditional_actor
+from .manager import TaskManager, TaskProxy, conditional_task
 
 __all__ = [
     "TaskError",
@@ -19,6 +19,6 @@ __all__ = [
     "TaskQueueError",
     "TaskQueueName",
     "TaskRunMode",
-    "conditional_actor",
+    "conditional_task",
 ]
 

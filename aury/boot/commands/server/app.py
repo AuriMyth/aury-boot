@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from pathlib import Path
 import sys
@@ -339,13 +340,11 @@ def dev(
     typer.echo(f"   应用模块: {app_module_path}")
 
     # 在应用启动完成后打印一次服务地址
-    try:
+    with contextlib.suppress(Exception):
         app_instance.add_event_handler(
             "startup",
             lambda: typer.echo(f"✅ 服务已就绪: http://{server_host}:{server_port}"),
         )
-    except Exception:
-        pass
 
     # 默认包含/排除规则（watchfiles 支持）
     reload_includes = [

@@ -81,10 +81,17 @@ def _detect_project_info(project_dir: Path) -> dict[str, str]:
 
 
 def _render_template(template_name: str, context: dict[str, str]) -> str:
-    """渲染模板。"""
+    """渲染模板。
+    
+    支持根目录模板和 aury_docs/ 子目录模板。
+    """
+    # 先在根目录找
     template_path = TEMPLATES_DIR / template_name
     if not template_path.exists():
-        raise FileNotFoundError(f"模板文件不存在: {template_path}")
+        # 再在 aury_docs/ 子目录找
+        template_path = AURY_DOCS_TPL_DIR / template_name
+    if not template_path.exists():
+        raise FileNotFoundError(f"模板文件不存在: {template_name}")
     
     content = template_path.read_text(encoding="utf-8")
     return content.format(**context)
@@ -155,22 +162,15 @@ def generate_agents_doc(
         raise typer.Exit(1)
 
 
-# aury_docs/ 目录中的文档模板映射
-DEV_DOCS_TEMPLATES = [
-    ("aury_docs/00-overview.md.tpl", "aury_docs/00-overview.md", "项目概览"),
-    ("aury_docs/01-model.md.tpl", "aury_docs/01-model.md", "Model 开发指南"),
-    ("aury_docs/02-repository.md.tpl", "aury_docs/02-repository.md", "Repository 开发指南"),
-    ("aury_docs/03-service.md.tpl", "aury_docs/03-service.md", "Service 开发指南"),
-    ("aury_docs/04-schema.md.tpl", "aury_docs/04-schema.md", "Schema 开发指南"),
-    ("aury_docs/05-api.md.tpl", "aury_docs/05-api.md", "API 开发指南"),
-    ("aury_docs/06-exception.md.tpl", "aury_docs/06-exception.md", "异常处理指南"),
-    ("aury_docs/07-cache.md.tpl", "aury_docs/07-cache.md", "缓存指南"),
-    ("aury_docs/08-scheduler.md.tpl", "aury_docs/08-scheduler.md", "定时任务指南"),
-    ("aury_docs/09-tasks.md.tpl", "aury_docs/09-tasks.md", "异步任务指南"),
-    ("aury_docs/10-storage.md.tpl", "aury_docs/10-storage.md", "对象存储指南"),
-    ("aury_docs/11-logging.md.tpl", "aury_docs/11-logging.md", "日志指南"),
-    ("aury_docs/12-admin.md.tpl", "aury_docs/12-admin.md", "管理后台指南"),
-]
+# aury_docs/ 模板目录
+AURY_DOCS_TPL_DIR = TEMPLATES_DIR / "aury_docs"
+
+
+def _get_aury_docs_templates() -> list[Path]:
+    """动态扫描 aury_docs/ 模板目录。"""
+    if not AURY_DOCS_TPL_DIR.exists():
+        return []
+    return sorted(AURY_DOCS_TPL_DIR.glob("*.md.tpl"))
 
 
 @app.command(name="dev")
@@ -202,17 +202,22 @@ def generate_dev_doc(
     console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
     console.print()
     
+    # 确保输出目录存在
+    aury_docs_dir = project_dir / "aury_docs"
+    if not dry_run:
+        aury_docs_dir.mkdir(parents=True, exist_ok=True)
+    
     success_count = 0
-    for template_name, output_name, description in DEV_DOCS_TEMPLATES:
+    for tpl_path in _get_aury_docs_templates():
         try:
-            content = _render_template(template_name, context)
-            output_path = project_dir / output_name
+            output_name = tpl_path.stem  # 去掉 .tpl 后缀，保留 .md
+            output_path = aury_docs_dir / output_name
+            content = tpl_path.read_text(encoding="utf-8")
+            content = content.format(**context)
             if _write_file(output_path, content, force=force, dry_run=dry_run):
                 success_count += 1
-        except FileNotFoundError:
-            console.print(f"[yellow]⚠️  模板不存在，跳过: {template_name}[/yellow]")
         except Exception as e:
-            console.print(f"[red]❌ 生成 {description} 失败: {e}[/red]")
+            console.print(f"[red]❌ 生成 {tpl_path.name} 失败: {e}[/red]")
     
     console.print()
     if dry_run:
@@ -244,14 +249,18 @@ def generate_cli_doc(
         help="预览模式，不实际写入文件",
     ),
 ) -> None:
-    """生成/更新 CLI.md 命令行文档。"""
+    """生成/更新 aury_docs/99-cli.md 命令行文档。"""
     context = _detect_project_info(project_dir)
     
     console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
     
     try:
-        content = _render_template("CLI.md.tpl", context)
-        output_path = project_dir / "CLI.md"
+        tpl_path = AURY_DOCS_TPL_DIR / "99-cli.md.tpl"
+        content = tpl_path.read_text(encoding="utf-8")
+        content = content.format(**context)
+        output_path = project_dir / "aury_docs" / "99-cli.md"
+        if not dry_run:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
         _write_file(output_path, content, force=force, dry_run=dry_run)
     except Exception as e:
         console.print(f"[red]❌ 生成失败: {e}[/red]")
@@ -325,14 +334,20 @@ def generate_all_docs(
     console.print()
     
     # 根目录文档
-    root_docs = [
+    root_docs: list[tuple[str, str, str]] = [
         ("AGENTS.md.tpl", "AGENTS.md", "AI 编程助手上下文"),
-        ("CLI.md.tpl", "CLI.md", "CLI 文档"),
         ("env.example.tpl", ".env.example", "环境变量示例"),
     ]
     
+    # aury_docs/ 开发文档
+    aury_docs_templates = _get_aury_docs_templates()
+    dev_docs = [
+        (tpl.name, f"aury_docs/{tpl.stem}", f"开发文档: {tpl.stem}")
+        for tpl in aury_docs_templates
+    ]
+    
     # 合并所有文档
-    all_docs = root_docs + DEV_DOCS_TEMPLATES
+    all_docs = root_docs + dev_docs
     
     success_count = 0
     for template_name, output_name, description in all_docs:

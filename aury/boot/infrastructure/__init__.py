@@ -6,7 +6,11 @@
 - 存储管理
 - 调度器
 - 任务队列
-- 日志
+- 消息队列
+- 通道 (SSE/PubSub)
+- 事件总线
+- Redis 客户端
+- RabbitMQ 客户端
 """
 
 # 数据库
@@ -20,16 +24,49 @@ from .cache import (
     MemoryCache,
     RedisCache,
 )
+
+# 通道 (SSE/PubSub)
+from .channel import (
+    ChannelBackend,
+    ChannelManager,
+    ChannelMessage,
+    IChannel,
+    MemoryChannel,
+    RedisChannel,
+)
+
+# RabbitMQ 客户端
+from .clients.rabbitmq import RabbitMQClient, RabbitMQConfig
+
+# Redis 客户端
+from .clients.redis import RedisClient, RedisConfig
 from .database import DatabaseManager
 
-# 日志（已迁移到 common 层）
-# 从 common.logging 导入
+# 依赖注入
+from .di import Container, Lifetime, Scope, ServiceDescriptor
 
-# 调度器（可选依赖）
-try:
-    from .scheduler import SchedulerManager
-except ImportError:
-    SchedulerManager = None  # type: ignore[assignment, misc]
+# 事件总线
+from .events import (
+    Event,
+    EventBackend,
+    EventBusManager,
+    EventHandler,
+    EventType,
+    IEventBus,
+    MemoryEventBus,
+    RabbitMQEventBus,
+    RedisEventBus,
+)
+
+# 消息队列
+from .mq import (
+    IMQ,
+    MQBackend,
+    MQManager,
+    MQMessage,
+    RabbitMQ,
+    RedisMQ,
+)
 
 # 存储（基于 aury-sdk-storage）
 from .storage import (
@@ -44,45 +81,67 @@ from .storage import (
     UploadResult,
 )
 
+# 调度器（可选依赖）
+try:
+    from .scheduler import SchedulerManager
+except ImportError:
+    SchedulerManager = None  # type: ignore[assignment, misc]
+
 # 任务队列（可选依赖）
 try:
-    from .tasks import TaskManager, TaskProxy, conditional_actor
+    from .tasks import TaskManager, TaskProxy, conditional_task
 except ImportError:
     TaskManager = None  # type: ignore[assignment, misc]
     TaskProxy = None  # type: ignore[assignment, misc]
-    conditional_actor = None  # type: ignore[assignment, misc]
-
-# 事件总线
-# 依赖注入
-from .di import Container, Lifetime, Scope, ServiceDescriptor
-from .events import (
-    EventBus,
-    EventConsumer,
-    EventLoggingMiddleware,
-    EventMiddleware,
-)
+    conditional_task = None  # type: ignore[assignment, misc]
 
 __all__ = [
+    # 消息队列
+    "IMQ",
+    # 缓存
     "CacheBackend",
     "CacheFactory",
-    # 缓存
     "CacheManager",
+    # 通道
+    "ChannelBackend",
+    "ChannelManager",
+    "ChannelMessage",
     # 依赖注入
     "Container",
     # 数据库
     "DatabaseManager",
     # 事件总线
-    "EventBus",
-    "EventConsumer",
-    "EventLoggingMiddleware",
-    "EventMiddleware",
+    "Event",
+    "EventBackend",
+    "EventBusManager",
+    "EventHandler",
+    "EventType",
     "ICache",
+    "IChannel",
+    "IEventBus",
+    # 存储
     "IStorage",
     "Lifetime",
     "LocalStorage",
+    "MQBackend",
+    "MQManager",
+    "MQMessage",
     "MemcachedCache",
     "MemoryCache",
+    "MemoryChannel",
+    "MemoryEventBus",
+    "RabbitMQ",
+    # RabbitMQ 客户端
+    "RabbitMQClient",
+    "RabbitMQConfig",
+    "RabbitMQEventBus",
     "RedisCache",
+    "RedisChannel",
+    # Redis 客户端
+    "RedisClient",
+    "RedisConfig",
+    "RedisEventBus",
+    "RedisMQ",
     "S3Storage",
     # 调度器
     "SchedulerManager",
@@ -92,13 +151,11 @@ __all__ = [
     "StorageConfig",
     "StorageFactory",
     "StorageFile",
-    # 存储
     "StorageManager",
-    "UploadResult",
     # 任务队列
     "TaskManager",
     "TaskProxy",
-    "conditional_actor",
-    # 日志（已迁移到 common 层，请从 common.logging 导入）
+    "UploadResult",
+    "conditional_task",
 ]
 

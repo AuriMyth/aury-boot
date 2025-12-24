@@ -35,6 +35,12 @@ class ComponentName(str, Enum):
     # 存储组件
     STORAGE = "storage"
 
+    # 消息队列组件
+    MESSAGE_QUEUE = "message_queue"
+
+    # 事件总线组件
+    EVENT_BUS = "event_bus"
+
     # 迁移组件
     MIGRATIONS = "migrations"
 

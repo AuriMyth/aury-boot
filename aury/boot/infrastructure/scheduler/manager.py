@@ -117,10 +117,13 @@ class SchedulerManager:
         elif name in cls._instances:
             del cls._instances[name]
     
-    async def initialize(self) -> None:
-        """初始化调度器（已废弃，保留以保持后向兼容）。
+    async def initialize(self) -> SchedulerManager:
+        """初始化调度器（链式调用）。
         
-        调度器现在在 get_instance() 时同步初始化。
+        调度器现在在 get_instance() 时同步初始化，此方法保留以保持后向兼容。
+        
+        Returns:
+            self: 支持链式调用
         """
         if not self._initialized:
             # 如果还未初始化（理论上不会发生），进行初始化
@@ -131,6 +134,7 @@ class SchedulerManager:
             self._scheduler = AsyncIOScheduler()
             self._initialized = True
         logger.debug("调度器已就绪")
+        return self
     
     @property
     def scheduler(self) -> AsyncIOScheduler:

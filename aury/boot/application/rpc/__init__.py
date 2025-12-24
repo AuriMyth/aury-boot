@@ -51,13 +51,13 @@ __all__ = [
     "BaseRPCClient",
     "CompositeServiceDiscovery",
     "ConfigServiceDiscovery",
-    "create_rpc_client",
     "DNSServiceDiscovery",
-    "get_service_discovery",
     "RPCClient",
     "RPCError",
     "RPCResponse",
     "ServiceDiscovery",
+    "create_rpc_client",
+    "get_service_discovery",
     "set_service_discovery",
 ]
 

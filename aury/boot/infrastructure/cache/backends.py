@@ -10,7 +10,7 @@ from collections.abc import Callable
 from datetime import timedelta
 import json
 import pickle
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from redis.asyncio import Redis
 
@@ -18,36 +18,65 @@ from aury.boot.common.logging import logger
 
 from .base import ICache
 
+if TYPE_CHECKING:
+    from aury.boot.infrastructure.clients.redis import RedisClient
+
 
 class RedisCache(ICache):
-    """Redis缓存实现。"""
+    """Redis缓存实现。
     
-    def __init__(self, url: str, *, serializer: str = "json"):
+    支持两种初始化方式：
+    1. 传入 URL 自行创建连接
+    2. 传入 RedisClient 实例（推荐）
+    """
+    
+    def __init__(
+        self,
+        url: str | None = None,
+        *,
+        redis_client: RedisClient | None = None,
+        serializer: str = "json",
+    ):
         """初始化Redis缓存。
         
         Args:
             url: Redis连接URL
+            redis_client: RedisClient 实例（推荐）
             serializer: 序列化方式（json/pickle）
         """
         self._url = url
+        self._redis_client = redis_client
         self._serializer = serializer
         self._redis: Redis | None = None
+        self._owns_connection = False  # 是否自己拥有连接（需要自己关闭）
     
     async def initialize(self) -> None:
         """初始化连接。"""
-        try:
-            self._redis = Redis.from_url(
-                self._url,
-                encoding="utf-8",
-                decode_responses=False,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-            )
-            await self._redis.ping()
-            logger.info("Redis缓存初始化成功")
-        except Exception as exc:
-            logger.error(f"Redis连接失败: {exc}")
-            raise
+        # 优先使用 RedisClient
+        if self._redis_client is not None:
+            self._redis = self._redis_client.connection
+            self._owns_connection = False
+            logger.info("Redis缓存初始化成功（使用 RedisClient）")
+            return
+        
+        # 使用 URL 创建连接
+        if self._url:
+            try:
+                self._redis = Redis.from_url(
+                    self._url,
+                    encoding="utf-8",
+                    decode_responses=False,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
+                )
+                await self._redis.ping()
+                self._owns_connection = True
+                logger.info("Redis缓存初始化成功")
+            except Exception as exc:
+                logger.error(f"Redis连接失败: {exc}")
+                raise
+        else:
+            raise ValueError("Redis缓存需要提供 url 或 redis_client 参数")
     
     async def get(self, key: str, default: Any = None) -> Any:
         """获取缓存。"""
@@ -134,11 +163,40 @@ class RedisCache(ICache):
             await self._redis.flushdb()
             logger.info("Redis缓存已清空")
     
+    async def delete_pattern(self, pattern: str) -> int:
+        """按模式删除缓存。
+        
+        Args:
+            pattern: 通配符模式，如 "todo:*"
+            
+        Returns:
+            int: 删除的键数量
+        """
+        if not self._redis:
+            return 0
+        
+        try:
+            # 使用 SCAN 遍历匹配的键（比 KEYS 更安全，不会阻塞）
+            count = 0
+            cursor = 0
+            while True:
+                cursor, keys = await self._redis.scan(cursor, match=pattern, count=100)
+                if keys:
+                    count += await self._redis.delete(*keys)
+                if cursor == 0:
+                    break
+            logger.debug(f"按模式删除缓存: {pattern}, 删除 {count} 个键")
+            return count
+        except Exception as exc:
+            logger.error(f"Redis模式删除失败: {pattern}, {exc}")
+            return 0
+    
     async def close(self) -> None:
-        """关闭连接。"""
-        if self._redis:
+        """关闭连接（仅当自己拥有连接时）。"""
+        if self._redis and self._owns_connection:
             await self._redis.close()
             logger.info("Redis连接已关闭")
+        self._redis = None
     
     @property
     def redis(self) -> Redis | None:
@@ -227,6 +285,27 @@ class MemoryCache(ICache):
         async with self._lock:
             self._cache.clear()
             logger.info("内存缓存已清空")
+    
+    async def delete_pattern(self, pattern: str) -> int:
+        """按模式删除缓存。
+        
+        Args:
+            pattern: 通配符模式，支持 * 和 ?
+            
+        Returns:
+            int: 删除的键数量
+        """
+        import fnmatch
+        
+        async with self._lock:
+            keys_to_delete = [
+                key for key in self._cache
+                if fnmatch.fnmatch(key, pattern)
+            ]
+            for key in keys_to_delete:
+                del self._cache[key]
+            logger.debug(f"按模式删除缓存: {pattern}, 删除 {len(keys_to_delete)} 个键")
+            return len(keys_to_delete)
     
     async def close(self) -> None:
         """关闭连接（内存缓存无需关闭）。"""
@@ -332,6 +411,11 @@ class MemcachedCache(ICache):
     async def clear(self) -> None:
         """清空所有缓存（Memcached不支持）。"""
         logger.warning("Memcached不支持清空所有缓存")
+    
+    async def delete_pattern(self, pattern: str) -> int:
+        """按模式删除缓存（Memcached 不支持）。"""
+        logger.warning("Memcached 不支持模式删除，请使用 Redis 或 Memory 后端")
+        return 0
     
     async def close(self) -> None:
         """关闭连接。"""

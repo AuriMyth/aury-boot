@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from aury.boot.domain.models import Base, GUID
+from aury.boot.domain.models import GUID, Base
 from aury.boot.domain.pagination import PaginationParams, PaginationResult, SortParams
 
 if TYPE_CHECKING:

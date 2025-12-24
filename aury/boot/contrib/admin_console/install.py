@@ -14,7 +14,7 @@ from .utils import import_from_string
 
 def _require_sqladmin():
     try:
-        from sqladmin import Admin  # noqa: F401
+        from sqladmin import Admin
     except Exception as exc:  # pragma: no cover
         raise ImportError(
             "未安装 sqladmin。请先安装: uv add \"aury-boot[admin]\" 或 uv add sqladmin"

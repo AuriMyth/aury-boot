@@ -54,8 +54,37 @@ CACHE_MAX_SIZE=1000
 
 # Redis（生产环境）
 CACHE_TYPE=redis
-CACHE_REDIS_URL=redis://localhost:6379/0
-CACHE_REDIS_POOL_SIZE=10
+CACHE_URL=redis://localhost:6379/0
+```
+
+### 多实例配置
+
+支持多实例，环境变量格式：`CACHE_{INSTANCE}_{FIELD}`
+
+```bash
+# 默认实例
+CACHE_TYPE=redis
+CACHE_URL=redis://localhost:6379/0
+
+# 会话缓存实例
+CACHE_SESSION_TYPE=redis
+CACHE_SESSION_URL=redis://localhost:6379/2
+CACHE_SESSION_DEFAULT_TTL=3600
+
+# 限流缓存实例
+CACHE_RATE_LIMIT_TYPE=memory
+CACHE_RATE_LIMIT_MAX_SIZE=10000
+```
+
+代码中使用：
+
+```python
+# 默认实例
+cache = CacheManager.get_instance()
+
+# 命名实例
+session_cache = CacheManager.get_instance("session")
+rate_limit_cache = CacheManager.get_instance("rate_limit")
 ```
 
 ## 缓存策略

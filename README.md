@@ -1,6 +1,23 @@
 # Aury Boot
 
-这是AUM项目的基于 FastAPI 生态的企业级 API 开发框架，提供所有微服务共用的基础设施组件。
+基于 FastAPI 生态的企业级 API 开发框架，提供所有微服务共用的基础设施组件。
+
+## 快速开始
+
+```bash
+# 1. 创建项目目录并初始化
+mkdir my-service && cd my-service
+uv init . --name my_service --no-package --python 3.13
+
+# 2. 添加依赖
+uv add "aury-boot[recommended,admin]"  # admin 可选，提供 SQLAdmin 管理后台
+
+# 3. 初始化项目结构
+aury init
+
+# 4. 启动开发服务器
+aury server dev
+```
 
 ## 功能模块
 

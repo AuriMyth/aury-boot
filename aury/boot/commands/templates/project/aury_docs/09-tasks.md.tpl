@@ -9,7 +9,7 @@ from aury.boot.common.logging import logger
 from aury.boot.infrastructure.tasks import conditional_task
 
 
-@conditional_task
+@conditional_task()
 def send_email(to: str, subject: str, body: str):
     """异步发送邮件。"""
     logger.info(f"发送邮件到 {{to}}: {{subject}}")
@@ -17,7 +17,7 @@ def send_email(to: str, subject: str, body: str):
     return {{"status": "sent"}}
 
 
-@conditional_task
+@conditional_task()
 def process_order(order_id: str):
     """异步处理订单。"""
     logger.info(f"处理订单: {{order_id}}")

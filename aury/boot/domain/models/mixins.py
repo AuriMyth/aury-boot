@@ -119,7 +119,54 @@ class AuditableStateMixin:
 
 
 class VersionMixin:
-    """乐观锁版本控制 Mixin"""
+    """乐观锁版本控制 Mixin。
+    
+    用于防止并发更新冲突。每次更新时会检查 version 是否一致，
+    如果不一致则抛出 VersionConflictError。
+    
+    工作原理:
+    1. 读取记录时获取当前 version
+    2. 更新时检查 version 是否与读取时一致
+    3. 如果一致，version + 1 并完成更新
+    4. 如果不一致，抛出 VersionConflictError
+    
+    使用场景:
+    - 库存管理（防止超卖）
+    - 订单状态更新（防止重复支付）
+    - 文档编辑（防止覆盖他人修改）
+    
+    示例:
+        class Product(IDMixin, VersionMixin, Base):
+            __tablename__ = "products"
+            name: Mapped[str]
+            stock: Mapped[int]
+        
+        # 更新时自动检查版本
+        product = await repo.get(1)  # version=1
+        product.stock -= 1
+        await repo.update(product)  # version 自动变为 2
+        
+        # 并发更新时抛出异常
+        # 线程 A: product.version = 1, 准备更新
+        # 线程 B: 已经更新，version = 2
+        # 线程 A: await repo.update(product) -> VersionConflictError
+    
+    异常处理:
+        from aury.boot.domain.exceptions import VersionConflictError
+        
+        try:
+            await repo.update(product)
+        except VersionConflictError as e:
+            # 重新加载数据并重试
+            product = await repo.get(product.id)
+            # ... 重新应用业务逻辑 ...
+            await repo.update(product)
+    
+    注意:
+    - 乐观锁适用于读多写少的场景
+    - 高并发写入场景建议使用悲观锁 (QueryBuilder.for_update())
+    - BaseRepository.update() 已自动支持乐观锁检查
+    """
 
     version: Mapped[int] = mapped_column(
         Integer,

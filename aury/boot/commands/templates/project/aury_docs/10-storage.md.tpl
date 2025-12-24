@@ -21,7 +21,7 @@ from aury.boot.infrastructure.storage import (
 
 # 默认实例
 storage = StorageManager.get_instance()
-await storage.init(StorageConfig(
+await storage.initialize(StorageConfig(
     backend=StorageBackend.COS,
     bucket_name="my-bucket-1250000000",
     region="ap-guangzhou",
@@ -33,8 +33,8 @@ await storage.init(StorageConfig(
 # 多实例示例：源存储和目标存储
 source = StorageManager.get_instance("source")
 target = StorageManager.get_instance("target")
-await source.init(StorageConfig(backend=StorageBackend.COS, ...))
-await target.init(StorageConfig(backend=StorageBackend.S3, ...))
+await source.initialize(StorageConfig(backend=StorageBackend.COS, ...))
+await target.initialize(StorageConfig(backend=StorageBackend.S3, ...))
 
 # 上传文件（返回 URL）
 url = await storage.upload_file(
@@ -103,7 +103,7 @@ from aury.boot.infrastructure.storage import (
 )
 
 storage = StorageManager.get_instance()
-await storage.init(StorageConfig(
+await storage.initialize(StorageConfig(
     backend=StorageBackend.LOCAL,
     base_path="./dev_storage",
 ))

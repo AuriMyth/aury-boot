@@ -138,7 +138,7 @@ value = await cache.get("key")
 **配置**（.env）：
 ```bash
 CACHE_TYPE=redis
-CACHE_REDIS_URL=redis://localhost:6379/0
+CACHE_URL=redis://localhost:6379/0
 CACHE_MAX_SIZE=1000
 ```
 
@@ -502,3 +502,4 @@ class DependentComponent(Component):
 - 查看 [12-database-complete.md](./12-database-complete.md) 了解 DatabaseComponent 详细用法
 - 查看 [13-caching-advanced.md](./13-caching-advanced.md) 了解 CacheComponent 详细用法
 - 查看 [06-di-container-complete.md](./06-di-container-complete.md) 了解如何与 DI 容器配合
+- 查看 [26-infrastructure-advanced.md](./26-infrastructure-advanced.md) 了解 Channel、MQ、Events 等新模块

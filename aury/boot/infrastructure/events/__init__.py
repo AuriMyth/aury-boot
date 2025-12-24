@@ -1,33 +1,30 @@
-"""事件系统 - 基于 Kombu 消息队列的分布式事件总线。
+"""事件总线模块。
 
-提供事件基础定义、发布/订阅机制，实现模块间的解耦。
-支持本地模式（内存）和分布式模式（Kombu 消息队列）。
+提供发布/订阅模式的事件总线功能，用于模块间解耦通信。
 
-**架构说明**：
-Event 基类定义在 infrastructure 层，这是最底层的公共数据结构。
-Domain 层依赖 infrastructure.events 获取 Event 基类。
-这样完全断开了 infrastructure 对 domain 的循环依赖。
-
-事件模型定义在单独的 models.py 文件中，避免循环导入问题。
+支持的后端:
+- memory: 内存事件总线（单进程）
+- redis: Redis Pub/Sub（多进程/多实例）
+- rabbitmq: RabbitMQ Exchange（分布式）
 """
 
-from __future__ import annotations
-
-from .bus import EventBus
-from .config import EventConfig
-from .consumer import EventConsumer
-from .middleware import EventLoggingMiddleware, EventMiddleware
-from .models import Event, EventHandler, EventType
+from .backends import MemoryEventBus, RabbitMQEventBus, RedisEventBus
+from .base import Event, EventBackend, EventHandler, EventType, IEventBus
+from .manager import EventBusManager
 
 __all__ = [
+    # 接口和类型
     "Event",
-    "EventBus",
-    "EventConfig",
-    "EventConsumer",
+    "EventBackend",
+    # 管理器
+    "EventBusManager",
     "EventHandler",
-    "EventLoggingMiddleware",
-    "EventMiddleware",
     "EventType",
+    "IEventBus",
+    # 后端实现
+    "MemoryEventBus",
+    "RabbitMQEventBus",
+    "RedisEventBus",
 ]
 
 

@@ -47,16 +47,16 @@ except ImportError:
 
 
 class TaskProxy:
-    """任务代理类，用于在 API 模式下发送消息而不注册 actor。
+    """任务代理类，用于在 API 模式下发送消息而不注册任务。
     
-    在 API 服务中，我们不希望注册 actor（因为 worker 已经注册了），
+    在 API 服务中，我们不希望注册任务（因为 worker 已经注册了），
     但仍然需要能够发送任务消息。TaskProxy 提供了这个功能。
     
     使用示例:
-        @conditional_actor(queue_name="default")
-        async def send_email(to: str, subject: str):
-            # 在 worker 中会注册为 actor
-            # 在 API 中会返回 TaskProxy
+        @conditional_task(queue_name="default")
+        def send_email(to: str, subject: str):
+            # 在 worker 中执行任务
+            # 在 API 中只发送不执行
             pass
         
         # API 模式下发送任务
@@ -210,18 +210,21 @@ class TaskManager:
         broker_url: str | None = None,
         *,
         middleware: list | None = None,
-    ) -> None:
-        """初始化任务队列。
+    ) -> TaskManager:
+        """初始化任务队列（链式调用）。
         
         Args:
             task_config: 任务配置（TaskConfig）
             run_mode: 运行模式（TaskRunMode 或字符串，如 "api", "worker"）
             broker_url: Broker连接URL（可选，优先使用 config）
             middleware: 中间件列表
+            
+        Returns:
+            self: 支持链式调用
         """
         if self._initialized:
             logger.warning("任务管理器已初始化，跳过")
-            return
+            return self
         
         self._task_config = task_config or TaskConfig()
         
@@ -241,7 +244,7 @@ class TaskManager:
         url = broker_url or self._task_config.broker_url
         if not url:
             logger.warning("未配置任务队列URL，任务功能将被禁用")
-            return
+            return self
         
         if not _DRAMATIQ_AVAILABLE:
             raise ImportError(
@@ -269,6 +272,8 @@ class TaskManager:
         except Exception as exc:
             logger.error(f"任务队列初始化失败: {exc}")
             raise
+        
+        return self
     
     def task(
         self,
@@ -415,29 +420,39 @@ class TaskManager:
         return f"<TaskManager status={status}>"
 
 
-def conditional_actor(
+def conditional_task(
+    func: Callable | None = None,
+    /,
     queue_name: str = TaskQueueName.DEFAULT.value,
     run_mode: TaskRunMode | str | None = None,
     **kwargs: Any,
-) -> Callable[[Callable], Any]:
-    """条件注册的 actor 装饰器（独立函数版本）。
+) -> Callable[[Callable], Any] | Any:
+    """条件注册的任务装饰器。
     
-    在 worker 模式下正常注册为 actor（执行者）
-    在 producer 模式下返回 TaskProxy，可以发送消息但不注册（生产者）
+    根据运行模式决定行为：
+    - worker 模式：正常注册为任务执行者
+    - producer 模式：返回 TaskProxy，可发送任务但不注册
+    
+    支持两种使用方式：
+    - @conditional_task      # 无括号
+    - @conditional_task()    # 带括号
     
     Args:
+        func: 被装饰的函数（无括号调用时自动传入）
         queue_name: 队列名称
         run_mode: 运行模式（TaskRunMode 或字符串），默认为 WORKER
-        **kwargs: 其他参数
+        **kwargs: 其他参数（如 max_retries, time_limit）
     
     使用示例:
-        @conditional_actor(queue_name="default", max_retries=3)
-        async def send_email(to: str, subject: str):
-            # 在 worker 中会注册为 actor
-            # 在 producer 中会返回 TaskProxy
+        @conditional_task
+        def send_email(to: str, subject: str):
             pass
         
-        # Producer 模式下发送任务
+        @conditional_task(queue_name="high", max_retries=5)
+        def send_sms(phone: str, message: str):
+            pass
+        
+        # 发送任务到队列
         send_email.send("user@example.com", "Hello")
     """
     if not _DRAMATIQ_AVAILABLE:
@@ -445,7 +460,7 @@ def conditional_actor(
             "dramatiq 未安装。请安装可选依赖: pip install 'aury-boot[queue-dramatiq]'"
         )
     
-    def decorator(func: Callable) -> Any:
+    def decorator(f: Callable) -> Any:
         # 处理 run_mode 参数，默认为 WORKER
         if run_mode is None:
             mode = TaskRunMode.WORKER
@@ -460,31 +475,34 @@ def conditional_actor(
         
         if mode == TaskRunMode.WORKER:
             # Worker 模式下正常注册（执行者）
-            return dramatiq.actor(queue_name=queue_name, **kwargs)(func)
+            return dramatiq.actor(queue_name=queue_name, **kwargs)(f)
         else:
             # Producer 模式下返回代理对象，不注册但可以发送消息
             # 获取函数的完整模块路径作为 actor_name
-            module_name = func.__module__
-            func_name = func.__name__
-            actor_name = f"{module_name}.{func_name}"
+            module_name = f.__module__
+            func_name = f.__name__
+            full_actor_name = f"{module_name}.{func_name}"
             
             # 获取全局 broker（如果已设置）
             broker = dramatiq.get_broker() if hasattr(dramatiq, "get_broker") else None
             
             return TaskProxy(
-                func=func,
+                func=f,
                 queue_name=queue_name,
-                actor_name=actor_name,
+                actor_name=full_actor_name,
                 broker=broker,
                 **kwargs,
             )
     
+    # 支持 @conditional_task 和 @conditional_task() 两种写法
+    if func is not None:
+        return decorator(func)
     return decorator
 
 
 __all__ = [
     "TaskManager",
     "TaskProxy",
-    "conditional_actor",
+    "conditional_task",
 ]
 

@@ -16,6 +16,8 @@ from aury.boot.application.migrations import MigrationManager
 from aury.boot.common.logging import logger
 from aury.boot.infrastructure.cache import CacheManager
 from aury.boot.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.events import EventBusManager
+from aury.boot.infrastructure.mq import MQManager
 from aury.boot.infrastructure.scheduler import SchedulerManager
 from aury.boot.infrastructure.storage import StorageManager
 from aury.boot.infrastructure.tasks import TaskManager
@@ -74,12 +76,12 @@ class CacheComponent(Component):
         """初始化缓存。"""
         try:
             cache_manager = CacheManager.get_instance()
-            if not cache_manager._backend:
-                await cache_manager.init_app({
-                    "CACHE_TYPE": config.cache.cache_type,
-                    "CACHE_URL": config.cache.url,
-                    "CACHE_MAX_SIZE": config.cache.max_size,
-                })
+            if not cache_manager.is_initialized:
+                await cache_manager.initialize(
+                    backend=config.cache.cache_type,
+                    url=config.cache.url,
+                    max_size=config.cache.max_size,
+                )
         except Exception as e:
             logger.warning(f"缓存初始化失败（非关键）: {e}")
 
@@ -87,7 +89,7 @@ class CacheComponent(Component):
         """关闭缓存。"""
         try:
             cache_manager = CacheManager.get_instance()
-            if cache_manager._backend:
+            if cache_manager.is_initialized:
                 await cache_manager.cleanup()
         except Exception as e:
             logger.warning(f"缓存关闭失败: {e}")
@@ -95,53 +97,53 @@ class CacheComponent(Component):
 
 class StorageComponent(Component):
     """对象存储组件。
-
-设计要点（解耦）：
-- 使用 aury-sdk-storage 的 StorageConfig/StorageBackend，Application 层仅做装配
-- 建议由应用的 `StorageSettings` 读取环境变量并构造 SDK 的 StorageConfig
-"""
+    
+    支持多实例配置，通过环境变量 STORAGE_{INSTANCE}_{FIELD} 配置。
+    """
 
     name = ComponentName.STORAGE
     enabled = True
     depends_on: ClassVar[list[str]] = []
 
     def can_enable(self, config: BaseConfig) -> bool:
-        st = getattr(config, "storage", None)
-        return self.enabled and bool(getattr(st, "enabled", True))
+        """当配置了 Storage 实例时启用。"""
+        return self.enabled and bool(config.get_storages())
 
     async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
-        try:
-            from aury.boot.infrastructure.storage import StorageBackend, StorageConfig
-
-            storage_manager = StorageManager.get_instance()
-            st = config.storage
-            storage_config = StorageConfig(
-                backend=StorageBackend(st.type),
-                access_key_id=st.access_key_id,
-                access_key_secret=st.access_key_secret,
-                session_token=st.session_token,
-                endpoint=st.endpoint,
-                region=st.region,
-                bucket_name=st.bucket_name,
-                base_path=st.base_path,
-                addressing_style=st.addressing_style,
-                role_arn=st.role_arn,
-                role_session_name=st.role_session_name,
-                external_id=st.external_id,
-                sts_endpoint=st.sts_endpoint,
-                sts_region=st.sts_region,
-                sts_duration_seconds=st.sts_duration_seconds,
-            )
-            await storage_manager.init(storage_config)
-        except Exception as e:
-            logger.warning(f"存储初始化失败（非关键）: {e}")
+        """初始化存储。"""
+        from aury.boot.infrastructure.storage import StorageBackend, StorageConfig
+        
+        storage_configs = config.get_storages()
+        if not storage_configs:
+            logger.debug("未配置 Storage 实例，跳过存储初始化")
+            return
+        
+        for name, st_config in storage_configs.items():
+            try:
+                storage_manager = StorageManager.get_instance(name)
+                if not storage_manager.is_initialized:
+                    storage_config = StorageConfig(
+                        backend=StorageBackend(st_config.backend),
+                        access_key_id=st_config.access_key_id,
+                        access_key_secret=st_config.access_key_secret,
+                        endpoint=st_config.endpoint,
+                        region=st_config.region,
+                        bucket_name=st_config.bucket_name,
+                        base_path=st_config.base_path,
+                    )
+                    await storage_manager.initialize(storage_config)
+            except Exception as e:
+                logger.warning(f"存储 [{name}] 初始化失败（非关键）: {e}")
 
     async def teardown(self, app: FoundationApp) -> None:
-        try:
-            storage_manager = StorageManager.get_instance()
-            await storage_manager.cleanup()
-        except Exception as e:
-            logger.warning(f"存储关闭失败: {e}")
+        """关闭所有存储实例。"""
+        for name in list(StorageManager._instances.keys()):
+            try:
+                storage_manager = StorageManager.get_instance(name)
+                if storage_manager.is_initialized:
+                    await storage_manager.cleanup()
+            except Exception as e:
+                logger.warning(f"存储 [{name}] 关闭失败: {e}")
 
 
 class TaskComponent(Component):
@@ -410,6 +412,93 @@ class AdminConsoleComponent(Component):
         pass
 
 
+class MessageQueueComponent(Component):
+    """消息队列组件。
+    
+    提供统一的消息队列接口，支持多种后端（Redis、RabbitMQ）。
+    与 TaskComponent（基于 Dramatiq）的区别：
+    - Task: 异步任务处理（API 发送，Worker 执行）
+    - MQ: 通用消息队列（生产者/消费者模式，服务间通信）
+    """
+
+    name = ComponentName.MESSAGE_QUEUE
+    enabled = True
+    depends_on: ClassVar[list[str]] = []
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """当配置了 MQ 实例时启用。"""
+        return self.enabled and bool(config.get_mqs())
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化消息队列。"""
+        from aury.boot.application.config import MQInstanceConfig
+        
+        # 从多实例配置加载
+        mq_configs = config.get_mqs()
+        if not mq_configs:
+            logger.debug("未配置 MQ 实例，跳过消息队列初始化")
+            return
+        
+        for name, mq_config in mq_configs.items():
+            try:
+                mq_manager = MQManager.get_instance(name)
+                if not mq_manager.is_initialized:
+                    await mq_manager.initialize(config=mq_config)
+            except Exception as e:
+                logger.warning(f"消息队列 [{name}] 初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """关闭所有消息队列实例。"""
+        for name in list(MQManager._instances.keys()):
+            try:
+                mq_manager = MQManager.get_instance(name)
+                if mq_manager.is_initialized:
+                    await mq_manager.cleanup()
+            except Exception as e:
+                logger.warning(f"消息队列 [{name}] 关闭失败: {e}")
+
+
+class EventBusComponent(Component):
+    """事件总线组件。
+    
+    提供发布/订阅模式的事件总线功能，支持多种后端（memory、Redis、RabbitMQ）。
+    """
+
+    name = ComponentName.EVENT_BUS
+    enabled = True
+    depends_on: ClassVar[list[str]] = []
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """当配置了 Event 实例时启用。"""
+        return self.enabled and bool(config.get_events())
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化事件总线。"""
+        # 从多实例配置加载
+        event_configs = config.get_events()
+        if not event_configs:
+            logger.debug("未配置 Event 实例，跳过事件总线初始化")
+            return
+        
+        for name, event_config in event_configs.items():
+            try:
+                event_manager = EventBusManager.get_instance(name)
+                if not event_manager.is_initialized:
+                    await event_manager.initialize(config=event_config)
+            except Exception as e:
+                logger.warning(f"事件总线 [{name}] 初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """关闭所有事件总线实例。"""
+        for name in list(EventBusManager._instances.keys()):
+            try:
+                event_manager = EventBusManager.get_instance(name)
+                if event_manager.is_initialized:
+                    await event_manager.cleanup()
+            except Exception as e:
+                logger.warning(f"事件总线 [{name}] 关闭失败: {e}")
+
+
 # 设置默认组件
 FoundationApp.components = [
     DatabaseComponent,
@@ -418,6 +507,8 @@ FoundationApp.components = [
     CacheComponent,
     StorageComponent,
     TaskComponent,
+    MessageQueueComponent,
+    EventBusComponent,
     SchedulerComponent,
 ]
 
@@ -426,6 +517,8 @@ __all__ = [
     "AdminConsoleComponent",
     "CacheComponent",
     "DatabaseComponent",
+    "EventBusComponent",
+    "MessageQueueComponent",
     "MigrationComponent",
     "SchedulerComponent",
     "StorageComponent",

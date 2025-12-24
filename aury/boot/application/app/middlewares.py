@@ -13,6 +13,8 @@ from aury.boot.application.config import BaseConfig
 from aury.boot.application.constants import MiddlewareName
 from aury.boot.application.middleware.logging import (
     RequestLoggingMiddleware as StarletteRequestLoggingMiddleware,
+)
+from aury.boot.application.middleware.logging import (
     WebSocketLoggingMiddleware as StarletteWebSocketLoggingMiddleware,
 )
 

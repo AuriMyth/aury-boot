@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from aury.boot.common.logging import logger
 from aury.sdk.storage.storage import (
     IStorage,
     LocalStorage,
@@ -13,8 +14,6 @@ from aury.sdk.storage.storage import (
     StorageConfig,
     StorageFile,
 )
-
-from aury.boot.common.logging import logger
 
 
 class StorageManager:
@@ -69,8 +68,15 @@ class StorageManager:
         elif name in cls._instances:
             del cls._instances[name]
 
-    async def init(self, config: StorageConfig) -> None:
-        """使用 SDK 的 StorageConfig 初始化存储后端。"""
+    async def initialize(self, config: StorageConfig) -> StorageManager:
+        """初始化存储后端（链式调用）。
+        
+        Args:
+            config: 存储配置对象
+            
+        Returns:
+            self: 支持链式调用
+        """
         self._config = config
         if config.backend == StorageBackend.LOCAL:
             self._backend = LocalStorage(base_path=config.base_path or "./storage")
@@ -78,11 +84,17 @@ class StorageManager:
             # S3/COS/OSS/MinIO 统一走 S3Storage
             self._backend = S3Storage(config)
         logger.info(f"存储管理器初始化完成: {config.backend.value}")
+        return self
 
+    @property
+    def is_initialized(self) -> bool:
+        """检查是否已初始化。"""
+        return self._backend is not None
+    
     @property
     def backend(self) -> IStorage:
         if self._backend is None:
-            raise RuntimeError("存储管理器未初始化，请先调用 init()")
+            raise RuntimeError("存储管理器未初始化，请先调用 initialize()")
         return self._backend
 
     async def upload_file(

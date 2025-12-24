@@ -5,7 +5,6 @@ from typing import Any
 
 from starlette.requests import Request
 
-
 try:  # pragma: no cover
     from sqladmin.authentication import AuthenticationBackend as _SQLAdminAuthenticationBackend
 except Exception:  # pragma: no cover
@@ -14,7 +13,7 @@ except Exception:  # pragma: no cover
 
 def _require_sqladmin():
     try:
-        from sqladmin.authentication import AuthenticationBackend  # noqa: F401
+        from sqladmin.authentication import AuthenticationBackend
     except Exception as exc:  # pragma: no cover
         raise ImportError(
             "未安装 sqladmin。请先安装: uv add \"aury-boot[admin]\" 或 uv add sqladmin"
@@ -118,7 +117,7 @@ def wrap_authenticate(
     from sqladmin.authentication import AuthenticationBackend
 
     class _Wrapped(AuthenticationBackend):
-        async def login(self, request: Request) -> bool:  # noqa: D401
+        async def login(self, request: Request) -> bool:
             # 默认不提供登录页逻辑；用户可自己实现更复杂版本
             return False
 

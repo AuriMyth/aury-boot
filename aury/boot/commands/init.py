@@ -156,8 +156,7 @@ TEMPLATE_FILE_MAP = {
     ".env.example": "env.example.tpl",
     ".gitignore": "gitignore.tpl",
     "README.md": "README.md.tpl",
-    "DEVELOPMENT.md": "DEVELOPMENT.md.tpl",
-    "CLI.md": "CLI.md.tpl",
+    "AGENTS.md": "AGENTS.md.tpl",
     "conftest.py": "conftest.py.tpl",
     "admin_console/__init__.py": "admin_console_init.py.tpl",
 }
@@ -712,8 +711,7 @@ def init(
         (code_root / "admin_console" / "__init__.py", "admin_console/__init__.py", False),
         (base_path / "tests" / "conftest.py", "conftest.py", False),  # tests 放在项目根目录
         (base_path / "README.md", "README.md", True),  # 覆盖 uv init 创建的默认 README
-        (base_path / "DEVELOPMENT.md", "DEVELOPMENT.md", False),  # 开发指南
-        (base_path / "CLI.md", "CLI.md", False),  # CLI 命令参考
+        (base_path / "AGENTS.md", "AGENTS.md", False),  # AI 编程助手上下文
         (base_path / ".gitignore", ".gitignore", False),  # Git 忽略文件
     ]
 
@@ -806,13 +804,34 @@ def init(
     else:
         console.print("  [dim]ℹ️  migrations/ 目录已存在，跳过[/dim]")
 
-    # 5. 生成 Docker 配置
+    # 5. 生成开发文档 (aury_docs/) - 动态扫描模板目录
+    console.print("\n[bold]📚 生成开发文档...[/bold]")
+    aury_docs_tpl_dir = TEMPLATES_DIR / "aury_docs"
+    aury_docs_dir = base_path / "aury_docs"
+    aury_docs_dir.mkdir(parents=True, exist_ok=True)
+    docs_count = 0
+    if aury_docs_tpl_dir.exists():
+        for tpl_path in sorted(aury_docs_tpl_dir.glob("*.md.tpl")):
+            output_name = tpl_path.stem  # 去掉 .tpl 后缀，保留 .md
+            output_path = aury_docs_dir / output_name
+            if output_path.exists() and not force:
+                continue
+            try:
+                content = tpl_path.read_text(encoding="utf-8")
+                content = content.format(**template_vars)
+                output_path.write_text(content, encoding="utf-8")
+                docs_count += 1
+            except Exception:
+                pass
+    console.print(f"  [green]✅ 已生成 {docs_count} 个文档到 aury_docs/[/green]")
+
+    # 6. 生成 Docker 配置
     if with_docker:
         console.print("\n[bold]🐳 生成 Docker 配置...[/bold]")
         from .docker import docker_init
         docker_init(force=force)
 
-    # 6. 显示结果
+    # 7. 显示结果
     console.print("\n")
 
     tree = Tree(f"[bold cyan]{project_name}/[/bold cyan]")
@@ -821,8 +840,8 @@ def init(
     tree.add("[dim]alembic.ini[/dim]")
     tree.add("[dim]pyproject.toml[/dim]")
     tree.add("[dim]README.md[/dim]")
-    tree.add("[dim]DEVELOPMENT.md[/dim]")
-    tree.add("[dim]CLI.md[/dim]")
+    tree.add("[dim]AGENTS.md[/dim]")
+    tree.add("[blue]aury_docs/[/blue]")
     if with_docker:
         tree.add("[dim]Dockerfile[/dim]")
         tree.add("[dim]docker-compose.yml[/dim]")
