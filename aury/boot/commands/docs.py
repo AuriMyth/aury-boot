@@ -1,13 +1,15 @@
 """文档生成命令。
 
 提供命令行工具用于在现有项目中生成/更新文档：
-- aury docs dev         生成/更新 DEVELOPMENT.md
+- aury docs agents      生成/更新 AGENTS.md（AI 编程助手上下文）
+- aury docs dev         生成/更新 docs/ 目录（开发文档包）
 - aury docs cli         生成/更新 CLI.md
 - aury docs env         生成/更新 .env.example
 - aury docs all         生成/更新所有文档
 
 使用示例：
-    aury docs dev                    # 生成开发文档
+    aury docs agents                 # 生成 AI 编程助手上下文文档
+    aury docs dev                    # 生成 docs/ 开发文档包
     aury docs cli                    # 生成 CLI 文档
     aury docs env                    # 生成环境变量示例
     aury docs all                    # 生成所有文档
@@ -116,6 +118,61 @@ def _write_file(
     return True
 
 
+@app.command(name="agents")
+def generate_agents_doc(
+    project_dir: Path = typer.Argument(
+        Path("."),
+        help="项目目录路径",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True,
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="强制覆盖已存在的文件",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        "-n",
+        help="预览模式，不实际写入文件",
+    ),
+) -> None:
+    """生成/更新 AGENTS.md（AI 编程助手上下文文档）。"""
+    context = _detect_project_info(project_dir)
+    
+    console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
+    
+    try:
+        content = _render_template("AGENTS.md.tpl", context)
+        output_path = project_dir / "AGENTS.md"
+        _write_file(output_path, content, force=force, dry_run=dry_run)
+    except Exception as e:
+        console.print(f"[red]❌ 生成失败: {e}[/red]")
+        raise typer.Exit(1)
+
+
+# aury_docs/ 目录中的文档模板映射
+DEV_DOCS_TEMPLATES = [
+    ("aury_docs/00-overview.md.tpl", "aury_docs/00-overview.md", "项目概览"),
+    ("aury_docs/01-model.md.tpl", "aury_docs/01-model.md", "Model 开发指南"),
+    ("aury_docs/02-repository.md.tpl", "aury_docs/02-repository.md", "Repository 开发指南"),
+    ("aury_docs/03-service.md.tpl", "aury_docs/03-service.md", "Service 开发指南"),
+    ("aury_docs/04-schema.md.tpl", "aury_docs/04-schema.md", "Schema 开发指南"),
+    ("aury_docs/05-api.md.tpl", "aury_docs/05-api.md", "API 开发指南"),
+    ("aury_docs/06-exception.md.tpl", "aury_docs/06-exception.md", "异常处理指南"),
+    ("aury_docs/07-cache.md.tpl", "aury_docs/07-cache.md", "缓存指南"),
+    ("aury_docs/08-scheduler.md.tpl", "aury_docs/08-scheduler.md", "定时任务指南"),
+    ("aury_docs/09-tasks.md.tpl", "aury_docs/09-tasks.md", "异步任务指南"),
+    ("aury_docs/10-storage.md.tpl", "aury_docs/10-storage.md", "对象存储指南"),
+    ("aury_docs/11-logging.md.tpl", "aury_docs/11-logging.md", "日志指南"),
+    ("aury_docs/12-admin.md.tpl", "aury_docs/12-admin.md", "管理后台指南"),
+]
+
+
 @app.command(name="dev")
 def generate_dev_doc(
     project_dir: Path = typer.Argument(
@@ -139,18 +196,29 @@ def generate_dev_doc(
         help="预览模式，不实际写入文件",
     ),
 ) -> None:
-    """生成/更新 DEVELOPMENT.md 开发文档。"""
+    """生成/更新 aury_docs/ 开发文档包。"""
     context = _detect_project_info(project_dir)
     
     console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
+    console.print()
     
-    try:
-        content = _render_template("DEVELOPMENT.md.tpl", context)
-        output_path = project_dir / "DEVELOPMENT.md"
-        _write_file(output_path, content, force=force, dry_run=dry_run)
-    except Exception as e:
-        console.print(f"[red]❌ 生成失败: {e}[/red]")
-        raise typer.Exit(1)
+    success_count = 0
+    for template_name, output_name, description in DEV_DOCS_TEMPLATES:
+        try:
+            content = _render_template(template_name, context)
+            output_path = project_dir / output_name
+            if _write_file(output_path, content, force=force, dry_run=dry_run):
+                success_count += 1
+        except FileNotFoundError:
+            console.print(f"[yellow]⚠️  模板不存在，跳过: {template_name}[/yellow]")
+        except Exception as e:
+            console.print(f"[red]❌ 生成 {description} 失败: {e}[/red]")
+    
+    console.print()
+    if dry_run:
+        console.print(f"[dim]🔍 预览模式完成，将生成 {success_count} 个文档到 aury_docs/ 目录[/dim]")
+    else:
+        console.print(f"[green]✨ 完成！成功生成 {success_count} 个文档到 aury_docs/ 目录[/green]")
 
 
 @app.command(name="cli")
@@ -250,20 +318,24 @@ def generate_all_docs(
         help="预览模式，不实际写入文件",
     ),
 ) -> None:
-    """生成/更新所有文档（DEVELOPMENT.md, CLI.md, .env.example）。"""
+    """生成/更新所有文档（AGENTS.md, docs/, CLI.md, .env.example）。"""
     context = _detect_project_info(project_dir)
     
     console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
     console.print()
     
-    docs_to_generate = [
-        ("DEVELOPMENT.md.tpl", "DEVELOPMENT.md", "开发文档"),
+    # 根目录文档
+    root_docs = [
+        ("AGENTS.md.tpl", "AGENTS.md", "AI 编程助手上下文"),
         ("CLI.md.tpl", "CLI.md", "CLI 文档"),
         ("env.example.tpl", ".env.example", "环境变量示例"),
     ]
     
+    # 合并所有文档
+    all_docs = root_docs + DEV_DOCS_TEMPLATES
+    
     success_count = 0
-    for template_name, output_name, description in docs_to_generate:
+    for template_name, output_name, description in all_docs:
         try:
             content = _render_template(template_name, context)
             output_path = project_dir / output_name

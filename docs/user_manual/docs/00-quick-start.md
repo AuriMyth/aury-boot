@@ -2,6 +2,63 @@
 
 欢迎使用 Aury Boot！这是一款专为构建现代化、高性能微服务而设计的 Python 基础设施框架。
 
+## 用 AI 编程的推荐方式（强烈建议先看）
+
+> 利用 AI（如 Cursor / Warp AI / GitHub Copilot / OpenAI Codex 等）开发服务时，建议先为 AI 准备好当前项目的关键文档。
+>
+> ### 第一步：生成项目文档
+>
+> 在你的业务项目根目录安装好 `aury-boot` 之后，执行：
+>
+> ```bash
+> aury docs all        # 一次性生成/更新所有文档（推荐）
+>
+> # 或者按需：
+> aury docs agents     # 生成 AGENTS.md（AI 编程助手上下文文档）
+> aury docs dev        # 生成 aury_docs/ 目录（开发文档包）
+> aury docs cli        # 生成 CLI.md（命令行使用文档）
+> aury docs env        # 生成 .env.example（环境变量示例）
+> ```
+>
+> 生成的文档结构：
+>
+> ```
+> your-project/
+> ├── AGENTS.md           # AI 编程助手入口（指导 AI 阅读哪些文档）
+> ├── aury_docs/          # 开发文档包
+> │   ├── 00-overview.md    # 项目概览与最佳实践
+> │   ├── 01-model.md       # Model 开发指南
+> │   ├── 02-repository.md  # Repository 开发指南
+> │   ├── 03-service.md     # Service 开发指南（含事务）
+> │   ├── 04-schema.md      # Schema 开发指南
+> │   ├── 05-api.md         # API 开发指南
+> │   ├── 06-exception.md   # 异常处理指南
+> │   ├── 07-cache.md       # 缓存指南
+> │   ├── 08-scheduler.md   # 定时任务指南
+> │   ├── 09-tasks.md       # 异步任务指南
+> │   ├── 10-storage.md     # 对象存储指南
+> │   ├── 11-logging.md     # 日志指南
+> │   └── 12-admin.md       # 管理后台指南
+> ├── CLI.md              # CLI 命令参考
+> └── .env.example        # 环境变量示例
+> ```
+>
+> ### 第二步：让 AI 阅读 AGENTS.md
+>
+> `AGENTS.md` 是 AI 编程助手的入口文档，它会指导 AI 根据你要开发的功能类型阅读对应的 `aury_docs/` 文档。
+>
+> 例如，开发 CRUD 功能时，AI 会按顺序阅读：
+> - `aury_docs/01-model.md` → `aury_docs/02-repository.md` → `aury_docs/03-service.md` → ...
+>
+> ### 第三步：描述业务需求
+>
+> 在 AI 中描述你要做的业务需求，让它在理解文档的基础上帮你：
+> - 设计项目结构与模块划分
+> - 编写/修改业务代码、配置和数据库迁移
+> - 生成测试用例和运维脚本
+>
+> 后面的章节则是给人类开发者阅读的详细说明，AI 也可以一起阅读，用于更深层次的自动化改造。
+
 ## 目录（快速开始）
 
 > 📖 **详细文档**：本目录下还有更详细的技术指南
@@ -61,7 +118,7 @@ index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 EOF
 
 # 3. 安装框架
-uv add "aury-boot[recommended]"
+uv add "aury-boot[recommended,admin]"  # admin 可选，提供 SQLAdmin 管理后台
 
 # 4. 初始化脚手架
 aury init                 # 交互式模式（默认），会询问配置选项
@@ -93,9 +150,6 @@ aury server dev
 框架提供可选的 SQLAdmin 管理后台扩展，默认路径：`/api/admin-console`，适合生产快速搭建后台管理能力。
 
 ```bash
-# 安装扩展依赖
-uv add "aury-boot[admin]"
-
 # 在 .env 中启用并设置 basic 认证
 ADMIN_ENABLED=true
 ADMIN_PATH=/api/admin-console
@@ -272,7 +326,7 @@ class MyConfig(BaseConfig):
 
 ## 7. 依赖注入
 
-Kit 提供企业级 **DI 容器**
+Aury Boot 提供企业级 **DI 容器**
 
 | 生命周期 | 说明 | 场景 |
 |---------|------|------|
@@ -301,7 +355,7 @@ service = container.resolve(UserService)
 
 ## 8. 中间件和组件
 
-Kit 将功能单元分为两类：
+Aury Boot 将功能单元分为两类：
 - **中间件（Middleware）**：处理 HTTP 请求拦截
 - **组件（Component）**：管理基础设施生命周期
 
@@ -437,9 +491,9 @@ from aury.boot.application.errors import (
     ForbiddenError,
 )
 
-# ✅ 开发规范：所有服务特定异常都要继承 Foundation Kit 的异常
+# ✅ 开发规范：所有服务特定异常都要继承 Aury Boot 框架提供的异常
 class MyServiceError(UnauthorizedError):
-    """服务特定异常必须继承 Foundation Kit 的异常类。"""
+    """服务特定异常必须继承 Aury Boot 框架内置的异常类。"""
     
     def __init__(self, message: str, **kwargs):
         super().__init__(message=message, **kwargs)
@@ -448,7 +502,7 @@ class MyServiceError(UnauthorizedError):
 async def get_user(user_id: str):
     user = await repo.get(user_id)
     if not user:
-        # Foundation Kit 全局异常处理器会自动转换为 HTTP 404
+        # Aury Boot 的全局异常处理器会自动转换为 HTTP 404
         raise NotFoundError(f"用户 {user_id} 不存在")
     return user
 ```
@@ -456,9 +510,9 @@ async def get_user(user_id: str):
 ### 异常继承规则和错误代码
 
 **原则**：
-1. 所有异常必须继承 Foundation Kit 的异常类（UnauthorizedError、NotFoundError 等）
-2. 所有错误代码必须继承 Foundation Kit 的 `ErrorCode`，在服务范围内定义
-3. **不覆盖** Foundation Kit 的错误代码（1xxx-4xxx），服务使用 5xxx+ 范围
+1. 所有异常必须继承 Aury Boot 提供的异常基类（UnauthorizedError、NotFoundError 等）
+2. 所有错误代码必须继承 Aury Boot 的 `ErrorCode`，在服务范围内定义
+3. **不覆盖** Aury Boot 的内置错误代码（1xxx-4xxx），服务使用 5xxx+ 范围
 
 ```python
 # ✅ 正确：定义错误代码枚举，继承 ErrorCode
@@ -469,14 +523,14 @@ class IdentityErrorCode(ErrorCode):
     USER_NOT_FOUND = "5101"
     DUPLICATE_USER = "5104"
 
-# ✅ 正确：异常继承 Foundation Kit 的异常
+# ✅ 正确：异常继承 Aury Boot 的异常
 class InvalidCredentialsError(UnauthorizedError):
     def __init__(self, **kwargs):
         metadata = kwargs.pop("metadata", {})
         metadata["error_code"] = IdentityErrorCode.INVALID_CREDENTIALS.value
         super().__init__(message="用户名或密码错误", metadata=metadata, **kwargs)
 
-# ❌ 错误：不继承 Foundation Kit
+# ❌ 错误：不继承 Aury Boot 的异常体系
 class MyCustomError(Exception):
     pass
 
@@ -905,9 +959,9 @@ aum --install-completion
 
 ## 24. 最佳实践
 
-### 使用 Foundation Kit 预定义模型
+### 使用 Aury Boot 提供的预定义模型
 
-Foundation Kit 提供多个预定义模型组合，推荐直接使用而不是 `Base`：
+Aury Boot 提供多个预定义模型组合，推荐直接使用而不是 `Base`：
 
 ```python
 from aury.boot.domain.models import (

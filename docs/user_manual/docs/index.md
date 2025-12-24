@@ -6,15 +6,22 @@
 
 ## ⚡ 快速开始
 
-### 安装
-
 ```bash
-# 推荐（PostgreSQL + Redis + 任务队列 + 调度器）
-uv add "aury-boot[recommended]"
+# 1. 创建项目目录并初始化
+mkdir my-service && cd my-service
+uv init . --name my_service --no-package --python 3.13
 
-# 或按需组合
-uv add "aury-boot[postgres,redis]"
+# 2. 添加依赖
+uv add "aury-boot[recommended,admin]"  # admin 可选，提供 SQLAdmin 管理后台
+
+# 3. 初始化项目结构
+aury init
+
+# 4. 启动开发服务器
+aury server dev
 ```
+
+访问 http://localhost:8000/docs 查看 API 文档。
 
 ### Hello World
 
