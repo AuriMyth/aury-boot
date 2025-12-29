@@ -16,8 +16,8 @@ Kit 使用 **SQLAlchemy 2.0+** 作为 ORM，支持异步操作和全功能的关
 - `Model`：整数主键 + 时间戳（使用整数主键时）
 
 ```python
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, Text
 from aury.boot.domain.models import UUIDAuditableStateModel
 
 class User(UUIDAuditableStateModel):
@@ -43,16 +43,18 @@ class User(UUIDAuditableStateModel):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     
-    # 关系（一对多）
-    posts: Mapped[list["Post"]] = relationship(back_populates="author")
-    
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username})>"
 ```
 
-### 关系模型
+### 关联模型（不使用数据库外键）
+
+> **最佳实践**：不建议使用数据库外键，通过程序控制关系。便于分库分表、微服务拆分，避免级联操作影响性能，简化数据迁移。
 
 ```python
+import uuid
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Text
 from aury.boot.domain.models import UUIDAuditableStateModel
 
 class Post(UUIDAuditableStateModel):
@@ -64,11 +66,8 @@ class Post(UUIDAuditableStateModel):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     
-    # 外键
-    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
-    
-    # 关系（多对一）
-    author: Mapped["User"] = relationship(back_populates="posts")
+    # 关联字段（不使用 ForeignKey，通过程序控制关系）
+    author_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     
     # 自定义时间戳
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)

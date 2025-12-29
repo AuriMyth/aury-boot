@@ -19,7 +19,9 @@ aury server dev
 # 数据库迁移
 aury migrate make -m "描述"    # 生成迁移
 aury migrate up                # 执行迁移
+aury migrate down              # 回滚迁移
 aury migrate status            # 查看状态
+aury migrate show              # 查看历史
 
 # 测试
 pytest
@@ -29,6 +31,8 @@ pytest tests/test_xxx.py -v
 ruff check .
 mypy {package_name}/
 ```
+
+> ⚠️ **重要**：数据库迁移文件**必须**使用 `aury migrate make` 命令生成，**禁止**手写迁移文件！
 
 ## 项目结构
 
@@ -119,6 +123,7 @@ mypy {package_name}/
 - **必须**继承框架预定义基类，**不要**直接继承 `Base`
 - **推荐**使用 `UUIDAuditableStateModel`（UUID 主键 + 时间戳 + 软删除）
 - 软删除模型**必须**使用复合唯一约束（包含 `deleted_at`），不能单独使用 `unique=True`
+- **不建议**使用数据库外键（`ForeignKey`），通过程序控制关系，便于分库分表和微服务拆分
 
 ```python
 # ✅ 正确

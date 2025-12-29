@@ -125,9 +125,16 @@ class BaseErrorHandler(ErrorHandler):
         # 兼容 ErrorCode 枚举和字符串
         code_value = exception.code.value if hasattr(exception.code, "value") else exception.code
         
+        # 尝试转换为 int，如果失败则使用 status_code
+        try:
+            code_int = int(code_value)
+        except (ValueError, TypeError):
+            # 非数字字符串（如 "TODO_ATTACHMENT_ERROR"），使用 HTTP 状态码作为 code
+            code_int = exception.status_code
+        
         response = ResponseBuilder.fail(
             message=exception.message,
-            code=int(code_value),
+            code=code_int,
             errors=errors,
         )
         

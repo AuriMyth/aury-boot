@@ -112,8 +112,8 @@ class User(UUIDAuditableStateModel):
 ## 1.5 常用字段约束
 
 ```python
-from sqlalchemy import String, Integer, ForeignKey, Index, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Integer, Index, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 import uuid
 
 class Example(UUIDAuditableStateModel):
@@ -131,15 +131,14 @@ class Example(UUIDAuditableStateModel):
     # 单列唯一约束：直接在 mapped_column 中使用 unique=True（仅非软删除模型）
     # 注意：软删除模型不能单独使用 unique=True，必须使用复合唯一约束
     
-    # 外键关联
-    category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id"), index=True)
-    category: Mapped["Category"] = relationship(back_populates="examples")
+    # 关联字段（不使用数据库外键，通过程序控制关系）
+    category_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
     
     # 复合索引和复合唯一约束：必须使用 __table_args__（SQLAlchemy 要求）
     # 软删除模型必须使用复合唯一约束（包含 deleted_at），避免删除后无法插入相同值
     __table_args__ = (
-        Index("ix_examples_status_created", "status", "created_at"),  # 复合索引
-        UniqueConstraint("code", "deleted_at", name="uq_examples_code_deleted"),  # 复合唯一约束
+        Index("ix_examples_status_created", "status", "created_at"),
+        UniqueConstraint("code", "deleted_at", name="uq_examples_code_deleted"),
     )
 
 
@@ -169,7 +168,16 @@ class Config(UUIDModel):  # UUIDModel 不包含软删除
 3. **复合索引/唯一约束**：必须使用 `__table_args__`（SQLAlchemy 要求）
    ```python
    __table_args__ = (
-       Index("ix_name", "col1", "col2"),  # 复合索引
-       UniqueConstraint("col1", "col2", name="uq_name"),  # 复合唯一约束
+       Index("ix_name", "col1", "col2"),
+       UniqueConstraint("col1", "col2", name="uq_name"),
    )
+   ```
+
+4. **关联关系**：**不建议使用数据库外键**，通过程序控制关系
+   - 便于分库分表、微服务拆分
+   - 避免级联操作影响性能
+   - 简化数据迁移
+   ```python
+   # 只存储关联 ID，不使用 ForeignKey
+   category_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
    ```

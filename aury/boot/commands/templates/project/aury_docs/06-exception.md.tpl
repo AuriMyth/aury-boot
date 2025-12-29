@@ -53,26 +53,34 @@ raise UnauthorizedError("未登录或登录已过期")
 **文件**: `{package_name}/exceptions/order.py`
 
 ```python
+from enum import Enum
 from fastapi import status
 from aury.boot.application.errors import BaseError
 
 
-# 自定义异常（只需设置类属性）
+# 推荐：定义错误码枚举
+class OrderErrorCode(str, Enum):
+    ORDER_ERROR = "5000"
+    ORDER_NOT_FOUND = "5001"
+    INSUFFICIENT_STOCK = "5002"
+    PAYMENT_FAILED = "5003"
+
+
 class OrderError(BaseError):
     default_message = "订单错误"
-    default_code = "ORDER_ERROR"
+    default_code = OrderErrorCode.ORDER_ERROR
     default_status_code = status.HTTP_400_BAD_REQUEST
 
 
 class OrderNotFoundError(OrderError):
     default_message = "订单不存在"
-    default_code = "ORDER_NOT_FOUND"
+    default_code = OrderErrorCode.ORDER_NOT_FOUND
     default_status_code = status.HTTP_404_NOT_FOUND
 
 
 class InsufficientStockError(OrderError):
     default_message = "库存不足"
-    default_code = "INSUFFICIENT_STOCK"
+    default_code = OrderErrorCode.INSUFFICIENT_STOCK
     default_status_code = status.HTTP_400_BAD_REQUEST
 
 
@@ -81,6 +89,10 @@ raise OrderNotFoundError()  # 使用默认值
 raise OrderError(message="订单ID无效")  # 自定义消息
 raise InsufficientStockError(message=f"商品 {{product_id}} 库存不足")
 ```
+
+**Error Code 规范**：
+- **推荐使用枚举**定义错误码，枚举值必须为数字字符串（如 `"5001"`）
+- 框架预留编码范围：1xxx 通用、2xxx 数据库、3xxx 业务、4xxx 外部服务、**5xxx+ 用户自定义**
 
 ## 6.4 异常与 Schema 的关系
 

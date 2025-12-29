@@ -303,15 +303,15 @@ aury migrate make -m "Add index on users.email"
 aury migrate up
 ```
 
-### 添加外键
+### 添加关联字段
+
+> **最佳实践**：不建议使用数据库外键，通过程序控制关系。
 
 ```bash
-# 1. 修改模型
-# from sqlalchemy.orm import relationship
-# from sqlalchemy import ForeignKey
+# 1. 修改模型（不使用 ForeignKey）
+# import uuid
 # class User(Base):
-#     profile_id: Mapped[str] = mapped_column(GUID, ForeignKey('profiles.id'))
-#     profile: Mapped['Profile'] = relationship('Profile')
+#     profile_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
 
 # 2. 生成迁移
 aury migrate make -m "Add profile_id to users"

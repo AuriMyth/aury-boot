@@ -14,7 +14,6 @@ pip install "aury-sdk-storage[aws]"
 `StorageManager` 支持**命名多实例**，可以同时管理多个存储后端。
 
 ```python
-from io import BytesIO
 from aury.boot.infrastructure.storage import (
     StorageManager, StorageConfig, StorageBackend, StorageFile,
 )
@@ -37,10 +36,11 @@ await source.initialize(StorageConfig(backend=StorageBackend.COS, ...))
 await target.initialize(StorageConfig(backend=StorageBackend.S3, ...))
 
 # 上传文件（返回 URL）
+# data 支持: bytes / BytesIO / BinaryIO
 url = await storage.upload_file(
     StorageFile(
         object_name="user/123/avatar.png",
-        data=BytesIO(image_bytes),
+        data=image_bytes,
         content_type="image/png",
     )
 )
