@@ -1,0 +1,2850 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="基于 FastAPI 生态的企业级 API 开发框架用户手册">
+      
+      
+        <meta name="author" content="Aury Team">
+      
+      
+      
+        <link rel="prev" href="../11-transaction-management/">
+      
+      
+        <link rel="next" href="../13-caching-advanced/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../None">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>数据库操作 - Aury Boot</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#9" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="Aury Boot" class="md-header__button md-logo" aria-label="Aury Boot" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Aury Boot
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              数据库操作
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换暗色模式"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换暗色模式" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换亮色模式"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换亮色模式" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="分享" aria-label="分享" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AuriMyth/aury-boot" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aury-boot
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Aury Boot" class="md-nav__button md-logo" aria-label="Aury Boot" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Aury Boot
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AuriMyth/aury-boot" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aury-boot
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速开始
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础部分
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    基础部分
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-intro-detailed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Framework 架构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-installation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-server-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务器运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-configuration-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心功能
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    核心功能
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-di-container-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依赖注入容器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-middleware-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中间件系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-components-detailed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    组件系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-http-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-error-handling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    错误处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-transaction-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事务管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据库操作
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据库操作
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        概述
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义模型
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="定义模型">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联模型（不使用数据库外键）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        软删除模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        创建仓储
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="创建仓储">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#baserepository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BaseRepository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动提交机制
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        在 API 中使用
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="在 API 中使用">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#crud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本 CRUD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务管理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="事务管理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1transactional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 1：@transactional 装饰器（最简洁）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2transactional_context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 2：transactional_context 上下文管理器
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3transactionmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 3：TransactionManager 手动控制
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4sessionbegin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 4：session.begin() 原始方式
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务特性
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        查询优化
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="查询优化">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        避免 N+1 查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        批量操作
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        高级特性
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="高级特性">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#select-for-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SELECT FOR UPDATE（行级锁）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务隔离级别配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义查询条件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        聚合查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        数据库连接配置
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="数据库连接配置">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mysql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MySQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sqlite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite（开发用）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        常见问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="常见问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理大批量数据？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理并发更新冲突？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理时区问题？
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    高级功能
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    高级功能
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-caching-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    缓存系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-async-tasks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    异步任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-events-driven/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事件驱动
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-scheduler-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    定时调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-rpc-microservices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RPC 微服务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-websocket-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-storage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    对象存储
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-i18n-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    国际化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-migration-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据库迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-logging-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日志系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-best-practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    最佳实践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI 工具
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI 工具
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    命令参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-scaffold-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    脚手架指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        概述
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义模型
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="定义模型">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联模型（不使用数据库外键）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        软删除模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        创建仓储
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="创建仓储">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#baserepository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BaseRepository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动提交机制
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        在 API 中使用
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="在 API 中使用">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#crud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本 CRUD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务管理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="事务管理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1transactional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 1：@transactional 装饰器（最简洁）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2transactional_context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 2：transactional_context 上下文管理器
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3transactionmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 3：TransactionManager 手动控制
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4sessionbegin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方式 4：session.begin() 原始方式
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务特性
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        查询优化
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="查询优化">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        避免 N+1 查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        批量操作
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        高级特性
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="高级特性">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#select-for-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SELECT FOR UPDATE（行级锁）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事务隔离级别配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义查询条件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        聚合查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        数据库连接配置
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="数据库连接配置">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mysql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MySQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sqlite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite（开发用）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        常见问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="常见问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理大批量数据？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理并发更新冲突？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何处理时区问题？
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="9">9. 数据库完全指南<a class="headerlink" href="#9" title="Permanent link">&para;</a></h1>
+<h2 id="_1">概述<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Kit 使用 <strong>SQLAlchemy 2.0+</strong> 作为 ORM，支持异步操作和全功能的关系映射。</p>
+<h2 id="_2">定义模型<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="_3">基础模型<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p><strong>重要</strong>：不要直接继承 <code>Base</code> 类，应使用 Foundation Kit 提供的预定义模型。</p>
+<p><strong>推荐使用</strong>：
+- <code>UUIDAuditableStateModel</code>：UUID 主键 + 时间戳 + 软删除（最常用）
+- <code>UUIDModel</code>：UUID 主键 + 时间戳（不需要软删除时）
+- <code>Model</code>：整数主键 + 时间戳（使用整数主键时）</p>
+<pre class="python"><code>from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, Text
+from aury.boot.domain.models import UUIDAuditableStateModel
+
+class User(UUIDAuditableStateModel):
+    """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+    __tablename__ = "users"
+
+    # UUIDAuditableStateModel 自动提供：
+    # - id: UUID 主键
+    # - created_at: 创建时间
+    # - updated_at: 更新时间
+    # - deleted_at: 软删除时间（0 未删除，&gt;0 已删除时间戳）
+
+    # 基本字段
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # 可选字段
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # 布尔字段
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    def __repr__(self) -&gt; str:
+        return f"&lt;User(id={self.id}, username={self.username})&gt;"</code></pre>
+<h3 id="_4">关联模型（不使用数据库外键）<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>最佳实践</strong>：不建议使用数据库外键，通过程序控制关系。便于分库分表、微服务拆分，避免级联操作影响性能，简化数据迁移。</p>
+</blockquote>
+<pre class="python"><code>import uuid
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Text
+from aury.boot.domain.models import UUIDAuditableStateModel
+
+class Post(UUIDAuditableStateModel):
+    """文章模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+    __tablename__ = "posts"
+
+    # UUIDAuditableStateModel 自动提供 id、created_at、updated_at、deleted_at
+
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # 关联字段（不使用 ForeignKey，通过程序控制关系）
+    author_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+
+    # 自定义时间戳
+    published_at: Mapped[datetime | None] = mapped_column(nullable=True)</code></pre>
+<h3 id="_5">软删除模型<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.models.base import SoftDeleteModel
+
+class Article(SoftDeleteModel):
+    """支持软删除的模型"""
+    __tablename__ = "articles"
+
+    id: Mapped[str] = mapped_column(GUID, primary_key=True, default=lambda: str(uuid4()))
+    title: Mapped[str] = mapped_column(String(200))
+    content: Mapped[str] = mapped_column(Text)
+
+    # SoftDeleteModel 自动提供：
+    # deleted_at: Mapped[datetime | None]
+    # is_deleted: Mapped[bool]</code></pre>
+<h2 id="_6">创建仓储<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="baserepository">BaseRepository<a class="headerlink" href="#baserepository" title="Permanent link">&para;</a></h3>
+<p>继承 <code>BaseRepository</code> 获得自动 CRUD 操作：</p>
+<pre class="python"><code>from aury.boot.domain.repository.impl import BaseRepository
+from models import User
+
+class UserRepository(BaseRepository[User]):
+    """用户仓储"""
+
+    # 继承的自动方法：
+    # - create(data: dict) -&gt; User
+    # - get(id: str) -&gt; User | None
+    # - get_by(**kwargs) -&gt; User | None
+    # - list(**kwargs) -&gt; list[User]
+    # - paginate(page: int, size: int) -&gt; tuple[list[User], int]
+    # - update(id: str, data: dict) -&gt; User
+    # - delete(id: str) -&gt; bool
+    # - count(**kwargs) -&gt; int
+    # - with_commit() -&gt; Self  # 强制提交
+
+    # 自定义查询方法
+    async def get_by_email(self, email: str) -&gt; User | None:
+        """根据邮箱查询"""
+        return await self.get_by(email=email)
+
+    async def get_active_users(self, limit: int = 100) -&gt; list[User]:
+        """获取活跃用户"""
+        return await self.list(is_active=True, limit=limit)
+
+    async def search(self, keyword: str) -&gt; list[User]:
+        """搜索用户"""
+        from sqlalchemy import or_
+        return await self.list(
+            or_(
+                User.username.contains(keyword),
+                User.email.contains(keyword)
+            )
+        )</code></pre>
+<h3 id="_7">自动提交机制<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p>BaseRepository 支持智能的自动提交机制：</p>
+<pre class="python"><code># 默认行为：auto_commit=True，非事务中自动提交
+repo = UserRepository(session, User)
+await repo.create({"name": "test"})  # 自动 commit
+
+# 禁用自动提交
+repo = UserRepository(session, User, auto_commit=False)
+await repo.create({"name": "test"})  # 只 flush，不 commit
+
+# 单次强制提交
+await repo.with_commit().create({"name": "test2"})  # 强制 commit
+
+# 在事务中：无论 auto_commit 是什么，都不会自动提交
+@transactional
+async def create_users(session):
+    repo = UserRepository(session, User)  # auto_commit=True 但不生效
+    await repo.create({"name": "a"})  # 只 flush
+    await repo.create({"name": "b"})  # 只 flush
+    # 事务结束时统一 commit</code></pre>
+<p><strong>自动提交规则</strong>：
+- <code>auto_commit=True</code>（默认）：非事务中自动 commit
+- <code>auto_commit=False</code>：只 flush，需使用 <code>.with_commit()</code> 或手动管理
+- 在事务中：永不自动提交，由事务统一管理</p>
+<h2 id="api">在 API 中使用<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<h3 id="crud">基本 CRUD<a class="headerlink" href="#crud" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from fastapi import APIRouter, Depends, HTTPException
+from aury.boot.infrastructure.database import DatabaseManager
+from repositories import UserRepository
+from schemas import UserCreateRequest, UserResponse
+
+router = APIRouter()
+
+# 获取默认数据库实例
+db_manager = DatabaseManager.get_instance()
+
+# 命名多实例（如主库/从库）
+# primary_db = DatabaseManager.get_instance("primary")
+# replica_db = DatabaseManager.get_instance("replica")
+
+# 依赖注入
+async def get_user_repo(session=Depends(db_manager.get_session)) -&gt; UserRepository:
+    return UserRepository(session)
+
+# 创建
+from aury.boot.application.interfaces.egress import BaseResponse
+
+@router.post("/users")
+async def create_user(
+    request: UserCreateRequest,
+    repo: UserRepository = Depends(get_user_repo)
+):
+    # 检查重复
+    if await repo.get_by_email(request.email):
+        raise HTTPException(status_code=400, detail="邮箱已存在")
+
+    user = await repo.create({
+        "username": request.username,
+        "email": request.email,
+        "password_hash": hash_password(request.password)
+    })
+    return BaseResponse(code=200, message="用户创建成功", data=user)
+
+# 读取
+@router.get("/users/{user_id}")
+async def get_user(user_id: str, repo: UserRepository = Depends(get_user_repo)):
+    user = await repo.get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return BaseResponse(code=200, message="获取成功", data=user)
+
+# 列表（分页）
+from aury.boot.application.interfaces.egress import PaginationResponse, Pagination
+
+@router.get("/users")
+async def list_users(
+    page: int = 1,
+    size: int = 20,
+    repo: UserRepository = Depends(get_user_repo)
+):
+    items, total = await repo.paginate(page=page, size=size)
+    pagination = Pagination(
+        total=total,
+        items=items,
+        page=page,
+        size=size
+    )
+    return PaginationResponse(code=200, message="获取列表成功", data=pagination)
+
+# 更新
+@router.put("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    request: UserUpdateRequest,
+    repo: UserRepository = Depends(get_user_repo)
+):
+    user = await repo.get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    user = await repo.update(user_id, request.dict(exclude_unset=True))
+    return BaseResponse(code=200, message="更新成功", data=user)
+
+# 删除
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: str, repo: UserRepository = Depends(get_user_repo)):
+    if not await repo.delete(user_id):
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return BaseResponse(code=200, message="删除成功", data=None)</code></pre>
+<h2 id="_8">事务管理<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<p>Kit 提供了多种事务管理方式，推荐按场景选择：</p>
+<h3 id="1transactional">方式 1：@transactional 装饰器（最简洁）<a class="headerlink" href="#1transactional" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.transaction import transactional
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# 装饰器自动处理事务开启、提交、回滚
+@transactional
+async def create_order(session: AsyncSession, request: OrderRequest):
+    """创建订单及关联的订单项"""
+    order_repo = OrderRepository(session)
+    order = await order_repo.create({
+        "user_id": request.user_id,
+        "total_amount": request.total_amount
+    })
+
+    # 创建订单项
+    item_repo = OrderItemRepository(session)
+    for item in request.items:
+        await item_repo.create({
+            "order_id": order.id,
+            "product_id": item.product_id,
+            "quantity": item.quantity
+        })
+
+    # 异常时自动回滚，成功时自动提交
+    return order
+
+# 在路由中调用
+@router.post("/orders")
+async def create_order_api(request: OrderRequest, session=Depends(db_manager.get_session)):
+    order = await create_order(session, request)
+    return BaseResponse(code=200, message="订单创建成功", data=order)</code></pre>
+<h3 id="2transactional_context">方式 2：transactional_context 上下文管理器<a class="headerlink" href="#2transactional_context" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.transaction import transactional_context
+from aury.boot.infrastructure.database import DatabaseManager
+
+db_manager = DatabaseManager.get_instance()
+
+async def create_order(request: OrderRequest):
+    """使用上下文管理器管理事务"""
+    async with db_manager.session() as session:
+        # 自动开启、提交、回滚
+        async with transactional_context(session) as txn_session:
+            order_repo = OrderRepository(txn_session)
+            order = await order_repo.create({
+                "user_id": request.user_id,
+                "total_amount": request.total_amount
+            })
+
+            item_repo = OrderItemRepository(txn_session)
+            for item in request.items:
+                await item_repo.create({
+                    "order_id": order.id,
+                    "product_id": item.product_id,
+                    "quantity": item.quantity
+                })
+
+            return order</code></pre>
+<h3 id="3transactionmanager">方式 3：TransactionManager 手动控制<a class="headerlink" href="#3transactionmanager" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.transaction import TransactionManager
+
+async def create_order(request: OrderRequest, session: AsyncSession):
+    """手动控制事务，适合复杂场景"""
+    tm = TransactionManager(session)
+
+    try:
+        await tm.begin()
+
+        order_repo = OrderRepository(session)
+        order = await order_repo.create({...})
+
+        item_repo = OrderItemRepository(session)
+        for item in request.items:
+            await item_repo.create({...})
+
+        await tm.commit()
+        return order
+
+    except Exception as e:
+        await tm.rollback()
+        raise
+
+# 或使用上下文管理器形式
+async def create_order_alt(request: OrderRequest, session: AsyncSession):
+    tm = TransactionManager(session)
+    async with tm:  # 自动 commit/rollback
+        order_repo = OrderRepository(session)
+        order = await order_repo.create({...})
+        return order</code></pre>
+<h3 id="4sessionbegin">方式 4：session.begin() 原始方式<a class="headerlink" href="#4sessionbegin" title="Permanent link">&para;</a></h3>
+<pre class="python"><code># 仍然支持原始 SQLAlchemy 方式
+async with db_manager.session() as session:
+    async with session.begin():
+        repo = OrderRepository(session)
+        order = await repo.create({...})</code></pre>
+<h3 id="_9">事务特性<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<p><strong>自动提交/回滚</strong>：
+<pre class="python"><code>@transactional
+async def operation(session: AsyncSession):
+    repo = UserRepository(session)
+
+    # 成功执行：自动 commit
+    user = await repo.create({"username": "john"})
+
+    # 异常抛出：自动 rollback
+    if not user:
+        raise ValueError("创建失败")
+
+    return user</code></pre></p>
+<p><strong>嵌套事务支持</strong>：
+<pre class="python"><code>@transactional
+async def outer_transaction(session: AsyncSession):
+    repo1 = Repo1(session)
+    result1 = await repo1.create({...})
+
+    # 嵌套调用另一个 @transactional 函数
+    result2 = await inner_transaction(session)  # 不会重复开启事务
+
+    return result1, result2
+
+@transactional
+async def inner_transaction(session: AsyncSession):
+    repo2 = Repo2(session)
+    return await repo2.create({...})</code></pre></p>
+<p><strong>事务检查</strong>：
+<pre class="python"><code>from aury.boot.domain.transaction import (
+    ensure_transaction,
+    requires_transaction
+)
+
+# 检查是否在事务中
+if ensure_transaction(session):
+    print("已在事务中")
+
+# 强制要求在事务中
+class UserRepository(BaseRepository):
+    @requires_transaction
+    async def sensitive_update(self, data):
+        # 此方法必须在事务中调用
+        # 否则抛出 TransactionRequiredError
+        return await self.update(data)</code></pre></p>
+<h2 id="_10">查询优化<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h3 id="n1">避免 N+1 查询<a class="headerlink" href="#n1" title="Permanent link">&para;</a></h3>
+<p>❌ <strong>错误</strong>：
+<pre class="python"><code>users = await repo.list()
+for user in users:
+    posts = await post_repo.list(author_id=user.id)  # N 次查询！</code></pre></p>
+<p>✅ <strong>正确</strong>：使用 <code>selectinload</code>
+<pre class="python"><code>from sqlalchemy.orm import selectinload
+from sqlalchemy import select
+
+class UserRepository(BaseRepository[User]):
+    async def list_with_posts(self):
+        stmt = select(User).options(selectinload(User.posts))
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+users = await repo.list_with_posts()
+for user in users:
+    # posts 已加载，不会再查询
+    print(len(user.posts))</code></pre></p>
+<h3 id="_11">批量操作<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<pre class="python"><code># 批量创建
+users_data = [
+    {"username": f"user{i}", "email": f"user{i}@example.com"}
+    for i in range(1000)
+]
+await repo.bulk_create(users_data, batch_size=100)
+
+# 批量更新
+updates = [
+    {"id": user_id, "is_active": False}
+    for user_id in inactive_ids
+]
+await repo.bulk_update(updates)
+
+# 批量删除
+await repo.bulk_delete(ids_to_delete)</code></pre>
+<h2 id="_12">高级特性<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<h3 id="select-for-update">SELECT FOR UPDATE（行级锁）<a class="headerlink" href="#select-for-update" title="Permanent link">&para;</a></h3>
+<p>在并发场景下锁定查询的行，防止其他事务修改。</p>
+<pre class="python"><code>from aury.boot.domain.repository.query_builder import QueryBuilder
+
+class AccountRepository(BaseRepository[Account]):
+    async def get_for_update(self, account_id: str) -&gt; Account | None:
+        """获取并锁定账户记录"""
+        qb = QueryBuilder(Account)
+        query = qb.filter(Account.id == account_id).for_update().build()
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_for_update_nowait(self, account_id: str) -&gt; Account | None:
+        """获取并锁定，如果已被锁定则立即失败"""
+        qb = QueryBuilder(Account)
+        query = qb.filter(Account.id == account_id).for_update(nowait=True).build()
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_for_update_skip_locked(self, account_ids: list[str]) -&gt; list[Account]:
+        """获取并锁定，跳过已被锁定的行"""
+        qb = QueryBuilder(Account)
+        query = qb.filter(Account.id.in_(account_ids)).for_update(skip_locked=True).build()
+        result = await self.session.execute(query)
+        return list(result.scalars().all())</code></pre>
+<p><strong>for_update 参数</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nowait=True</code></td>
+<td>如果行已被锁定，立即报错而不是等待</td>
+</tr>
+<tr>
+<td><code>skip_locked=True</code></td>
+<td>跳过已被锁定的行（常用于队列场景）</td>
+</tr>
+<tr>
+<td><code>of=(Column,...)</code></td>
+<td>指定锁定的列（用于 JOIN 场景）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>典型用例：转账操作</strong>：</p>
+<pre class="python"><code>from aury.boot.domain.transaction import transactional
+
+@transactional
+async def transfer_money(session: AsyncSession, from_id: str, to_id: str, amount: float):
+    """转账：使用行锁防止并发问题"""
+    repo = AccountRepository(session)
+
+    # 锁定两个账户（按 ID 顺序锁定避免死锁）
+    ids = sorted([from_id, to_id])
+
+    qb = QueryBuilder(Account)
+    query = qb.filter(Account.id.in_(ids)).for_update().build()
+    result = await session.execute(query)
+    accounts = {a.id: a for a in result.scalars().all()}
+
+    from_account = accounts[from_id]
+    to_account = accounts[to_id]
+
+    if from_account.balance &lt; amount:
+        raise InsufficientBalanceError()
+
+    from_account.balance -= amount
+    to_account.balance += amount
+
+    # 事务提交后释放锁</code></pre>
+<p><strong>注意事项</strong>：
+- <code>nowait</code> 和 <code>skip_locked</code> 互斥，不能同时使用
+- FOR UPDATE 必须在事务中使用
+- 按固定顺序锁定多行以避免死锁</p>
+<h3 id="_13">事务隔离级别配置<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
+<p>通过环境变量配置数据库的默认事务隔离级别：</p>
+<pre class="bash"><code># .env
+DATABASE_ISOLATION_LEVEL=REPEATABLE READ</code></pre>
+<p><strong>支持的隔离级别</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>隔离级别</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>READ UNCOMMITTED</code></td>
+<td>最低隔离，可读未提交数据（脏读）</td>
+</tr>
+<tr>
+<td><code>READ COMMITTED</code></td>
+<td>只读已提交数据（PostgreSQL/Oracle 默认）</td>
+</tr>
+<tr>
+<td><code>REPEATABLE READ</code></td>
+<td>可重复读，同一事务内读取结果一致（MySQL 默认）</td>
+</tr>
+<tr>
+<td><code>SERIALIZABLE</code></td>
+<td>最高隔离，完全串行化执行</td>
+</tr>
+<tr>
+<td><code>AUTOCOMMIT</code></td>
+<td>每条语句自动提交</td>
+</tr>
+</tbody>
+</table>
+<p><strong>配置示例</strong>：</p>
+<pre class="python"><code>from aury.boot.infrastructure.database import DatabaseConfig
+
+# 通过配置对象
+ config = DatabaseConfig(
+    database_url="postgresql+asyncpg://...",
+    isolation_level="REPEATABLE READ"
+)
+
+# 或通过环境变量
+DATABASE_ISOLATION_LEVEL=SERIALIZABLE</code></pre>
+<p><strong>选择建议</strong>：
+- 大多数场景：<code>READ COMMITTED</code>（平衡性能和一致性）
+- 报表/统计查询：<code>REPEATABLE READ</code>（保证读取一致性）
+- 金融交易：<code>SERIALIZABLE</code>（最强一致性，性能较低）</p>
+<h3 id="_14">自定义查询条件<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from sqlalchemy import and_, or_
+
+async def advanced_search(
+    repo: UserRepository,
+    keyword: str | None = None,
+    is_active: bool | None = None,
+    created_after: datetime | None = None
+):
+    conditions = []
+
+    if keyword:
+        conditions.append(
+            or_(
+                User.username.contains(keyword),
+                User.email.contains(keyword)
+            )
+        )
+
+    if is_active is not None:
+        conditions.append(User.is_active == is_active)
+
+    if created_after:
+        conditions.append(User.created_at &gt;= created_after)
+
+    if conditions:
+        result = await repo.list(and_(*conditions))
+    else:
+        result = await repo.list()
+
+    return result</code></pre>
+<h3 id="_15">聚合查询<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from sqlalchemy import func
+
+async def get_statistics(repo: UserRepository):
+    stmt = select(
+        func.count(User.id).label("total_users"),
+        func.sum(User.id.notexists()).label("active_users"),
+    )
+    result = await repo.session.execute(stmt)
+    return result.first()</code></pre>
+<h2 id="_16">数据库连接配置<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h2>
+<h3 id="postgresql">PostgreSQL<a class="headerlink" href="#postgresql" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code>DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/dbname
+DATABASE_POOL_SIZE=10
+DATABASE_MAX_OVERFLOW=20
+DATABASE_POOL_RECYCLE=3600
+DATABASE_ECHO=false  # 是否打印 SQL</code></pre>
+<h3 id="mysql">MySQL<a class="headerlink" href="#mysql" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code>DATABASE_URL=mysql+aiomysql://user:password@localhost:3306/dbname</code></pre>
+<h3 id="sqlite">SQLite（开发用）<a class="headerlink" href="#sqlite" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code>DATABASE_URL=sqlite+aiosqlite:///./test.db</code></pre>
+<h2 id="_17">常见问题<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h2>
+<h3 id="q">Q: 如何处理大批量数据？<a class="headerlink" href="#q" title="Permanent link">&para;</a></h3>
+<p>A: 分批处理：
+<pre class="python"><code>batch_size = 1000
+for offset in range(0, total_count, batch_size):
+    batch = await repo.list(offset=offset, limit=batch_size)
+    await process_batch(batch)</code></pre></p>
+<h3 id="q_1">Q: 如何处理并发更新冲突？<a class="headerlink" href="#q_1" title="Permanent link">&para;</a></h3>
+<p>A: 使用版本字段（乐观锁）：
+<pre class="python"><code>class Entity(Base):
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+# 更新时检查版本
+async def update_with_version(repo, id, data, expected_version):
+    entity = await repo.get(id)
+    if entity.version != expected_version:
+        raise VersionConflictError()
+
+    await repo.update(id, {**data, "version": expected_version + 1})</code></pre></p>
+<h3 id="q_2">Q: 如何处理时区问题？<a class="headerlink" href="#q_2" title="Permanent link">&para;</a></h3>
+<p>A: 总是使用 UTC：
+<pre class="python"><code>from datetime import datetime, timezone
+
+def now() -&gt; datetime:
+    return datetime.now(timezone.utc)
+
+class Entity(Base):
+    created_at: Mapped[datetime] = mapped_column(default=now)</code></pre></p>
+<h2 id="_18">下一步<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h2>
+<ul>
+<li>查看 <a href="./18-migration-guide.md">18-migration-guide.md</a> 学习数据库迁移</li>
+<li>查看 <a href="./20-best-practices.md">20-best-practices.md</a> 查看最佳实践</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 Aury Team
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/AuriMyth/aury-boot" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["search.suggest", "search.highlight", "search.share", "content.tabs.link", "content.code.copy", "content.code.annotate", "navigation.instant", "navigation.tracking", "navigation.top", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

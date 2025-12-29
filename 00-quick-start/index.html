@@ -1,0 +1,4323 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="基于 FastAPI 生态的企业级 API 开发框架用户手册">
+      
+      
+        <meta name="author" content="Aury Team">
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../01-intro-detailed/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../None">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>快速开始 - Aury Boot</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#aury-boot" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="Aury Boot" class="md-header__button md-logo" aria-label="Aury Boot" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Aury Boot
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              快速开始
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换暗色模式"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换暗色模式" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换亮色模式"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换亮色模式" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="分享" aria-label="分享" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AuriMyth/aury-boot" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aury-boot
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Aury Boot" class="md-nav__button md-logo" aria-label="Aury Boot" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Aury Boot
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AuriMyth/aury-boot" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aury-boot
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速开始
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速开始
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        用 AI 编程的推荐方式（强烈建议先看）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="用 AI 编程的推荐方式（强烈建议先看）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第一步：生成项目文档
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ai-agentsmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第二步：让 AI 阅读 AGENTS.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第三步：描述业务需求
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目录（快速开始）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 简介
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 快速上手（脚手架）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. 快速上手（脚手架）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#admin-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        （可选）启用管理后台 Admin Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        字段语法说明
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 快速上手（手动）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 快速上手（手动）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安装
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hello-world" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hello World
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        运行
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 服务器运行
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. 服务器运行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI 命令（推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 项目结构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 配置
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 配置">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        环境变量（.env）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 依赖注入
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. 依赖注入">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        快速开始
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 中间件和组件
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 中间件和组件">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        内置中间件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        内置组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        注册中间件和组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. HTTP 接口
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. HTTP 接口">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ingress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求模型（Ingress）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#egress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        统一响应格式（Egress）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        路由示例
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 错误处理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. 错误处理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常体系与继承规则
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常继承规则和错误代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 事务管理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. 事务管理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        推荐方式：装饰器
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 数据库
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. 数据库">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        创建仓储
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        在 API 中使用
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. 缓存
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. 缓存">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本用法
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. 异步任务
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. 异步任务">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义任务
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        调用任务
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. 事件驱动
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. 事件驱动">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义和订阅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        发布事件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. 定时调度
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-rpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. RPC 与服务发现
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="17. RPC 与服务发现">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        发起调用
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动分布式链路追踪
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-websocket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. WebSocket
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="18. WebSocket">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本连接
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        19. 对象存储
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        20. 国际化
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21. 数据库迁移
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="21. 数据库迁移">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动迁移（推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        手动迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        22. 日志系统
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="22. 日志系统">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        环境变量
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用日志
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#23-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        23. CLI 命令
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="23. CLI 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        统一入口
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        24. 最佳实践
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="24. 最佳实践">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aury-boot_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用 Aury Boot 提供的预定义模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        贫血模型 + Repository 模式
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        避免 N+1 查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-bus-vs-task-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Bus vs Task Queue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依赖管理
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25. 基础设施高级
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="25. 基础设施高级">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_34" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        多实例配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        流式通道（Channel）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        消息队列（MQ）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_35" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事件总线后端
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础部分
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    基础部分
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-intro-detailed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Framework 架构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-installation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-server-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务器运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-configuration-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心功能
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    核心功能
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-di-container-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依赖注入容器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-middleware-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中间件系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-components-detailed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    组件系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-http-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-error-handling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    错误处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-transaction-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事务管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-database-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据库操作
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    高级功能
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    高级功能
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-caching-advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    缓存系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-async-tasks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    异步任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-events-driven/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事件驱动
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-scheduler-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    定时调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-rpc-microservices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RPC 微服务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-websocket-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-storage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    对象存储
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-i18n-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    国际化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-migration-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据库迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-logging-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日志系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-best-practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    最佳实践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI 工具
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI 工具
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    命令参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-scaffold-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    脚手架指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        用 AI 编程的推荐方式（强烈建议先看）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="用 AI 编程的推荐方式（强烈建议先看）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第一步：生成项目文档
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ai-agentsmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第二步：让 AI 阅读 AGENTS.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第三步：描述业务需求
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目录（快速开始）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 简介
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 快速上手（脚手架）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. 快速上手（脚手架）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#admin-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        （可选）启用管理后台 Admin Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        字段语法说明
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 快速上手（手动）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 快速上手（手动）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安装
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hello-world" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hello World
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        运行
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 服务器运行
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. 服务器运行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI 命令（推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 项目结构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 配置
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 配置">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        环境变量（.env）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 依赖注入
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. 依赖注入">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        快速开始
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 中间件和组件
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 中间件和组件">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        内置中间件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        内置组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        注册中间件和组件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. HTTP 接口
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. HTTP 接口">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ingress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求模型（Ingress）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#egress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        统一响应格式（Egress）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        路由示例
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 错误处理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. 错误处理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常体系与继承规则
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常继承规则和错误代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 事务管理
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. 事务管理">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        推荐方式：装饰器
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 数据库
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. 数据库">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        创建仓储
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        在 API 中使用
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. 缓存
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. 缓存">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本用法
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. 异步任务
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. 异步任务">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义任务
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        调用任务
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. 事件驱动
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. 事件驱动">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        定义和订阅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        发布事件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. 定时调度
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-rpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. RPC 与服务发现
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="17. RPC 与服务发现">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        发起调用
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动分布式链路追踪
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-websocket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. WebSocket
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="18. WebSocket">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本连接
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        19. 对象存储
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        20. 国际化
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21. 数据库迁移
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="21. 数据库迁移">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动迁移（推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        手动迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        22. 日志系统
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="22. 日志系统">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        环境变量
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用日志
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#23-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        23. CLI 命令
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="23. CLI 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        统一入口
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        24. 最佳实践
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="24. 最佳实践">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aury-boot_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用 Aury Boot 提供的预定义模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        贫血模型 + Repository 模式
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#n1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        避免 N+1 查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-bus-vs-task-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Bus vs Task Queue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依赖管理
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25. 基础设施高级
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="25. 基础设施高级">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_34" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        多实例配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        流式通道（Channel）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        消息队列（MQ）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_35" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事件总线后端
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="aury-boot">Aury Boot 用户开发手册<a class="headerlink" href="#aury-boot" title="Permanent link">&para;</a></h1>
+<p>欢迎使用 Aury Boot！这是一款专为构建现代化、高性能微服务而设计的 Python 基础设施框架。</p>
+<h2 id="ai">用 AI 编程的推荐方式（强烈建议先看）<a class="headerlink" href="#ai" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>利用 AI（如 Cursor / Warp AI / GitHub Copilot / OpenAI Codex 等）开发服务时，建议先为 AI 准备好当前项目的关键文档。</p>
+<h3 id="_1">第一步：生成项目文档<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p>在你的业务项目根目录安装好 <code>aury-boot</code> 之后，执行：</p>
+<pre class="bash"><code>aury docs all        # 一次性生成/更新所有文档（推荐）
+
+# 或者按需：
+aury docs agents     # 生成 AGENTS.md（AI 编程助手上下文文档）
+aury docs dev        # 生成 aury_docs/ 目录（开发文档包）
+aury docs cli        # 生成 CLI.md（命令行使用文档）
+aury docs env        # 生成 .env.example（环境变量示例）</code></pre>
+<p>生成的文档结构：</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code>your-project/
+├── AGENTS.md           # AI 编程助手入口（指导 AI 阅读哪些文档）
+├── aury_docs/          # 开发文档包
+│   ├── 00-overview.md    # 项目概览与最佳实践
+│   ├── 01-model.md       # Model 开发指南
+│   ├── 02-repository.md  # Repository 开发指南
+│   ├── 03-service.md     # Service 开发指南（含事务）
+│   ├── 04-schema.md      # Schema 开发指南
+│   ├── 05-api.md         # API 开发指南
+│   ├── 06-exception.md   # 异常处理指南
+│   ├── 07-cache.md       # 缓存指南
+│   ├── 08-scheduler.md   # 定时任务指南
+│   ├── 09-tasks.md       # 异步任务指南
+│   ├── 10-storage.md     # 对象存储指南
+│   ├── 11-logging.md     # 日志指南
+│   ├── 12-admin.md       # 管理后台指南
+│   ├── 13-channel.md     # 流式通道指南（Pub/Sub、SSE、进程间通信）
+│   ├── 14-mq.md          # 消息队列指南
+│   └── 15-events.md      # 事件总线指南
+├── CLI.md              # CLI 命令参考
+└── .env.example        # 环境变量示例
+</code></pre></div></td></tr></table></div>
+<h3 id="ai-agentsmd">第二步：让 AI 阅读 AGENTS.md<a class="headerlink" href="#ai-agentsmd" title="Permanent link">&para;</a></h3>
+<p><code>AGENTS.md</code> 是 AI 编程助手的入口文档，它会指导 AI 根据你要开发的功能类型阅读对应的 <code>aury_docs/</code> 文档。</p>
+<p>例如，开发 CRUD 功能时，AI 会按顺序阅读：
+- <code>aury_docs/01-model.md</code> → <code>aury_docs/02-repository.md</code> → <code>aury_docs/03-service.md</code> → ...</p>
+<h3 id="_2">第三步：描述业务需求<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>在 AI 中描述你要做的业务需求，让它在理解文档的基础上帮你：
+- 设计项目结构与模块划分
+- 编写/修改业务代码、配置和数据库迁移
+- 生成测试用例和运维脚本</p>
+<p>后面的章节则是给人类开发者阅读的详细说明，AI 也可以一起阅读，用于更深层次的自动化改造。</p>
+</blockquote>
+<h2 id="_3">目录（快速开始）<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>📖 <strong>详细文档</strong>：本目录下还有更详细的技术指南</p>
+</blockquote>
+<ol>
+<li><a href="#1-简介">简介</a> - 查看详细版：<a href="../01-intro-detailed/">01-intro-detailed.md</a></li>
+<li><a href="#2-快速上手脚手架">快速上手（脚手架）</a> - 查看详细版：<a href="../25-scaffold-guide/">25-scaffold-guide.md</a></li>
+<li><a href="#3-快速上手手动">快速上手（手动）</a> - 查看详细版：<a href="../02-installation-guide/">02-installation-guide.md</a></li>
+<li><a href="#4-服务器运行">服务器运行</a> - 查看详细版：<a href="../03-server-deployment/">03-server-deployment.md</a></li>
+<li><a href="#5-项目结构">项目结构</a> - 查看详细版：<a href="../04-project-structure/">04-project-structure.md</a></li>
+<li><a href="#6-配置">配置</a> - 查看详细版：<a href="../05-configuration-advanced/">05-configuration-advanced.md</a></li>
+<li><a href="#7-依赖注入">依赖注入</a> - 查看详细版：<a href="../06-di-container-complete/">06-di-container-complete.md</a></li>
+<li><a href="#8-中间件和组件">中间件和组件</a> - 查看详细版：<a href="../07-middleware-guide/">07-middleware-guide.md</a> / <a href="../08-components-detailed/">08-components-detailed.md</a></li>
+<li><a href="#9-http-接口">HTTP 接口</a> - 查看详细版：<a href="../09-http-advanced/">09-http-advanced.md</a> （Ingress/Egress 详解）</li>
+<li><a href="#10-错误处理">错误处理</a> - 查看详细版：<a href="../10-error-handling-guide/">10-error-handling-guide.md</a></li>
+<li><a href="#11-事务管理">事务管理</a> - 查看详细版：<a href="../11-transaction-management/">11-transaction-management.md</a></li>
+<li><a href="#12-数据库">数据库</a> - 查看详细版：<a href="../12-database-complete/">12-database-complete.md</a></li>
+<li><a href="#13-缓存">缓存</a> - 查看详细版：<a href="../13-caching-advanced/">13-caching-advanced.md</a></li>
+<li><a href="#14-异步任务">异步任务</a> - 查看详细版：<a href="../14-async-tasks-guide/">14-async-tasks-guide.md</a></li>
+<li><a href="#15-事件驱动">事件驱动</a> - 查看详细版：<a href="../15-events-driven/">15-events-driven.md</a></li>
+<li><a href="#16-定时调度">定时调度</a> - 查看详细版：<a href="../16-scheduler-guide/">16-scheduler-guide.md</a></li>
+<li><a href="#17-rpc-与服务发现">RPC 与服务发现</a> - 查看详细版：<a href="../17-rpc-microservices/">17-rpc-microservices.md</a></li>
+<li><a href="#18-websocket">WebSocket</a> - 查看详细版：<a href="../18-websocket-guide/">18-websocket-guide.md</a></li>
+<li><a href="#19-对象存储">对象存储</a> - 查看详细版：<a href="../19-storage-guide/">19-storage-guide.md</a></li>
+<li><a href="#20-国际化">国际化</a> - 查看详细版：<a href="../20-i18n-guide/">20-i18n-guide.md</a></li>
+<li><a href="#21-数据库迁移">数据库迁移</a> - 查看详细版：<a href="../21-migration-guide/">21-migration-guide.md</a></li>
+<li><a href="#22-日志系统">日志系统</a> - 查看详细版：<a href="../22-logging-complete/">22-logging-complete.md</a></li>
+<li><a href="#23-cli-命令">CLI 命令</a> - 查看详细版：<a href="../24-cli-commands/">24-cli-commands.md</a></li>
+<li><a href="#24-最佳实践">最佳实践</a> - 查看详细版：<a href="../23-best-practices/">23-best-practices.md</a></li>
+<li><a href="#25-基础设施高级">基础设施高级</a> - 查看详细版：<a href="../26-infrastructure-advanced/">26-infrastructure-advanced.md</a>（Channel、MQ、多实例配置）</li>
+</ol>
+<hr />
+<h2 id="1">1. 简介<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p>Aury Boot 是 FastAPI 的增强层，提供微服务开发所需的"电池"：</p>
+<ul>
+<li><strong>统一的组件管理</strong>：生命周期自动管理（数据库、缓存、任务等）</li>
+<li><strong>标准化架构</strong>：Domain/Infrastructure 分离，Repository 模式</li>
+<li><strong>微服务能力</strong>：服务发现、RPC、分布式事件总线开箱即用</li>
+</ul>
+<hr />
+<h2 id="2">2. 快速上手（脚手架）<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>📖 <strong>推荐方式</strong>：使用脚手架快速创建项目，详见 <a href="../25-scaffold-guide/">25-scaffold-guide.md</a></p>
+</blockquote>
+<pre class="bash"><code># 1. 创建项目目录并初始化
+mkdir my-service &amp;&amp; cd my-service
+uv init . --name my_service --no-package --python 3.13
+
+# 2. （可选）配置清华源以加速安装
+# 在 pyproject.toml 中添加以下配置
+cat &gt;&gt; pyproject.toml &lt;&lt; EOF
+
+[tool.uv]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+EOF
+
+# 3. 安装框架
+uv add "aury-boot[recommended,admin]"  # admin 可选，提供 SQLAdmin 管理后台
+
+# 4. 初始化脚手架
+aury init                 # 交互式模式（默认），会询问配置选项
+aury init -y              # 跳过交互，使用默认配置
+aury init my_package      # 使用顶层包结构
+aury init --docker        # 同时生成 Docker 配置
+
+# 5. 配置环境变量
+cp .env.example .env
+# 编辑 .env 配置数据库连接
+
+# 6. 生成 CRUD 代码
+aury generate crud user email:str:unique age:int? status:str=active
+
+# 7. 生成并执行数据库迁移
+aury migrate make -m "initial"
+aury migrate up
+
+# 8. 启动开发服务器
+aury server dev</code></pre>
+<blockquote>
+<p><strong>注意</strong>：<code>init</code> 会覆盖 <code>uv init</code> 创建的默认 <code>main.py</code>，这是正常行为。</p>
+</blockquote>
+<p>访问 http://localhost:8000/docs 查看 API 文档。</p>
+<h3 id="admin-console">（可选）启用管理后台 Admin Console<a class="headerlink" href="#admin-console" title="Permanent link">&para;</a></h3>
+<p>框架提供可选的 SQLAdmin 管理后台扩展，默认路径：<code>/api/admin-console</code>，适合生产快速搭建后台管理能力。</p>
+<pre class="bash"><code># 在 .env 中启用并设置 basic 认证
+ADMIN_ENABLED=true
+ADMIN_PATH=/api/admin-console
+ADMIN_AUTH_MODE=basic
+ADMIN_AUTH_SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET
+ADMIN_AUTH_BASIC_USERNAME=admin
+ADMIN_AUTH_BASIC_PASSWORD=change_me</code></pre>
+<p>启动服务后访问：<code>http://localhost:8000/api/admin-console</code></p>
+<h3 id="_4">字段语法说明<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 格式: name:type:modifiers
+# 类型: str, text, int, bigint, float, decimal, bool, datetime, date, time, json
+# 修饰符: ? (可空), unique, index, =默认值
+
+# 示例
+aury generate crud article title:str(200) content:text status:str=draft
+aury generate crud product name:str:unique price:decimal stock:int=0
+
+# 交互式模式
+aury generate crud user -i</code></pre>
+<hr />
+<h2 id="3">3. 快速上手（手动）<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_5">安装<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 推荐：PostgreSQL + Redis + 任务队列 + 调度器
+uv add "aury-boot[recommended]"
+
+# 或按需组合
+uv add "aury-boot[postgres,redis]"</code></pre>
+<h3 id="hello-world">Hello World<a class="headerlink" href="#hello-world" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.app.base import FoundationApp
+from aury.boot.application.config import BaseConfig
+from aury.boot.application.server import run_app
+from aury.boot.application.interfaces.egress import BaseResponse
+
+class AppConfig(BaseConfig):
+    pass
+
+app = FoundationApp(
+    title="My Service",
+    version="0.1.0",
+    config=AppConfig()
+)
+
+@app.get("/")
+def hello():
+    return BaseResponse(code=200, message="Hello", data={"message": "Hello AUM!"})
+
+if __name__ == "__main__":
+    run_app(app, host="0.0.0.0", port=8000)</code></pre>
+<h3 id="_6">运行<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 开发模式（热重载）
+aury server dev
+
+# 生产模式（多进程）
+aury server prod</code></pre>
+<hr />
+<h2 id="4">4. 服务器运行<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="cli">CLI 命令（推荐）<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 开发模式（热重载）
+aury server dev
+
+# 生产模式（多进程）
+aury server prod</code></pre>
+<blockquote>
+<p>📖 <strong>详细配置</strong>：参考 <a href="../03-server-deployment/">03-server-deployment.md</a></p>
+</blockquote>
+<hr />
+<h2 id="5">5. 项目结构<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span></pre></div></td><td class="code"><div><pre><span></span><code>my_service/
+├── main.py                 # 应用入口
+├── config.py               # 配置
+├── alembic.ini             # Alembic 配置
+├── .env.example            # 环境变量模板
+├── api/                    # API 路由
+│   ├── users.py
+│   └── orders.py
+├── services/               # 业务逻辑
+│   ├── user_service.py
+│   └── order_service.py
+├── models/                 # 数据模型
+│   ├── user.py
+│   └── order.py
+├── repositories/           # 数据访问
+│   ├── user_repository.py
+│   └── order_repository.py
+├── schemas/                # Pydantic 模型
+│   ├── user.py
+│   └── order.py
+├── migrations/             # 数据库迁移
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+├── tests/                  # 测试
+│   └── conftest.py
+├── pyproject.toml
+└── README.md
+</code></pre></div></td></tr></table></div>
+<p><strong>分层说明</strong>：
+- <code>api/</code>：HTTP 请求处理
+- <code>services/</code>：业务逻辑
+- <code>models/</code>：SQLAlchemy 模型
+- <code>repositories/</code>：数据访问
+- <code>schemas/</code>：请求/响应序列化</p>
+<hr />
+<h2 id="6">6. 配置<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="env">环境变量（.env）<a class="headerlink" href="#env" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 服务器
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8000
+
+# 数据库
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE_POOL_SIZE=10
+
+# 缓存
+CACHE_TYPE=redis
+CACHE_URL=redis://localhost:6379/0
+
+# 任务队列
+TASK_BROKER_URL=redis://localhost:6379/0
+
+# 日志
+LOG_LEVEL=INFO
+LOG_DIR=log</code></pre>
+<h3 id="_7">自定义配置<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.config import BaseConfig
+from pydantic import Field
+
+class MyConfig(BaseConfig):
+    my_feature: bool = Field(default=True)</code></pre>
+<blockquote>
+<p>📖 <strong>详细配置</strong>：参考 <a href="../05-configuration-advanced/">05-configuration-advanced.md</a></p>
+</blockquote>
+<hr />
+<h2 id="7">7. 依赖注入<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<p>Aury Boot 提供企业级 <strong>DI 容器</strong></p>
+<table>
+<thead>
+<tr>
+<th>生命周期</th>
+<th>说明</th>
+<th>场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SINGLETON</strong></td>
+<td>应用生命周期唯一</td>
+<td>数据库、缓存、配置</td>
+</tr>
+<tr>
+<td><strong>SCOPED</strong></td>
+<td>请求范围内唯一</td>
+<td>数据库会话</td>
+</tr>
+<tr>
+<td><strong>TRANSIENT</strong></td>
+<td>每次创建新实例</td>
+<td>服务、工具类</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_8">快速开始<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.infrastructure.di import Container
+
+container = Container.get_instance()
+
+# 注册
+container.register_singleton(DatabaseManager)
+container.register_transient(UserService)
+
+# 解析
+service = container.resolve(UserService)</code></pre>
+<blockquote>
+<p>📖 <strong>深入学习</strong>：参考 <a href="../06-di-container-complete/">06-di-container-complete.md</a></p>
+</blockquote>
+<hr />
+<h2 id="8">8. 中间件和组件<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<p>Aury Boot 将功能单元分为两类：
+- <strong>中间件（Middleware）</strong>：处理 HTTP 请求拦截
+- <strong>组件（Component）</strong>：管理基础设施生命周期</p>
+<h3 id="_9">内置中间件<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.app.middlewares import (
+    RequestLoggingMiddleware,  # HTTP 请求日志
+    CORSMiddleware,            # CORS 跨域
+)</code></pre>
+<h3 id="_10">内置组件<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.app.components import (
+    DatabaseComponent,        # 数据库
+    CacheComponent,           # 缓存
+    TaskComponent,            # 异步任务
+    SchedulerComponent,       # 定时调度
+    MigrationComponent,       # 数据库迁移
+)</code></pre>
+<h3 id="_11">自定义组件<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.app.base import Component, FoundationApp
+
+class MyComponent(Component):
+    name = "my_component"
+    enabled = True
+    depends_on = ["cache"]
+
+    async def setup(self, app: FoundationApp, config):
+        print("初始化...")
+
+    async def teardown(self, app: FoundationApp):
+        print("清理...")</code></pre>
+<h3 id="_12">注册中间件和组件<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>class MyApp(FoundationApp):
+    middlewares = [
+        RequestLoggingMiddleware,
+        CORSMiddleware,
+    ]
+    components = [
+        DatabaseComponent,
+        CacheComponent,
+        MyComponent,
+    ]
+
+app = MyApp(config=config)</code></pre>
+<blockquote>
+<p>📖 <strong>深入学习</strong>：参考 <a href="../07-middleware-guide/">07-middleware-guide.md</a> 和 <a href="../08-components-detailed/">08-components-detailed.md</a></p>
+</blockquote>
+<hr />
+<h2 id="9-http">9. HTTP 接口<a class="headerlink" href="#9-http" title="Permanent link">&para;</a></h2>
+<h3 id="ingress">请求模型（Ingress）<a class="headerlink" href="#ingress" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.interfaces.ingress import (
+    BaseRequest,
+    PaginationRequest
+)
+from pydantic import EmailStr, Field
+
+class UserCreateRequest(BaseRequest):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8)</code></pre>
+<h3 id="egress">统一响应格式（Egress）<a class="headerlink" href="#egress" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.interfaces.egress import (
+    BaseResponse,
+    PaginationResponse,
+    Pagination,
+)
+
+# 单个资源
+return BaseResponse(code=200, message="成功", data=user)
+
+# 列表响应
+pagination = Pagination(total=100, items=users, page=1, size=20)
+return PaginationResponse(code=200, message="获取成功", data=pagination)</code></pre>
+<h3 id="_13">路由示例<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from fastapi import APIRouter, Depends
+from aury.boot.infrastructure.di import Container
+from aury.boot.application.interfaces.egress import BaseResponse
+
+router = APIRouter()
+container = Container.get_instance()
+
+def get_user_service():
+    return container.resolve(UserService)
+
+@router.post("/users")
+async def create_user(
+    request: UserCreateRequest,
+    service: UserService = Depends(get_user_service)
+):
+    user = await service.create(request)
+    return BaseResponse(code=200, message="创建成功", data=user)</code></pre>
+<blockquote>
+<p>📖 <strong>深入学习</strong>：参考 <a href="../09-http-advanced/">09-http-advanced.md</a></p>
+</blockquote>
+<hr />
+<h2 id="10">10. 错误处理<a class="headerlink" href="#10" title="Permanent link">&para;</a></h2>
+<h3 id="_14">异常体系与继承规则<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.errors import (
+    BaseError,
+    NotFoundError,
+    AlreadyExistsError,
+    UnauthorizedError,
+    ForbiddenError,
+)
+
+# ✅ 开发规范：所有服务特定异常都要继承 Aury Boot 框架提供的异常
+class MyServiceError(UnauthorizedError):
+    """服务特定异常必须继承 Aury Boot 框架内置的异常类。"""
+
+    def __init__(self, message: str, **kwargs):
+        super().__init__(message=message, **kwargs)
+
+@router.get("/users/{user_id}")
+async def get_user(user_id: str):
+    user = await repo.get(user_id)
+    if not user:
+        # Aury Boot 的全局异常处理器会自动转换为 HTTP 404
+        raise NotFoundError(f"用户 {user_id} 不存在")
+    return user</code></pre>
+<h3 id="_15">异常继承规则和错误代码<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<p><strong>原则</strong>：
+1. 所有异常必须继承 Aury Boot 提供的异常基类（UnauthorizedError、NotFoundError 等）
+2. 所有错误代码必须继承 Aury Boot 的 <code>ErrorCode</code>，在服务范围内定义
+3. <strong>不覆盖</strong> Aury Boot 的内置错误代码（1xxx-4xxx），服务使用 5xxx+ 范围</p>
+<pre class="python"><code># ✅ 正确：定义错误代码枚举，继承 ErrorCode
+from aury.boot.application.errors.codes import ErrorCode
+
+class IdentityErrorCode(ErrorCode):
+    INVALID_CREDENTIALS = "5001"
+    USER_NOT_FOUND = "5101"
+    DUPLICATE_USER = "5104"
+
+# ✅ 正确：异常继承 Aury Boot 的异常
+class InvalidCredentialsError(UnauthorizedError):
+    def __init__(self, **kwargs):
+        metadata = kwargs.pop("metadata", {})
+        metadata["error_code"] = IdentityErrorCode.INVALID_CREDENTIALS.value
+        super().__init__(message="用户名或密码错误", metadata=metadata, **kwargs)
+
+# ❌ 错误：不继承 Aury Boot 的异常体系
+class MyCustomError(Exception):
+    pass
+
+# ❌ 错误：没有调用 super().__init__()
+class BadError(NotFoundError):
+    self.message = message  # 错！</code></pre>
+<blockquote>
+<p>📖 <strong>详细规范</strong>：参考 <a href="../10-error-handling-guide/">10-error-handling-guide.md</a></p>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../10-error-handling-guide/">10-error-handling-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="11">11. 事务管理<a class="headerlink" href="#11" title="Permanent link">&para;</a></h2>
+<h3 id="_16">推荐方式：装饰器<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.transaction import transactional
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@transactional
+async def create_user_with_profile(session: AsyncSession, name: str):
+    repo = UserRepository(session)
+    user = await repo.create({"username": name})
+    # 自动提交，异常时自动回滚
+    return user</code></pre>
+<blockquote>
+<p>📖 <strong>其他方式</strong>：参考 <a href="../11-transaction-management/">11-transaction-management.md</a></p>
+</blockquote>
+<hr />
+<h2 id="12">12. 数据库<a class="headerlink" href="#12" title="Permanent link">&para;</a></h2>
+<h3 id="_17">定义模型<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String
+from aury.boot.domain.models import UUIDAuditableStateModel
+
+class User(UUIDAuditableStateModel):
+    """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+    __tablename__ = "users"
+
+    # UUIDAuditableStateModel 自动提供：
+    # - id: UUID 主键
+    # - created_at: 创建时间
+    # - updated_at: 更新时间
+    # - deleted_at: 软删除时间
+
+    username: Mapped[str] = mapped_column(String(50), unique=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True)</code></pre>
+<h3 id="_18">创建仓储<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.domain.repository.impl import BaseRepository
+
+class UserRepository(BaseRepository[User]):
+    async def get_by_email(self, email: str):
+        return await self.get_by(email=email)</code></pre>
+<h3 id="api">在 API 中使用<a class="headerlink" href="#api" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.infrastructure.database import DatabaseManager
+
+db_manager = DatabaseManager.get_instance()
+
+async def get_user_repo(session=Depends(db_manager.get_session)):
+    return UserRepository(session)
+
+@router.get("/users/{user_id}")
+async def get_user(user_id: str, repo=Depends(get_user_repo)):
+    user = await repo.get(user_id)
+    if not user:
+        raise NotFoundError("用户不存在")
+    return BaseResponse(code=200, message="获取成功", data=user)</code></pre>
+<blockquote>
+<p>📖 <strong>深入学习</strong>：参考 <a href="../12-database-complete/">12-database-complete.md</a></p>
+</blockquote>
+<hr />
+<h2 id="13">13. 缓存<a class="headerlink" href="#13" title="Permanent link">&para;</a></h2>
+<h3 id="_19">基本用法<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.infrastructure.cache import CacheManager
+
+cache = CacheManager.get_instance()
+
+# 设置
+await cache.set("user:1", {"name": "test"}, expire=300)
+
+# 获取
+user = await cache.get("user:1")
+
+# 删除
+await cache.delete("user:1")</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../13-caching-advanced/">13-caching-advanced.md</a></p>
+</blockquote>
+<hr />
+<h2 id="14">14. 异步任务<a class="headerlink" href="#14" title="Permanent link">&para;</a></h2>
+<h3 id="_20">定义任务<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.infrastructure.tasks.manager import TaskManager
+
+tm = TaskManager.get_instance()
+
+@tm.conditional_task(queue_name="default", max_retries=3)
+async def send_email_task(email: str, content: str):
+    pass</code></pre>
+<h3 id="_21">调用任务<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
+<pre class="python"><code># 发送
+send_email_task.send("test@example.com", "Hello!")</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../14-async-tasks-guide/">14-async-tasks-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="15">15. 事件驱动<a class="headerlink" href="#15" title="Permanent link">&para;</a></h2>
+<h3 id="_22">定义和订阅<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.infrastructure.events.bus import EventBus
+from aury.boot.infrastructure.events import Event
+
+class OrderCreatedEvent(Event):
+    order_id: str
+    amount: float
+
+    @property
+    def event_name(self) -&gt; str:
+        return "order.created"
+
+bus = EventBus.get_instance()
+
+@bus.subscribe(OrderCreatedEvent)
+async def on_order_created(event: OrderCreatedEvent):
+    print(f"订单创建: {event.order_id}")</code></pre>
+<h3 id="_23">发布事件<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>await bus.publish(OrderCreatedEvent(order_id="1001", amount=99.9))</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../15-events-driven/">15-events-driven.md</a></p>
+</blockquote>
+<hr />
+<h2 id="16">16. 定时调度<a class="headerlink" href="#16" title="Permanent link">&para;</a></h2>
+<pre class="python"><code>from aury.boot.infrastructure.scheduler.manager import SchedulerManager
+from datetime import datetime
+
+scheduler = SchedulerManager.get_instance()
+
+# Cron 任务
+scheduler.add_job(
+    func=daily_report,
+    trigger="cron",
+    hour=2, minute=30,
+    id="daily_report"
+)
+
+# 间隔任务
+scheduler.add_job(
+    func=heartbeat,
+    trigger="interval",
+    seconds=30
+)</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../16-scheduler-guide/">16-scheduler-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="17-rpc">17. RPC 与服务发现<a class="headerlink" href="#17-rpc" title="Permanent link">&para;</a></h2>
+<h3 id="_24">配置<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 环境变量
+RPC_CLIENT_SERVICES={"order-service": "http://order-service:8000"}</code></pre>
+<h3 id="_25">发起调用<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.application.rpc.client import create_rpc_client
+
+client = create_rpc_client(service_name="order-service")
+response = await client.get("/api/orders/123")</code></pre>
+<h3 id="_26">自动分布式链路追踪<a class="headerlink" href="#_26" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.common.logging import get_trace_id, logger
+
+trace_id = get_trace_id()
+logger.info(f"处理请求 | Trace-ID: {trace_id}")
+# RPC 调用会自动添加 X-Trace-ID 请求头</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../17-rpc-microservices/">17-rpc-microservices.md</a></p>
+</blockquote>
+<hr />
+<h2 id="18-websocket">18. WebSocket<a class="headerlink" href="#18-websocket" title="Permanent link">&para;</a></h2>
+<h3 id="_27">基本连接<a class="headerlink" href="#_27" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from fastapi import APIRouter, WebSocket
+from aury.boot.infrastructure.database import DatabaseManager
+
+router = APIRouter()
+db_manager = DatabaseManager.get_instance()
+
+@router.websocket("/ws/chat/{room_id}")
+async def websocket_chat(websocket: WebSocket, room_id: str):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+
+            async with db_manager.session() as session:
+                repo = MessageRepository(session)
+                await repo.create({"room_id": room_id, "content": data})
+
+            await websocket.send_json({"status": "ok"})
+    except Exception as e:
+        await websocket.close(code=1011, reason=str(e))</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../18-websocket-guide/">18-websocket-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="19">19. 对象存储<a class="headerlink" href="#19" title="Permanent link">&para;</a></h2>
+<p>基于 <a href="https://github.com/AuriMyth/aury-sdk-storage">aury-sdk-storage</a>，支持 S3 兼容存储和 STS 临时凭证。</p>
+<pre class="bash"><code># 安装
+uv add "aury-sdk-storage[aws]"</code></pre>
+<pre class="python"><code>from io import BytesIO
+from aury.boot.infrastructure.storage import (
+    StorageManager, StorageConfig, StorageBackend, StorageFile,
+)
+
+# 获取存储管理器（支持命名多实例）
+storage = StorageManager.get_instance()
+
+# 初始化（一般由 StorageComponent 自动完成）
+await storage.init(StorageConfig(
+    backend=StorageBackend.COS,
+    bucket_name="my-bucket-1250000000",
+    region="ap-guangzhou",
+    endpoint="https://cos.ap-guangzhou.myqcloud.com",
+    access_key_id="AKIDxxxxx",
+    access_key_secret="xxxxx",
+))
+
+# 上传
+url = await storage.upload_file(
+    StorageFile(
+        object_name="avatars/user_1.png",
+        data=BytesIO(image_bytes),
+        content_type="image/png",
+    )
+)</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../19-storage-guide/">19-storage-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="20">20. 国际化<a class="headerlink" href="#20" title="Permanent link">&para;</a></h2>
+<pre class="python"><code>from aury.boot.common.i18n.translator import translate, load_translations
+
+# 加载翻译
+load_translations({
+    "zh_CN": {"error.not_found": "资源 {name} 未找到"},
+    "en_US": {"error.not_found": "Resource {name} not found"}
+})
+
+# 使用
+msg = translate("error.not_found", name="User", locale="zh_CN")</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../20-i18n-guide/">20-i18n-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="21">21. 数据库迁移<a class="headerlink" href="#21" title="Permanent link">&para;</a></h2>
+<h3 id="_28">自动迁移（推荐）<a class="headerlink" href="#_28" title="Permanent link">&para;</a></h3>
+<p>应用启动时自动执行迁移：</p>
+<pre class="python"><code>from aury.boot.application.app.components import MigrationComponent
+
+class MyApp(FoundationApp):
+    components = [
+        DatabaseComponent,
+        MigrationComponent,  # 自动执行迁移
+        CacheComponent,
+    ]
+
+# 应用启动时自动执行迁移到最新版本</code></pre>
+<h3 id="_29">手动迁移<a class="headerlink" href="#_29" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code># 初始化
+alembic init -t async alembic
+
+# 生成迁移
+aury migrate make -m "Add users table"
+
+# 执行迁移
+aury migrate up
+
+# 查看状态
+aury migrate status</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../21-migration-guide/">21-migration-guide.md</a></p>
+</blockquote>
+<hr />
+<h2 id="22">22. 日志系统<a class="headerlink" href="#22" title="Permanent link">&para;</a></h2>
+<h3 id="_30">环境变量<a class="headerlink" href="#_30" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code>LOG_LEVEL=INFO
+LOG_DIR=log
+LOG_ROTATION_TIME=00:00
+LOG_RETENTION_DAYS=7</code></pre>
+<h3 id="_31">使用日志<a class="headerlink" href="#_31" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from aury.boot.common.logging import logger, get_trace_id
+
+logger.info("信息")
+logger.warning("警告")
+logger.error("错误")
+
+# 自动包含 Trace ID
+trace_id = get_trace_id()
+logger.info(f"处理请求 | Trace-ID: {trace_id}")</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../22-logging-complete/">22-logging-complete.md</a></p>
+</blockquote>
+<hr />
+<h2 id="23-cli">23. CLI 命令<a class="headerlink" href="#23-cli" title="Permanent link">&para;</a></h2>
+<h3 id="_32">统一入口<a class="headerlink" href="#_32" title="Permanent link">&para;</a></h3>
+<p>安装后可使用 <code>aury</code> 统一命令：</p>
+<pre class="bash"><code># 项目初始化（先用 uv 创建项目）
+uv init . --name my_service --no-package --python 3.13
+uv add "aury-boot[recommended]"
+aury init -i              # 交互式模式（推荐）
+aury init                 # 默认配置
+aury init my_package      # 顶层包结构
+aury init --docker        # 包含 Docker 配置
+
+# 代码生成
+aury generate crud user
+
+# 服务器
+aury server dev
+aury server prod
+
+# 数据库迁移
+aury migrate make -m "add user"
+aury migrate up
+aury migrate status
+
+# Shell 补全
+aum --install-completion</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../24-cli-commands/">24-cli-commands.md</a></p>
+</blockquote>
+<hr />
+<h2 id="24">24. 最佳实践<a class="headerlink" href="#24" title="Permanent link">&para;</a></h2>
+<h3 id="aury-boot_1">使用 Aury Boot 提供的预定义模型<a class="headerlink" href="#aury-boot_1" title="Permanent link">&para;</a></h3>
+<p>Aury Boot 提供多个预定义模型组合，推荐直接使用而不是 <code>Base</code>：</p>
+<pre class="python"><code>from aury.boot.domain.models import (
+    UUIDAuditableStateModel,  # 【推荐】UUID主键 + 时间戳 + 软删除
+    UUIDModel,                # UUID主键 + 时间戳
+    Model,                    # 整数主键 + 时间戳
+    FullFeaturedUUIDModel,    # 完整功能：UUID + 时间戳 + 软删除 + 乐观锁
+)
+
+# ✅ 推荐：使用 UUIDAuditableStateModel
+class Identity(UUIDAuditableStateModel):
+    """身份模型 - 自动获得以下字段：
+    - id: UUID 主键
+    - created_at: 创建时间
+    - updated_at: 更新时间  
+    - deleted_at: 软删除时间（0 未删除，&gt;0 已删除时间戳）
+    """
+    __tablename__ = "identity_identities"
+    username: Mapped[str] = mapped_column(String(100))
+
+# ❌ 不推荐：直接使用 Base
+class BadModel(Base):
+    __tablename__ = "bad_model"
+    # 需要手动添加 id、created_at 等字段</code></pre>
+<p><strong>预定义模型对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>UUID 主键</th>
+<th>时间戳</th>
+<th>软删除</th>
+<th>乐观锁</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>UUIDAuditableStateModel</strong></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+<td>【推荐】大多数业务模型</td>
+</tr>
+<tr>
+<td><strong>UUIDModel</strong></td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+<td>不需要软删除的模型</td>
+</tr>
+<tr>
+<td><strong>Model</strong></td>
+<td>❌</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+<td>使用整数主键</td>
+</tr>
+<tr>
+<td><strong>FullFeaturedUUIDModel</strong></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>需要完整功能的关键业务</td>
+</tr>
+</tbody>
+</table>
+<h3 id="repository">贫血模型 + Repository 模式<a class="headerlink" href="#repository" title="Permanent link">&para;</a></h3>
+<p>推荐使用"贫血模型"设计（只包含字段，无关系定义），所有查询由 Repository 层负责：</p>
+<pre class="python"><code># ✅ 模型层（纯数据结构）
+class Tenant(UUIDAuditableStateModel):
+    __tablename__ = "tenants"
+    name: Mapped[str] = mapped_column(String(100))
+    # 不定义 relationship，不定义 ForeignKey
+
+# ✅ 仓库层（负责所有查询）
+class TenantRepository(BaseRepository[Tenant]):
+    async def get_with_members(self, tenant_id: GUID):
+        # 显式 join，可控的查询
+        stmt = select(Tenant).where(Tenant.id == tenant_id)
+        return await self.session.scalar(stmt)
+
+    async def list_members(self, tenant_id: GUID):
+        # 显式查询成员，避免隐式 N+1
+        stmt = select(TenantMembership).where(TenantMembership.tenant_id == tenant_id)
+        return await self.session.scalars(stmt)</code></pre>
+<p><strong>好处</strong>：
+- 模型简洁，易于维护
+- 避免隐式查询导致的 N+1 问题
+- 查询逻辑集中在 Repository，便于优化
+- 完全掌控数据加载策略</p>
+<h3 id="n1">避免 N+1 查询<a class="headerlink" href="#n1" title="Permanent link">&para;</a></h3>
+<pre class="python"><code>from sqlalchemy.orm import selectinload
+
+class UserRepository(BaseRepository[User]):
+    async def list_with_orders(self):
+        stmt = select(User).options(selectinload(User.orders))
+        result = await self.session.execute(stmt)
+        return result.scalars().all()</code></pre>
+<h3 id="event-bus-vs-task-queue">Event Bus vs Task Queue<a class="headerlink" href="#event-bus-vs-task-queue" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Event Bus</th>
+<th>Task Queue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>消费者</td>
+<td>多个</td>
+<td>单个</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>毫秒级</td>
+<td>秒级</td>
+</tr>
+<tr>
+<td>重试</td>
+<td>无</td>
+<td>有</td>
+</tr>
+<tr>
+<td>用途</td>
+<td>通知、分析</td>
+<td>数据处理、支付</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_33">依赖管理<a class="headerlink" href="#_33" title="Permanent link">&para;</a></h3>
+<pre class="bash"><code>uv init my-service
+uv add "aury-boot[recommended]"
+uv lock</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../23-best-practices/">23-best-practices.md</a></p>
+</blockquote>
+<hr />
+<h2 id="25">25. 基础设施高级<a class="headerlink" href="#25" title="Permanent link">&para;</a></h2>
+<h3 id="_34">多实例配置<a class="headerlink" href="#_34" title="Permanent link">&para;</a></h3>
+<p>所有 Manager 支持多实例，环境变量格式：<code>{PREFIX}_{INSTANCE}_{FIELD}</code></p>
+<pre class="bash"><code># 数据库多实例
+DATABASE_DEFAULT_URL=postgresql+asyncpg://localhost/mydb
+DATABASE_READONLY_URL=postgresql+asyncpg://replica/mydb
+
+# Redis 多实例
+REDIS_CACHE_URL=redis://localhost:6379/1
+REDIS_SESSION_URL=redis://localhost:6379/2</code></pre>
+<h3 id="channel">流式通道（Channel）<a class="headerlink" href="#channel" title="Permanent link">&para;</a></h3>
+<p>用于 Pub/Sub、SSE 和进程间通信：</p>
+<pre class="python"><code>from aury.boot.infrastructure.channel import ChannelManager
+
+channel = ChannelManager.get_instance()
+await channel.configure(backend="redis", redis_url="redis://localhost:6379/0").initialize()
+
+# 发布
+await channel.publish("user:123", {"event": "message"})
+
+# 订阅
+async for msg in channel.subscribe("user:123"):
+    print(msg)</code></pre>
+<h3 id="mq">消息队列（MQ）<a class="headerlink" href="#mq" title="Permanent link">&para;</a></h3>
+<p>支持 Redis 和 RabbitMQ 后端：</p>
+<pre class="python"><code>from aury.boot.infrastructure.mq import MQManager
+
+mq = MQManager.get_instance()
+await mq.configure(backend="redis", url="redis://localhost:6379/0").initialize()
+
+# 生产者
+await mq.publish("orders", {"order_id": "123"})
+
+# 消费者
+await mq.consume("orders", handler)</code></pre>
+<h3 id="_35">事件总线后端<a class="headerlink" href="#_35" title="Permanent link">&para;</a></h3>
+<p>支持 memory、redis、rabbitmq 后端：</p>
+<pre class="bash"><code># 内存后端（单进程）
+EVENT_BACKEND=memory
+
+# Redis Pub/Sub
+EVENT_BACKEND=redis
+EVENT_URL=redis://localhost:6379/0
+
+# RabbitMQ
+EVENT_BACKEND=rabbitmq
+EVENT_URL=amqp://guest:guest@localhost:5672/</code></pre>
+<blockquote>
+<p>📖 <strong>详细说明</strong>：参考 <a href="../26-infrastructure-advanced/">26-infrastructure-advanced.md</a></p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 Aury Team
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/AuriMyth/aury-boot" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["search.suggest", "search.highlight", "search.share", "content.tabs.link", "content.code.copy", "content.code.annotate", "navigation.instant", "navigation.tracking", "navigation.top", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
