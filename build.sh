@@ -41,6 +41,59 @@ check_uv() {
     success "uv $(uv --version | head -1)"
 }
 
+# 从 pyproject.toml 读取版本文件路径
+get_version_file() {
+    local pyproject="pyproject.toml"
+    local version_file
+    
+    if [ ! -f "$pyproject" ]; then
+        return 1
+    fi
+    
+    # 尝试使用 Python 解析 TOML（更可靠）
+    if command -v python3 &> /dev/null; then
+        version_file=$(python3 <<PYTHON_SCRIPT 2>/dev/null
+import re
+import sys
+
+try:
+    with open("$pyproject", "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # 查找 [tool.hatch.build.hooks.vcs] 部分的 version-file
+    pattern = r'\[tool\.hatch\.build\.hooks\.vcs\].*?version-file\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content, re.DOTALL)
+    
+    if match:
+        print(match.group(1))
+        sys.exit(0)
+except Exception:
+    pass
+
+sys.exit(1)
+PYTHON_SCRIPT
+)
+        if [ $? -eq 0 ] && [ -n "$version_file" ]; then
+            echo "$version_file"
+            return 0
+        fi
+    fi
+    
+    # 备用方案：使用 grep/sed（简单但可能不够健壮）
+    if grep -q '\[tool\.hatch\.build\.hooks\.vcs\]' "$pyproject" 2>/dev/null; then
+        version_file=$(sed -n '/\[tool\.hatch\.build\.hooks\.vcs\]/,/^\[/p' "$pyproject" | \
+            grep 'version-file' | \
+            sed -E 's/.*version-file\s*=\s*"([^"]+)".*/\1/' | \
+            head -1)
+        if [ -n "$version_file" ]; then
+            echo "$version_file"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
 # 检查 Git 状态
 check_git() {
     info "检查 Git 状态..."
@@ -70,7 +123,31 @@ check_git() {
 # 清理构建产物
 clean() {
     info "清理旧的构建文件..."
-    rm -rf build/ dist/ *.egg-info aury/*.egg-info aury/foundation_kit/_version.py
+    
+    # 清理构建目录和临时文件
+    rm -rf build/ dist/ *.egg-info aury/*.egg-info
+    
+    # 从 pyproject.toml 读取版本文件路径
+    VERSION_FILE=$(get_version_file || echo "")
+    
+    if [ -n "$VERSION_FILE" ]; then
+        info "检测到版本文件: ${CYAN}${VERSION_FILE}${NC}"
+        
+        # 如果版本文件被 Git 追踪，先从索引中移除
+        if git ls-files --error-unmatch "$VERSION_FILE" > /dev/null 2>&1; then
+            info "从 Git 索引中移除版本文件..."
+            git rm --cached "$VERSION_FILE" > /dev/null 2>&1 || true
+        fi
+        
+        # 删除本地版本文件（.gitignore 会忽略它）
+        if [ -f "$VERSION_FILE" ]; then
+            rm -f "$VERSION_FILE"
+        fi
+    else
+        # 如果没有配置版本文件，尝试查找常见的版本文件
+        info "未在 pyproject.toml 中找到版本文件配置，跳过版本文件清理"
+    fi
+    
     success "清理完成"
 }
 
