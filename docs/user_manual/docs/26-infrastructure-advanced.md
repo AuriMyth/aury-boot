@@ -4,26 +4,26 @@
 
 ## 多实例配置
 
-所有基础设施组件均支持多实例配置，格式：`{PREFIX}_{INSTANCE}_{FIELD}`。
+所有基础设施组件均支持多实例配置，格式：`{PREFIX}__{INSTANCE}__{FIELD}`。
 
 ### 环境变量格式
 
 ```bash
 # 数据库多实例
-DATABASE_URL=sqlite+aiosqlite:///./dev.db          # 默认实例
-DATABASE_DEFAULT_URL=sqlite+aiosqlite:///./dev.db  # 等同于默认
-DATABASE_READONLY_URL=postgresql+asyncpg://...      # 只读实例
+DATABASE__URL=sqlite+aiosqlite:///./dev.db          # 默认实例
+DATABASE__DEFAULT__URL=sqlite+aiosqlite:///./dev.db  # 等同于默认
+DATABASE__READONLY__URL=postgresql+asyncpg://...      # 只读实例
 
 # 缓存多实例
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
-CACHE_SESSION_TYPE=redis
-CACHE_SESSION_URL=redis://localhost:6379/2
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
+CACHE__SESSION__CACHE_TYPE=redis
+CACHE__SESSION__URL=redis://localhost:6379/2
 
 # 流式通道多实例
-CHANNEL_BACKEND=memory
-CHANNEL_DEFAULT_BACKEND=redis
-CHANNEL_DEFAULT_URL=redis://localhost:6379/3
+CHANNEL__BACKEND=memory
+CHANNEL__DEFAULT__BACKEND=redis
+CHANNEL__DEFAULT__URL=redis://localhost:6379/3
 ```
 
 ### 在代码中使用
@@ -352,39 +352,39 @@ await bus.publish(event)
 
 ```bash
 # =============================================================================
-# 缓存 (CACHE_)
+# 缓存 (CACHE__)
 # =============================================================================
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
-CACHE_SESSION_TYPE=redis
-CACHE_SESSION_URL=redis://localhost:6379/2
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
+CACHE__SESSION__CACHE_TYPE=redis
+CACHE__SESSION__URL=redis://localhost:6379/2
 
 # =============================================================================
-# 流式通道 (CHANNEL_)
+# 流式通道 (CHANNEL__)
 # =============================================================================
-CHANNEL_BACKEND=memory
-CHANNEL_DEFAULT_BACKEND=redis
-CHANNEL_DEFAULT_URL=redis://localhost:6379/3
-CHANNEL_DEFAULT_KEY_PREFIX=channel:
-CHANNEL_DEFAULT_TTL=86400
+CHANNEL__BACKEND=memory
+CHANNEL__DEFAULT__BACKEND=redis
+CHANNEL__DEFAULT__URL=redis://localhost:6379/3
+CHANNEL__DEFAULT__KEY_PREFIX=channel:
+CHANNEL__DEFAULT__TTL=86400
 
 # =============================================================================
-# 消息队列 (MQ_)
+# 消息队列 (MQ__)
 # =============================================================================
-MQ_BACKEND=redis
-MQ_DEFAULT_URL=redis://localhost:6379/4
-MQ_ORDERS_BACKEND=rabbitmq
-MQ_ORDERS_URL=amqp://guest:guest@localhost:5672/
+MQ__BACKEND=redis
+MQ__DEFAULT__URL=redis://localhost:6379/4
+MQ__ORDERS__BACKEND=rabbitmq
+MQ__ORDERS__URL=amqp://guest:guest@localhost:5672/
 
 # =============================================================================
-# 事件总线 (EVENT_)
+# 事件总线 (EVENT__)
 # =============================================================================
-EVENT_BACKEND=memory
-EVENT_DEFAULT_BACKEND=redis
-EVENT_DEFAULT_URL=redis://localhost:6379/5
-EVENT_DOMAIN_BACKEND=rabbitmq
-EVENT_DOMAIN_URL=amqp://guest:guest@localhost:5672/
-EVENT_DOMAIN_EXCHANGE_NAME=domain.events
+EVENT__BACKEND=memory
+EVENT__DEFAULT__BACKEND=redis
+EVENT__DEFAULT__URL=redis://localhost:6379/5
+EVENT__DOMAIN__BACKEND=rabbitmq
+EVENT__DOMAIN__URL=amqp://guest:guest@localhost:5672/
+EVENT__DOMAIN__EXCHANGE_NAME=domain.events
 ```
 
 ---

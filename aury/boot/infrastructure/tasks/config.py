@@ -1,21 +1,18 @@
 """任务队列配置。
 
-Infrastructure 层配置，不依赖 application 层。
+Infrastructure 层配置数据类，由 application 层传入。
 """
 
 from __future__ import annotations
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, Field
 
 
-class TaskConfig(BaseSettings):
+class TaskConfig(BaseModel):
     """任务队列基础设施配置。
     
-    Infrastructure 层直接使用的任务队列配置。
-    
-    环境变量前缀: TASK_
-    示例: TASK_BROKER_URL, TASK_MAX_RETRIES
+    纯数据类，由 application 层构造并传入 infrastructure 层。
+    不直接读取环境变量。
     """
     
     broker_url: str = Field(
@@ -29,11 +26,6 @@ class TaskConfig(BaseSettings):
     time_limit: int = Field(
         default=3600000,
         description="任务执行时间限制（毫秒）"
-    )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="TASK_",
-        case_sensitive=False,
     )
 
 

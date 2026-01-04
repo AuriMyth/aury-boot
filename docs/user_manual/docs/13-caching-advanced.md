@@ -49,31 +49,31 @@ await cache.clear()
 
 ```bash
 # 内存缓存（开发环境）
-CACHE_TYPE=memory
-CACHE_MAX_SIZE=1000
+CACHE__CACHE_TYPE=memory
+CACHE__MAX_SIZE=1000
 
 # Redis（生产环境）
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 ```
 
 ### 多实例配置
 
-支持多实例，环境变量格式：`CACHE_{INSTANCE}_{FIELD}`
+支持多实例，环境变量格式：`CACHE__{INSTANCE}__{FIELD}`
 
 ```bash
 # 默认实例
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 
 # 会话缓存实例
-CACHE_SESSION_TYPE=redis
-CACHE_SESSION_URL=redis://localhost:6379/2
-CACHE_SESSION_DEFAULT_TTL=3600
+CACHE__SESSION__CACHE_TYPE=redis
+CACHE__SESSION__URL=redis://localhost:6379/2
+CACHE__SESSION__DEFAULT_TTL=3600
 
 # 限流缓存实例
-CACHE_RATE_LIMIT_TYPE=memory
-CACHE_RATE_LIMIT_MAX_SIZE=10000
+CACHE__RATE_LIMIT__CACHE_TYPE=memory
+CACHE__RATE_LIMIT__MAX_SIZE=10000
 ```
 
 代码中使用：

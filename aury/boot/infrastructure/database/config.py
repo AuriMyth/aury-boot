@@ -1,12 +1,11 @@
 """数据库配置。
 
-Infrastructure 层配置，不依赖 application 层。
+Infrastructure 层配置数据类，由 application 层传入。
 """
 
 from __future__ import annotations
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, Field
 
 # 支持的事务隔离级别
 ISOLATION_LEVELS = (
@@ -18,17 +17,15 @@ ISOLATION_LEVELS = (
 )
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(BaseModel):
     """数据库基础设施配置。
     
-    Infrastructure 层直接使用的数据库配置。
-    
-    环境变量前缀: DATABASE_
-    示例: DATABASE_URL, DATABASE_ECHO, DATABASE_POOL_SIZE
+    纯数据类，由 application 层构造并传入 infrastructure 层。
+    不直接读取环境变量。
     """
     
     url: str = Field(
-        description="数据库连接URL（支持所有 SQLAlchemy 支持的数据库），必需配置"
+        description="数据库连接URL（支持所有 SQLAlchemy 支持的数据库）"
     )
     echo: bool = Field(
         default=False,
@@ -53,11 +50,6 @@ class DatabaseConfig(BaseSettings):
     isolation_level: str | None = Field(
         default=None,
         description="事务隔离级别: READ UNCOMMITTED / READ COMMITTED / REPEATABLE READ / SERIALIZABLE / AUTOCOMMIT"
-    )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="DATABASE_",
-        case_sensitive=False,
     )
 
 

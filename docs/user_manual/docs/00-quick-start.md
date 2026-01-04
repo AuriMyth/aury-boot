@@ -293,25 +293,27 @@ my_service/
 
 ### 环境变量（.env）
 
+配置使用双下划线 `__` 分层：
+
 ```bash
 # 服务器
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
+SERVER__HOST=*******
+SERVER__PORT=8000
 
 # 数据库
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
-DATABASE_POOL_SIZE=10
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__POOL_SIZE=10
 
 # 缓存
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 
 # 任务队列
-TASK_BROKER_URL=redis://localhost:6379/0
+TASK__BROKER_URL=redis://localhost:6379/0
 
 # 日志
-LOG_LEVEL=INFO
-LOG_DIR=log
+LOG__LEVEL=INFO
+LOG__DIR=log
 ```
 
 ### 自定义配置
@@ -902,10 +904,10 @@ aury migrate status
 ### 环境变量
 
 ```bash
-LOG_LEVEL=INFO
-LOG_DIR=log
-LOG_ROTATION_TIME=00:00
-LOG_RETENTION_DAYS=7
+LOG__LEVEL=INFO
+LOG__DIR=log
+LOG__ROTATION_TIME=00:00
+LOG__RETENTION_DAYS=7
 ```
 
 ### 使用日志
@@ -1066,16 +1068,16 @@ uv lock
 
 ### 多实例配置
 
-所有 Manager 支持多实例，环境变量格式：`{PREFIX}_{INSTANCE}_{FIELD}`
+所有 Manager 支持多实例，环境变量格式：`{PREFIX}__{INSTANCE}__{FIELD}`
 
 ```bash
 # 数据库多实例
-DATABASE_DEFAULT_URL=postgresql+asyncpg://localhost/mydb
-DATABASE_READONLY_URL=postgresql+asyncpg://replica/mydb
+DATABASE__DEFAULT__URL=postgresql+asyncpg://localhost/mydb
+DATABASE__READONLY__URL=postgresql+asyncpg://replica/mydb
 
 # Redis 多实例
-REDIS_CACHE_URL=redis://localhost:6379/1
-REDIS_SESSION_URL=redis://localhost:6379/2
+REDIS__CACHE__URL=redis://localhost:6379/1
+REDIS__SESSION__URL=redis://localhost:6379/2
 ```
 
 ### 流式通道（Channel）
@@ -1120,15 +1122,15 @@ await mq.consume("orders", handler)
 
 ```bash
 # 内存后端（单进程）
-EVENT_BACKEND=memory
+EVENT__BACKEND=memory
 
 # Redis Pub/Sub
-EVENT_BACKEND=redis
-EVENT_URL=redis://localhost:6379/0
+EVENT__BACKEND=redis
+EVENT__URL=redis://localhost:6379/0
 
 # RabbitMQ
-EVENT_BACKEND=rabbitmq
-EVENT_URL=amqp://guest:guest@localhost:5672/
+EVENT__BACKEND=rabbitmq
+EVENT__URL=amqp://guest:guest@localhost:5672/
 ```
 
 > 📖 **详细说明**：参考 [26-infrastructure-advanced.md](./26-infrastructure-advanced.md)

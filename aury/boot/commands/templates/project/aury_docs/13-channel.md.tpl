@@ -94,11 +94,11 @@ await notify_channel.initialize(backend="redis", redis_client=redis_client)
 
 ```bash
 # 默认实例
-CHANNEL_BACKEND=memory
+CHANNEL__BACKEND=memory
 
-# 多实例（格式：CHANNEL_{{INSTANCE}}_{{FIELD}}）
-CHANNEL_DEFAULT_BACKEND=redis
-CHANNEL_DEFAULT_URL=redis://localhost:6379/3
-CHANNEL_NOTIFICATIONS_BACKEND=redis
-CHANNEL_NOTIFICATIONS_URL=redis://localhost:6379/4
+# 多实例（格式：CHANNEL__{{INSTANCE}}__{{FIELD}}）
+CHANNEL__DEFAULT__BACKEND=redis
+CHANNEL__DEFAULT__URL=redis://localhost:6379/3
+CHANNEL__NOTIFICATIONS__BACKEND=redis
+CHANNEL__NOTIFICATIONS__URL=redis://localhost:6379/4
 ```

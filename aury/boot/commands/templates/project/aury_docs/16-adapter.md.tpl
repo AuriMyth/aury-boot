@@ -74,17 +74,17 @@ class PaymentAdapter(BaseAdapter):
 # .env
 
 # 全局模式：real / sandbox / mock / disabled
-THIRD_PARTY_GATEWAY_MODE=mock
+THIRD_PARTY__GATEWAY_MODE=mock
 
 # 方法级模式覆盖（JSON 格式）
 # 例如：query 方法使用 real，其他方法使用全局配置
-THIRD_PARTY_METHOD_MODES={"query_order": "real"}
+THIRD_PARTY__METHOD_MODES={"query_order": "real"}
 
 # Mock 策略：decorator（装饰器）/ auto（自动生成）
-THIRD_PARTY_MOCK_STRATEGY=decorator
+THIRD_PARTY__MOCK_STRATEGY=decorator
 
 # 调试模式
-THIRD_PARTY_DEBUG=true
+THIRD_PARTY__DEBUG=true
 ```
 
 ### 代码配置
@@ -345,16 +345,16 @@ async def create_order_mock(self, amount: int, order_id: str) -> dict:
 
 ```bash
 # 开发环境 (.env.development)
-THIRD_PARTY_GATEWAY_MODE=mock
-THIRD_PARTY_DEBUG=true
+THIRD_PARTY__GATEWAY_MODE=mock
+THIRD_PARTY__DEBUG=true
 
 # 测试环境 (.env.testing)
-THIRD_PARTY_GATEWAY_MODE=mock
-THIRD_PARTY_METHOD_MODES={"query": "sandbox"}
+THIRD_PARTY__GATEWAY_MODE=mock
+THIRD_PARTY__METHOD_MODES={"query": "sandbox"}
 
 # 生产环境 (.env.production)
-THIRD_PARTY_GATEWAY_MODE=real
-THIRD_PARTY_DEBUG=false
+THIRD_PARTY__GATEWAY_MODE=real
+THIRD_PARTY__DEBUG=false
 ```
 
 ### 4. 在 Service 中使用

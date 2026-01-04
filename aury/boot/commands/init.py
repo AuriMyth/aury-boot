@@ -153,13 +153,28 @@ dev = [
 TEMPLATE_FILE_MAP = {
     "main.py": "main.py.tpl",
     "config.py": "config.py.tpl",
-    ".env.example": "env.example.tpl",
+    ".env.example": "env_templates",  # 特殊处理：拼接 env_templates/ 目录下的所有 .tpl 文件
     ".gitignore": "gitignore.tpl",
     "README.md": "README.md.tpl",
     "AGENTS.md": "AGENTS.md.tpl",
     "conftest.py": "conftest.py.tpl",
     "admin_console/__init__.py": "admin_console_init.py.tpl",
 }
+
+# env 模板拼接顺序
+ENV_TEMPLATE_ORDER = [
+    "_header.tpl",
+    "service.tpl",
+    "database.tpl",
+    "cache.tpl",
+    "log.tpl",
+    "admin.tpl",
+    "scheduler.tpl",
+    "messaging.tpl",
+    "storage.tpl",
+    "third_party.tpl",
+    "rpc.tpl",
+]
 
 # 模块 __init__.py 模板映射
 MODULE_TEMPLATE_MAP = {
@@ -170,8 +185,25 @@ MODULE_TEMPLATE_MAP = {
 }
 
 
+def _read_env_template() -> str:
+    """读取并拼接 env_templates/ 目录下的所有模板文件。"""
+    env_dir = TEMPLATES_DIR / "env_templates"
+    parts = []
+    
+    for tpl_name in ENV_TEMPLATE_ORDER:
+        tpl_path = env_dir / tpl_name
+        if tpl_path.exists():
+            parts.append(tpl_path.read_text(encoding="utf-8"))
+    
+    return "\n".join(parts)
+
+
 def _read_template(name: str) -> str:
     """读取模板文件。"""
+    # 特殊处理 .env.example：拼接 env_templates/ 目录
+    if name == ".env.example":
+        return _read_env_template()
+    
     # 先尝试从映射中查找 .tpl 文件
     tpl_name = TEMPLATE_FILE_MAP.get(name)
     if tpl_name:
@@ -244,22 +276,22 @@ def init_admin_console_module(
         dest.write_text(content, encoding="utf-8")
         result["file_created"] = True
 
-    # 2) 尝试在 .env.example 中开启 ADMIN_* 配置
+    # 2) 尝试在 .env.example 中开启 ADMIN__* 配置
     if enable_env:
         env_example = base_path / ".env.example"
         if env_example.exists():
             try:
                 s = env_example.read_text(encoding="utf-8")
                 s2 = (
-                    s.replace("# ADMIN_ENABLED=false", "ADMIN_ENABLED=true")
-                     .replace("# ADMIN_PATH=/api/admin-console", "ADMIN_PATH=/api/admin-console")
-                     .replace("# ADMIN_AUTH_MODE=basic", "ADMIN_AUTH_MODE=basic")
+                    s.replace("# ADMIN__ENABLED=false", "ADMIN__ENABLED=true")
+                     .replace("# ADMIN__PATH=/api/admin-console", "ADMIN__PATH=/api/admin-console")
+                     .replace("# ADMIN__AUTH__MODE=basic", "ADMIN__AUTH__MODE=basic")
                      .replace(
-                        "# ADMIN_AUTH_SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET",
-                        "ADMIN_AUTH_SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET",
+                        "# ADMIN__AUTH__SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET",
+                        "ADMIN__AUTH__SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET",
                     )
-                     .replace("# ADMIN_AUTH_BASIC_USERNAME=admin", "ADMIN_AUTH_BASIC_USERNAME=admin")
-                     .replace("# ADMIN_AUTH_BASIC_PASSWORD=change_me", "ADMIN_AUTH_BASIC_PASSWORD=change_me")
+                     .replace("# ADMIN__AUTH__BASIC_USERNAME=admin", "ADMIN__AUTH__BASIC_USERNAME=admin")
+                     .replace("# ADMIN__AUTH__BASIC_PASSWORD=change_me", "ADMIN__AUTH__BASIC_PASSWORD=change_me")
                 )
                 if s2 != s:
                     env_example.write_text(s2, encoding="utf-8")

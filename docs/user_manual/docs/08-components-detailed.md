@@ -104,12 +104,12 @@ async def list_users(session=Depends(db_manager.get_session)):
 
 **配置**（.env）：
 ```bash
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
-DATABASE_POOL_SIZE=10
-DATABASE_MAX_OVERFLOW=20
-DATABASE_POOL_TIMEOUT=30
-DATABASE_POOL_RECYCLE=3600
-DATABASE_ECHO=false
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__POOL_SIZE=10
+DATABASE__MAX_OVERFLOW=20
+DATABASE__POOL_TIMEOUT=30
+DATABASE__POOL_RECYCLE=3600
+DATABASE__ECHO=false
 ```
 
 ### 2. CacheComponent
@@ -137,9 +137,9 @@ value = await cache.get("key")
 
 **配置**（.env）：
 ```bash
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
-CACHE_MAX_SIZE=1000
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
+CACHE__MAX_SIZE=1000
 ```
 
 ### 3. TaskComponent
@@ -172,7 +172,7 @@ send_email.send("user@example.com")
 **配置**（.env）：
 ```bash
 SERVICE_TYPE=api  # 或 worker
-TASK_BROKER_URL=redis://localhost:6379/0
+TASK__BROKER_URL=redis://localhost:6379/0
 ```
 
 ### 4. SchedulerComponent
@@ -242,17 +242,17 @@ class MyApp(FoundationApp):
 **配置**（.env）：
 
 ```bash
-ADMIN_ENABLED=true
-ADMIN_PATH=/api/admin-console
+ADMIN__ENABLED=true
+ADMIN__PATH=/api/admin-console
 
-# SQLAdmin 通常要求同步 Engine；若 DATABASE_URL 是异步驱动，建议显式提供同步 URL
-# ADMIN_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/mydb
+# SQLAdmin 通常要求同步 Engine；若 DATABASE__URL 是异步驱动，建议显式提供同步 URL
+# ADMIN__DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/mydb
 
 # 认证（默认推荐 basic 或 bearer）
-ADMIN_AUTH_MODE=basic
-ADMIN_AUTH_SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET
-ADMIN_AUTH_BASIC_USERNAME=admin
-ADMIN_AUTH_BASIC_PASSWORD=change_me
+ADMIN__AUTH_MODE=basic
+ADMIN__AUTH_SECRET_KEY=CHANGE_ME_TO_A_RANDOM_SECRET
+ADMIN__AUTH_BASIC_USERNAME=admin
+ADMIN__AUTH_BASIC_PASSWORD=change_me
 ```
 
 ## 自定义组件

@@ -417,20 +417,20 @@ async def test_get_user():
 
 ```bash
 # 服务器
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
-SERVER_WORKERS=1
+SERVER__HOST=*******
+SERVER__PORT=8000
+SERVER__WORKERS=1
 
 # 数据库
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 
 # 缓存
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 
 # 日志
-LOG_LEVEL=INFO
-LOG_DIR=logs
+LOG__LEVEL=INFO
+LOG__DIR=logs
 ```
 
 ### .env.example

@@ -279,33 +279,33 @@ async def retry_subscriber(event: OrderCreatedEvent):
 
 ```bash
 # 后端类型
-EVENT_BACKEND=memory
+EVENT__BACKEND=memory
 
 # Redis 后端
-EVENT_BACKEND=redis
-EVENT_URL=redis://localhost:6379/0
-EVENT_KEY_PREFIX=events:
+EVENT__BACKEND=redis
+EVENT__URL=redis://localhost:6379/0
+EVENT__KEY_PREFIX=events:
 
 # RabbitMQ 后端
-EVENT_BACKEND=rabbitmq
-EVENT_URL=amqp://guest:guest@localhost:5672/
-EVENT_EXCHANGE_NAME=aury.events
-EVENT_EXCHANGE_TYPE=topic
+EVENT__BACKEND=rabbitmq
+EVENT__URL=amqp://guest:guest@localhost:5672/
+EVENT__EXCHANGE_NAME=aury.events
+EVENT__EXCHANGE_TYPE=topic
 ```
 
 ### 多实例配置
 
-支持多实例，环境变量格式：`EVENT_{INSTANCE}_{FIELD}`
+支持多实例，环境变量格式：`EVENT__{INSTANCE}__{FIELD}`
 
 ```bash
 # 默认实例
-EVENT_DEFAULT_BACKEND=redis
-EVENT_DEFAULT_URL=redis://localhost:6379/5
+EVENT__DEFAULT__BACKEND=redis
+EVENT__DEFAULT__URL=redis://localhost:6379/5
 
 # domain 实例
-EVENT_DOMAIN_BACKEND=rabbitmq
-EVENT_DOMAIN_URL=amqp://guest:guest@localhost:5672/
-EVENT_DOMAIN_EXCHANGE_NAME=domain.events
+EVENT__DOMAIN__BACKEND=rabbitmq
+EVENT__DOMAIN__URL=amqp://guest:guest@localhost:5672/
+EVENT__DOMAIN__EXCHANGE_NAME=domain.events
 ```
 
 ### 代码中配置（EventBusManager）

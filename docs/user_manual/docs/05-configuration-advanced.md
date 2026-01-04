@@ -22,7 +22,7 @@ class AppConfig(BaseConfig):
 
 ### 环境变量映射
 
-所有字段自动映射到环境变量：
+所有字段自动映射到环境变量（使用双下划线 `__` 分层）：
 
 ```bash
 # .env
@@ -31,45 +31,45 @@ MAX_RETRIES=3
 CACHE_TTL=3600
 
 # 服务器配置
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
+SERVER__HOST=*******
+SERVER__PORT=8000
 
 # 数据库配置
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 
 # 缓存配置
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 ```
 
 ## 多实例配置
 
-框架支持多实例配置，环境变量格式：`{PREFIX}_{INSTANCE}_{FIELD}`
+框架支持多实例配置，环境变量格式：`{PREFIX}__{INSTANCE}__{FIELD}`
 
 ### 数据库多实例
 
 ```bash
 # 默认实例
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 # 等同于
-DATABASE_DEFAULT_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+DATABASE__DEFAULT__URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
 
 # 只读实例
-DATABASE_READONLY_URL=postgresql+asyncpg://user:pass@replica:5432/mydb
-DATABASE_READONLY_POOL_SIZE=20
+DATABASE__READONLY__URL=postgresql+asyncpg://user:pass@replica:5432/mydb
+DATABASE__READONLY__POOL_SIZE=20
 ```
 
 ### 缓存多实例
 
 ```bash
 # 默认实例
-CACHE_TYPE=redis
-CACHE_URL=redis://localhost:6379/0
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379/0
 
 # 会话缓存实例
-CACHE_SESSION_TYPE=redis
-CACHE_SESSION_URL=redis://localhost:6379/2
-CACHE_SESSION_MAX_SIZE=5000
+CACHE__SESSION__CACHE_TYPE=redis
+CACHE__SESSION__URL=redis://localhost:6379/2
+CACHE__SESSION__MAX_SIZE=5000
 ```
 
 ### 在代码中获取多实例配置
@@ -191,14 +191,14 @@ else:
 ```bash
 # .env.development
 ENVIRONMENT=development
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/dev_db
-LOG_LEVEL=DEBUG
+DATABASE__URL=postgresql+asyncpg://user:pass@localhost:5432/dev_db
+LOG__LEVEL=DEBUG
 DEBUG=true
 
 # .env.production
 ENVIRONMENT=production
-DATABASE_URL=postgresql+asyncpg://user:pass@prod-db:5432/prod_db
-LOG_LEVEL=INFO
+DATABASE__URL=postgresql+asyncpg://user:pass@prod-db:5432/prod_db
+LOG__LEVEL=INFO
 DEBUG=false
 ```
 
@@ -422,7 +422,7 @@ from config import AppConfig
 @pytest.fixture
 def test_config(tmp_path):
     env_file = tmp_path / ".env.test"
-    env_file.write_text("DATABASE_URL=sqlite:///test.db\n")
+    env_file.write_text("DATABASE__URL=sqlite:///test.db\n")
     load_dotenv(env_file)
     return AppConfig()
 ```

@@ -5,14 +5,6 @@
 
 # 事件系统（从 infrastructure 导入 - Event 定义在最底层）
 # 事务管理（从 domain 导入）
-from aury.boot.domain.transaction import (
-    TransactionManager,
-    TransactionRequiredError,
-    ensure_transaction,
-    transactional,
-    transactional_context,
-)
-
 # 第三方适配器
 from aury.boot.application.adapter import (
     AdapterError,
@@ -20,6 +12,13 @@ from aury.boot.application.adapter import (
     BaseAdapter,
     HttpAdapter,
     adapter_method,
+)
+from aury.boot.domain.transaction import (
+    TransactionManager,
+    TransactionRequiredError,
+    ensure_transaction,
+    transactional,
+    transactional_context,
 )
 
 # 依赖注入容器（从 infrastructure 导入）

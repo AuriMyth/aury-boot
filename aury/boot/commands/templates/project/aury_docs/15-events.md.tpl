@@ -130,14 +130,14 @@ await bus.initialize(
 
 ```bash
 # 默认实例
-EVENT_BACKEND=memory
+EVENT__BACKEND=memory
 
-# 多实例（格式：EVENT_{{INSTANCE}}_{{FIELD}}）
-EVENT_DEFAULT_BACKEND=redis
-EVENT_DEFAULT_URL=redis://localhost:6379/5
-EVENT_DOMAIN_BACKEND=rabbitmq
-EVENT_DOMAIN_URL=amqp://guest:guest@localhost:5672/
-EVENT_DOMAIN_EXCHANGE_NAME=domain.events
+# 多实例（格式：EVENT__{{INSTANCE}}__{{FIELD}}）
+EVENT__DEFAULT__BACKEND=redis
+EVENT__DEFAULT__URL=redis://localhost:6379/5
+EVENT__DOMAIN__BACKEND=rabbitmq
+EVENT__DOMAIN__URL=amqp://guest:guest@localhost:5672/
+EVENT__DOMAIN__EXCHANGE_NAME=domain.events
 ```
 
 ## 15.6 最佳实践

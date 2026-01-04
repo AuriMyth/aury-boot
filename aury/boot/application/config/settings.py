@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .multi_instance import MultiInstanceConfigLoader, MultiInstanceSettings
@@ -31,11 +31,11 @@ def _load_env_file(env_file: str | Path) -> bool:
 class DatabaseInstanceConfig(MultiInstanceSettings):
     """数据库实例配置。
     
-    环境变量格式: DATABASE_{INSTANCE}_{FIELD}
+    环境变量格式: DATABASE__{INSTANCE}__{FIELD}
     示例:
-        DATABASE_DEFAULT_URL=postgresql://main...
-        DATABASE_DEFAULT_POOL_SIZE=10
-        DATABASE_ANALYTICS_URL=postgresql://analytics...
+        DATABASE__DEFAULT__URL=postgresql://main...
+        DATABASE__DEFAULT__POOL_SIZE=10
+        DATABASE__ANALYTICS__URL=postgresql://analytics...
     """
     
     url: str = Field(
@@ -71,12 +71,12 @@ class DatabaseInstanceConfig(MultiInstanceSettings):
 class CacheInstanceConfig(MultiInstanceSettings):
     """缓存实例配置。
     
-    环境变量格式: CACHE_{INSTANCE}_{FIELD}
+    环境变量格式: CACHE__{INSTANCE}__{FIELD}
     示例:
-        CACHE_DEFAULT_BACKEND=redis
-        CACHE_DEFAULT_URL=redis://localhost:6379/0
-        CACHE_LOCAL_BACKEND=memory
-        CACHE_LOCAL_MAX_SIZE=5000
+        CACHE__DEFAULT__BACKEND=redis
+        CACHE__DEFAULT__URL=redis://localhost:6379/0
+        CACHE__LOCAL__BACKEND=memory
+        CACHE__LOCAL__MAX_SIZE=5000
     """
     
     backend: str = Field(
@@ -96,12 +96,12 @@ class CacheInstanceConfig(MultiInstanceSettings):
 class StorageInstanceConfig(MultiInstanceSettings):
     """对象存储实例配置。
     
-    环境变量格式: STORAGE_{INSTANCE}_{FIELD}
+    环境变量格式: STORAGE__{INSTANCE}__{FIELD}
     示例:
-        STORAGE_DEFAULT_BACKEND=s3
-        STORAGE_DEFAULT_BUCKET=main-bucket
-        STORAGE_BACKUP_BACKEND=local
-        STORAGE_BACKUP_BASE_PATH=/backup
+        STORAGE__DEFAULT__BACKEND=s3
+        STORAGE__DEFAULT__BUCKET=main-bucket
+        STORAGE__BACKUP__BACKEND=local
+        STORAGE__BACKUP__BASE_PATH=/backup
     """
     
     backend: Literal["local", "s3", "oss", "cos"] = Field(
@@ -121,11 +121,11 @@ class StorageInstanceConfig(MultiInstanceSettings):
 class ChannelInstanceConfig(MultiInstanceSettings):
     """通道实例配置。
     
-    环境变量格式: CHANNEL_{INSTANCE}_{FIELD}
+    环境变量格式: CHANNEL__{INSTANCE}__{FIELD}
     示例:
-        CHANNEL_DEFAULT_BACKEND=memory
-        CHANNEL_SHARED_BACKEND=redis
-        CHANNEL_SHARED_URL=redis://localhost:6379/3
+        CHANNEL__DEFAULT__BACKEND=memory
+        CHANNEL__SHARED__BACKEND=redis
+        CHANNEL__SHARED__URL=redis://localhost:6379/3
     """
     
     backend: str = Field(
@@ -141,10 +141,10 @@ class ChannelInstanceConfig(MultiInstanceSettings):
 class MQInstanceConfig(MultiInstanceSettings):
     """消息队列实例配置。
     
-    环境变量格式: MQ_{INSTANCE}_{FIELD}
+    环境变量格式: MQ__{INSTANCE}__{FIELD}
     示例:
-        MQ_DEFAULT_BACKEND=redis
-        MQ_DEFAULT_URL=redis://localhost:6379/4
+        MQ__DEFAULT__BACKEND=redis
+        MQ__DEFAULT__URL=redis://localhost:6379/4
     """
     
     backend: str = Field(
@@ -160,11 +160,11 @@ class MQInstanceConfig(MultiInstanceSettings):
 class EventInstanceConfig(MultiInstanceSettings):
     """事件总线实例配置。
     
-    环境变量格式: EVENT_{INSTANCE}_{FIELD}
+    环境变量格式: EVENT__{INSTANCE}__{FIELD}
     示例:
-        EVENT_DEFAULT_BACKEND=memory
-        EVENT_DISTRIBUTED_BACKEND=redis
-        EVENT_DISTRIBUTED_URL=redis://localhost:6379/5
+        EVENT__DEFAULT__BACKEND=memory
+        EVENT__DISTRIBUTED__BACKEND=redis
+        EVENT__DISTRIBUTED__URL=redis://localhost:6379/5
     """
     
     backend: str = Field(
@@ -182,10 +182,12 @@ class EventInstanceConfig(MultiInstanceSettings):
 # =============================================================================
 
 
-class DatabaseSettings(BaseSettings):
+class DatabaseSettings(BaseModel):
     """数据库配置（单实例）。
     
-    推荐使用多实例配置: DATABASE_{INSTANCE}_{FIELD}
+    环境变量格式: DATABASE__{FIELD}
+    示例: DATABASE__URL, DATABASE__POOL_SIZE
+    多实例格式: DATABASE__{INSTANCE}__{FIELD}
     """
     
     url: str = Field(
@@ -216,23 +218,18 @@ class DatabaseSettings(BaseSettings):
         default=True,
         description="是否在获取连接前进行 PING"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="DATABASE_",
-        case_sensitive=False,
-    )
 
 
-class CacheSettings(BaseSettings):
+class CacheSettings(BaseModel):
     """缓存配置。
     
-    环境变量前缀: CACHE_
-    示例: CACHE_TYPE, CACHE_URL, CACHE_MAX_SIZE
+    环境变量格式: CACHE__{FIELD}
+    示例: CACHE__TYPE, CACHE__URL, CACHE__MAX_SIZE
     
     支持的缓存类型：
     - memory: 内存缓存（默认，无需 URL）
-    - redis: Redis 缓存（需要设置 CACHE_URL）
-    - memcached: Memcached 缓存（需要设置 CACHE_URL）
+    - redis: Redis 缓存（需要设置 CACHE__URL）
+    - memcached: Memcached 缓存（需要设置 CACHE__URL）
     """
     
     cache_type: str = Field(
@@ -247,22 +244,14 @@ class CacheSettings(BaseSettings):
         default=1000,
         description="内存缓存最大大小"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="CACHE_",
-        case_sensitive=False,
-    )
 
 
-class StorageSettings(BaseSettings):
+class StorageSettings(BaseModel):
     """对象存储组件接入配置（Application 层）。
 
-说明：
-- Application 层负责从 env/.env 读取配置（快速接入组件）
-- Infrastructure 层的 storage 仅接受 Pydantic(BaseModel) 的配置对象，不读取 env
-
-环境变量前缀：STORAGE_
-"""
+    环境变量格式: STORAGE__{FIELD}
+    示例: STORAGE__TYPE, STORAGE__BUCKET_NAME
+    """
 
     enabled: bool = Field(default=True, description="是否启用存储组件")
 
@@ -289,22 +278,16 @@ class StorageSettings(BaseSettings):
     # local
     base_path: str = Field(default="./storage", description="本地存储基础目录")
 
-    model_config = SettingsConfigDict(
-        env_prefix="STORAGE_",
-        case_sensitive=False,
-        extra="ignore",
-    )
 
-
-class ServerSettings(BaseSettings):
+class ServerSettings(BaseModel):
     """服务器配置。
     
-    环境变量前缀: SERVER_
-    示例: SERVER_HOST, SERVER_PORT, SERVER_RELOAD
+    环境变量格式: SERVER__{FIELD}
+    示例: SERVER__HOST, SERVER__PORT, SERVER__RELOAD
     """
     
     host: str = Field(
-        default="127.0.0.1",
+        default="0.0.0.0",
         description="服务器监听地址"
     )
     port: int = Field(
@@ -319,18 +302,13 @@ class ServerSettings(BaseSettings):
         default=1,
         description="工作进程数"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="SERVER_",
-        case_sensitive=False,
-    )
 
 
-class CORSSettings(BaseSettings):
+class CORSSettings(BaseModel):
     """CORS配置。
     
-    环境变量前缀: CORS_
-    示例: CORS_ORIGINS, CORS_ALLOW_CREDENTIALS, CORS_ALLOW_METHODS
+    环境变量格式: CORS__{FIELD}
+    示例: CORS__ORIGINS, CORS__ALLOW_CREDENTIALS, CORS__ALLOW_METHODS
     """
     
     origins: list[str] = Field(
@@ -349,18 +327,13 @@ class CORSSettings(BaseSettings):
         default=["*"],
         description="允许的CORS头"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="CORS_",
-        case_sensitive=False,
-    )
 
 
-class LogSettings(BaseSettings):
+class LogSettings(BaseModel):
     """日志配置。
     
-    环境变量前缀: LOG_
-    示例: LOG_LEVEL, LOG_DIR, LOG_ROTATION_TIME, LOG_RETENTION_DAYS
+    环境变量格式: LOG__{FIELD}
+    示例: LOG__LEVEL, LOG__DIR, LOG__ROTATION_TIME, LOG__RETENTION_DAYS
     """
     
     level: str = Field(
@@ -399,24 +372,19 @@ class LogSettings(BaseSettings):
         default=False,
         description="是否记录 WebSocket 消息内容（注意性能和敏感数据）"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="LOG_",
-        case_sensitive=False,
-    )
 
 
-class ServiceSettings(BaseSettings):
+class ServiceSettings(BaseModel):
     """服务配置。
 
-    环境变量前缀: SERVICE_
-    示例: SERVICE_NAME, SERVICE_TYPE
+    环境变量格式: SERVICE__{FIELD}
+    示例: SERVICE__NAME, SERVICE__TYPE
 
     服务类型说明：
-    - api: 运行 API 服务（SCHEDULER_ENABLED 决定是否同时运行调度器）
+    - api: 运行 API 服务（SCHEDULER__ENABLED 决定是否同时运行调度器）
     - worker: 运行任务队列 Worker（处理异步任务）
 
-    独立调度器通过 `aury scheduler` 命令运行，不需要配置 SERVICE_TYPE。
+    独立调度器通过 `aury scheduler` 命令运行，不需要配置 SERVICE__TYPE。
     """
 
     name: str = Field(
@@ -428,21 +396,16 @@ class ServiceSettings(BaseSettings):
         description="服务类型（api/worker）"
     )
 
-    model_config = SettingsConfigDict(
-        env_prefix="SERVICE_",
-        case_sensitive=False,
-    )
 
-
-class SchedulerSettings(BaseSettings):
+class SchedulerSettings(BaseModel):
     """调度器配置。
     
-    环境变量前缀: SCHEDULER_
-    示例: SCHEDULER_ENABLED, SCHEDULER_SCHEDULE_MODULES
+    环境变量格式: SCHEDULER__{FIELD}
+    示例: SCHEDULER__ENABLED, SCHEDULER__SCHEDULE_MODULES
     
-    仅在 SERVICE_TYPE=api 时有效：
-    - SCHEDULER_ENABLED=true: API 服务同时运行内嵌调度器（默认）
-    - SCHEDULER_ENABLED=false: 只运行 API，不启动调度器
+    仅在 SERVICE__TYPE=api 时有效：
+    - SCHEDULER__ENABLED=true: API 服务同时运行内嵌调度器（默认）
+    - SCHEDULER__ENABLED=false: 只运行 API，不启动调度器
     
     独立调度器通过 `aury scheduler` 命令运行，不需要此配置。
     """
@@ -455,18 +418,13 @@ class SchedulerSettings(BaseSettings):
         default_factory=list,
         description="定时任务模块列表。为空时自动发现 schedules 模块"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="SCHEDULER_",
-        case_sensitive=False,
-    )
 
 
-class TaskSettings(BaseSettings):
+class TaskSettings(BaseModel):
     """任务队列配置。
     
-    环境变量前缀: TASK_
-    示例: TASK_BROKER_URL, TASK_MAX_RETRIES
+    环境变量格式: TASK__{FIELD}
+    示例: TASK__BROKER_URL, TASK__MAX_RETRIES
     """
     
     broker_url: str | None = Field(
@@ -481,18 +439,13 @@ class TaskSettings(BaseSettings):
         default=3600,
         description="任务超时时间（秒）"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="TASK_",
-        case_sensitive=False,
-    )
 
 
-class EventSettings(BaseSettings):
+class EventSettings(BaseModel):
     """事件总线配置。
     
-    环境变量前缀: EVENT_
-    示例: EVENT_BROKER_URL, EVENT_EXCHANGE_NAME
+    环境变量格式: EVENT__{FIELD}
+    示例: EVENT__BROKER_URL, EVENT__EXCHANGE_NAME
     """
     
     broker_url: str | None = Field(
@@ -503,18 +456,13 @@ class EventSettings(BaseSettings):
         default="aury.events",
         description="事件交换机名称"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="EVENT_",
-        case_sensitive=False,
-    )
 
 
-class MessageQueueSettings(BaseSettings):
+class MessageQueueSettings(BaseModel):
     """消息队列配置。
     
-    环境变量前缀: MQ_
-    示例: MQ_BROKER_URL, MQ_DEFAULT_QUEUE, MQ_SERIALIZER
+    环境变量格式: MQ__{FIELD}
+    示例: MQ__BROKER_URL, MQ__DEFAULT_QUEUE, MQ__SERIALIZER
     
     与 Task（任务队列）的区别：
     - Task: 基于 Dramatiq，用于异步任务处理（API + Worker 模式）
@@ -546,18 +494,13 @@ class MessageQueueSettings(BaseSettings):
         default=1,
         description="预取消息数量"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="MQ_",
-        case_sensitive=False,
-    )
 
 
-class MigrationSettings(BaseSettings):
+class MigrationSettings(BaseModel):
     """数据库迁移配置。
     
-    环境变量前缀: MIGRATION_
-    示例: MIGRATION_CONFIG_PATH, MIGRATION_SCRIPT_LOCATION, MIGRATION_MODEL_MODULES
+    环境变量格式: MIGRATION__{FIELD}
+    示例: MIGRATION__CONFIG_PATH, MIGRATION__SCRIPT_LOCATION, MIGRATION__MODEL_MODULES
     """
     
     config_path: str = Field(
@@ -580,20 +523,15 @@ class MigrationSettings(BaseSettings):
         default=True,
         description="是否自动创建迁移配置和目录"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="MIGRATION_",
-        case_sensitive=False,
-    )
 
 
-class RPCClientSettings(BaseSettings):
+class RPCClientSettings(BaseModel):
     """RPC 客户端调用配置。
     
     用于配置客户端调用其他服务时的行为。
     
-    环境变量前缀: RPC_CLIENT_
-    示例: RPC_CLIENT_SERVICES, RPC_CLIENT_TIMEOUT, RPC_CLIENT_RETRY_TIMES, RPC_CLIENT_DNS_SCHEME
+    环境变量格式: RPC_CLIENT__{FIELD}
+    示例: RPC_CLIENT__SERVICES, RPC_CLIENT__TIMEOUT, RPC_CLIENT__RETRY_TIMES
     """
     
     services: dict[str, str] = Field(
@@ -620,20 +558,15 @@ class RPCClientSettings(BaseSettings):
         default=True,
         description="是否在配置中找不到时使用 DNS 解析（K8s/Docker Compose 自动 DNS）"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="RPC_CLIENT_",
-        case_sensitive=False,
-    )
 
 
-class RPCServiceSettings(BaseSettings):
+class RPCServiceSettings(BaseModel):
     """RPC 服务注册配置。
     
     用于配置当前服务注册到服务注册中心时的信息。
     
-    环境变量前缀: RPC_SERVICE_
-    示例: RPC_SERVICE_NAME, RPC_SERVICE_URL, RPC_SERVICE_HEALTH_CHECK_URL
+    环境变量格式: RPC_SERVICE__{FIELD}
+    示例: RPC_SERVICE__NAME, RPC_SERVICE__URL, RPC_SERVICE__HEALTH_CHECK_URL
     """
     
     name: str | None = Field(
@@ -656,21 +589,16 @@ class RPCServiceSettings(BaseSettings):
         default=None,
         description="服务注册中心地址（如果使用外部注册中心）"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="RPC_SERVICE_",
-        case_sensitive=False,
-    )
 
 
-class HealthCheckSettings(BaseSettings):
+class HealthCheckSettings(BaseModel):
     """健康检查配置。
     
     用于配置 Aury 框架的默认健康检查端点。
     注意：此配置仅用于框架内置的健康检查端点，不影响服务自身的健康检查端点。
     
-    环境变量前缀: HEALTH_CHECK_
-    示例: HEALTH_CHECK_PATH, HEALTH_CHECK_ENABLED
+    环境变量格式: HEALTH_CHECK__{FIELD}
+    示例: HEALTH_CHECK__PATH, HEALTH_CHECK__ENABLED
     """
     
     path: str = Field(
@@ -681,22 +609,17 @@ class HealthCheckSettings(BaseSettings):
         default=True,
         description="是否启用 Aury 默认健康检查端点"
     )
-    
-    model_config = SettingsConfigDict(
-        env_prefix="HEALTH_CHECK_",
-        case_sensitive=False,
-    )
 
 
-class AdminAuthSettings(BaseSettings):
+class AdminAuthSettings(BaseModel):
     """管理后台认证配置。
 
-    环境变量前缀: ADMIN_AUTH_
-    示例: ADMIN_AUTH_MODE, ADMIN_AUTH_SECRET_KEY, ADMIN_AUTH_BASIC_USERNAME
+    作为 ADMIN 配置的子配置，环境变量格式: ADMIN__AUTH__{FIELD}
+    示例: ADMIN__AUTH__MODE, ADMIN__AUTH__SECRET_KEY, ADMIN__AUTH__BASIC_USERNAME
 
     说明：
     - 内置模式仅保证 basic / bearer 开箱即用
-    - jwt/custom 推荐由用户自定义 backend 实现（见 ADMIN_AUTH_BACKEND）
+    - jwt/custom 推荐由用户自定义 backend 实现
     """
 
     mode: Literal["none", "basic", "bearer", "jwt", "custom"] = Field(
@@ -723,17 +646,13 @@ class AdminAuthSettings(BaseSettings):
         description='自定义认证后端导入路径，如 "yourpkg.admin_auth:backend"',
     )
 
-    model_config = SettingsConfigDict(
-        env_prefix="ADMIN_AUTH_",
-        case_sensitive=False,
-    )
 
-
-class AdminConsoleSettings(BaseSettings):
+class AdminConsoleSettings(BaseModel):
     """SQLAdmin 管理后台配置。
 
-    环境变量前缀: ADMIN_
-    示例: ADMIN_ENABLED, ADMIN_PATH, ADMIN_DATABASE_URL
+    环境变量格式: ADMIN__{FIELD}
+    示例: ADMIN__ENABLED, ADMIN__PATH, ADMIN__DATABASE_URL
+    嵌套配置: ADMIN__AUTH__{FIELD}
     """
 
     enabled: bool = Field(default=False, description="是否启用管理后台")
@@ -757,11 +676,6 @@ class AdminConsoleSettings(BaseSettings):
 
     auth: AdminAuthSettings = Field(default_factory=AdminAuthSettings, description="管理后台认证配置")
 
-    model_config = SettingsConfigDict(
-        env_prefix="ADMIN_",
-        case_sensitive=False,
-    )
-
 
 class BaseConfig(BaseSettings):
     """基础配置类。
@@ -769,17 +683,22 @@ class BaseConfig(BaseSettings):
     所有应用配置的基类，提供通用配置项。
     初始化时自动从 .env 文件加载环境变量，然后由 pydantic-settings 读取环境变量。
     
-    多实例配置:
-    框架支持多种组件的多实例配置，使用统一的环境变量格式:
-        {PREFIX}_{INSTANCE}_{FIELD}=value
+    环境变量格式:
+    使用双下划线 (__) 作为层级分隔符：
+        {SECTION}__{FIELD}=value
+        {SECTION}__{NESTED}__{FIELD}=value
     
-    示例:
-        DATABASE_DEFAULT_URL=postgresql://main...
-        DATABASE_ANALYTICS_URL=postgresql://analytics...
-        CACHE_DEFAULT_BACKEND=redis
-        CACHE_DEFAULT_URL=redis://localhost:6379/1
-        MQ_DEFAULT_URL=redis://localhost:6379/2
-        EVENT_DEFAULT_BACKEND=memory
+    单实例示例:
+        SERVER__HOST=0.0.0.0
+        SERVER__PORT=8000
+        DATABASE__URL=postgresql://...
+        LOG__LEVEL=INFO
+    
+    多实例示例:
+        DATABASE__DEFAULT__URL=postgresql://main...
+        DATABASE__ANALYTICS__URL=postgresql://analytics...
+        CACHE__DEFAULT__BACKEND=redis
+        CACHE__REDIS__URL=redis://localhost:6379/1
     
     注意：Application 层配置完全独立，不依赖 Infrastructure 层。
     """
@@ -848,6 +767,7 @@ class BaseConfig(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
         extra="ignore",
+        env_nested_delimiter="__",
     )
     
     # ========== 多实例配置访问方法 ==========
@@ -855,7 +775,7 @@ class BaseConfig(BaseSettings):
     def get_databases(self) -> dict[str, DatabaseInstanceConfig]:
         """获取所有数据库实例配置。
         
-        从环境变量解析 DATABASE_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 DATABASE__{INSTANCE}__{FIELD} 格式的配置。
         如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._databases is None:
@@ -878,7 +798,7 @@ class BaseConfig(BaseSettings):
     def get_caches(self) -> dict[str, CacheInstanceConfig]:
         """获取所有缓存实例配置。
         
-        从环境变量解析 CACHE_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 CACHE__{INSTANCE}__{FIELD} 格式的配置。
         如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._caches is None:
@@ -897,7 +817,7 @@ class BaseConfig(BaseSettings):
     def get_storages(self) -> dict[str, StorageInstanceConfig]:
         """获取所有存储实例配置。
         
-        从环境变量解析 STORAGE_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 STORAGE__{INSTANCE}__{FIELD} 格式的配置。
         如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._storages is None:
@@ -920,7 +840,7 @@ class BaseConfig(BaseSettings):
     def get_channels(self) -> dict[str, ChannelInstanceConfig]:
         """获取所有通道实例配置。
         
-        从环境变量解析 CHANNEL_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 CHANNEL__{INSTANCE}__{FIELD} 格式的配置。
         """
         if self._channels is None:
             loader = MultiInstanceConfigLoader("CHANNEL", ChannelInstanceConfig)
@@ -930,7 +850,7 @@ class BaseConfig(BaseSettings):
     def get_mqs(self) -> dict[str, MQInstanceConfig]:
         """获取所有消息队列实例配置。
         
-        从环境变量解析 MQ_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 MQ__{INSTANCE}__{FIELD} 格式的配置。
         """
         if self._mqs is None:
             loader = MultiInstanceConfigLoader("MQ", MQInstanceConfig)
@@ -940,7 +860,7 @@ class BaseConfig(BaseSettings):
     def get_events(self) -> dict[str, EventInstanceConfig]:
         """获取所有事件总线实例配置。
         
-        从环境变量解析 EVENT_{INSTANCE}_{FIELD} 格式的配置。
+        从环境变量解析 EVENT__{INSTANCE}__{FIELD} 格式的配置。
         如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._events is None:

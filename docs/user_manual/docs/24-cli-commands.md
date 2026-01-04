@@ -507,15 +507,15 @@ SERVICE_NAME=my-service
 SERVICE_TYPE=api  # api, worker
 
 # 服务器
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
-SERVER_WORKERS=4
+SERVER__HOST=*******
+SERVER__PORT=8000
+SERVER__WORKERS=4
 
 # 应用模块
 APP_MODULE=main:app
 
 # 调度器（内嵌在 API 服务中）
-SCHEDULER_ENABLED=true  # 默认 true，设为 false 可禁用
+SCHEDULER__ENABLED=true  # 默认 true，设为 false 可禁用
 ```
 
 **服务运行模式说明**：

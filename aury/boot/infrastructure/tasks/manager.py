@@ -226,8 +226,6 @@ class TaskManager:
             logger.warning("任务管理器已初始化，跳过")
             return self
         
-        self._task_config = task_config or TaskConfig()
-        
         # 处理 run_mode 参数
         if run_mode is None:
             self._run_mode = TaskRunMode.WORKER  # 默认 Worker 模式（调度者）
@@ -240,8 +238,14 @@ class TaskManager:
         else:
             self._run_mode = run_mode
         
-        # 获取 broker URL（优先级：参数 > 配置 > 环境变量）
-        url = broker_url or self._task_config.broker_url
+        # 获取 broker URL（优先级：参数 > 配置）
+        url = broker_url or (task_config.broker_url if task_config else None)
+        
+        # 保存配置（如果没有传入，从 broker_url 构造）
+        if task_config:
+            self._task_config = task_config
+        elif url:
+            self._task_config = TaskConfig(broker_url=url)
         if not url:
             logger.warning("未配置任务队列URL，任务功能将被禁用")
             return self

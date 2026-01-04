@@ -85,15 +85,15 @@ await notifications_mq.initialize(backend="redis", url="redis://localhost:6379/5
 
 ```bash
 # 默认实例
-MQ_BACKEND=redis
-MQ_URL=redis://localhost:6379/0
+MQ__BACKEND=redis
+MQ__URL=redis://localhost:6379/0
 
-# 多实例（格式：MQ_{{INSTANCE}}_{{FIELD}}）
-MQ_DEFAULT_BACKEND=redis
-MQ_DEFAULT_URL=redis://localhost:6379/4
-MQ_ORDERS_BACKEND=rabbitmq
-MQ_ORDERS_URL=amqp://guest:guest@localhost:5672/
-MQ_ORDERS_PREFETCH_COUNT=10
+# 多实例（格式：MQ__{{INSTANCE}}__{{FIELD}}）
+MQ__DEFAULT__BACKEND=redis
+MQ__DEFAULT__URL=redis://localhost:6379/4
+MQ__ORDERS__BACKEND=rabbitmq
+MQ__ORDERS__URL=amqp://guest:guest@localhost:5672/
+MQ__ORDERS__PREFETCH_COUNT=10
 ```
 
 ## 14.6 与异步任务（Dramatiq）的区别

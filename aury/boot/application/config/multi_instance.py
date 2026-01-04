@@ -1,11 +1,12 @@
 """多实例配置解析工具。
 
-支持从环境变量解析 {PREFIX}_{INSTANCE}_{FIELD} 格式的多实例配置。
+支持从环境变量解析 {PREFIX}__{INSTANCE}__{FIELD} 格式的多实例配置。
+使用双下划线 (__) 作为层级分隔符，符合行业标准。
 
 示例:
-    DATABASE_DEFAULT_URL=postgresql://main...
-    DATABASE_DEFAULT_POOL_SIZE=10
-    DATABASE_ANALYTICS_URL=postgresql://analytics...
+    DATABASE__DEFAULT__URL=postgresql://main...
+    DATABASE__DEFAULT__POOL_SIZE=10
+    DATABASE__ANALYTICS__URL=postgresql://analytics...
     
     解析后:
     {
@@ -25,50 +26,65 @@ from pydantic import BaseModel
 
 def parse_multi_instance_env(
     prefix: str,
-    fields: list[str],
+    fields: list[str] | None = None,
     *,
     type_hints: dict[str, type] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """从环境变量解析多实例配置。
     
+    使用双下划线 (__) 作为层级分隔符：
+    - {PREFIX}__{INSTANCE}__{FIELD}=value
+    
     Args:
         prefix: 环境变量前缀，如 "DATABASE"
-        fields: 支持的字段列表，如 ["url", "pool_size", "echo"]
+        fields: 支持的字段列表（可选，用于过滤）
         type_hints: 字段类型提示，用于类型转换
         
     Returns:
         dict[str, dict[str, Any]]: 实例名 -> 配置字典
         
     示例:
-        >>> parse_multi_instance_env("DATABASE", ["url", "pool_size"])
+        >>> parse_multi_instance_env("DATABASE")
         {
-            "default": {"url": "postgresql://...", "pool_size": "10"},
+            "default": {"url": "postgresql://...", "pool_size": 10},
             "analytics": {"url": "postgresql://..."}
         }
     """
     instances: dict[str, dict[str, Any]] = {}
     type_hints = type_hints or {}
+    prefix_with_sep = f"{prefix}__"
     
-    # 构建正则：{PREFIX}_{INSTANCE}_{FIELD}
-    # INSTANCE 和 FIELD 都是大写字母和下划线
-    fields_pattern = "|".join(re.escape(f.upper()) for f in fields)
-    pattern = re.compile(
-        rf"^{prefix}_([A-Z][A-Z0-9_]*)_({fields_pattern})$",
-        re.IGNORECASE
-    )
+    # 将 fields 转为大写集合用于过滤
+    valid_fields: set[str] | None = None
+    if fields:
+        valid_fields = {f.upper() for f in fields}
     
     for key, value in os.environ.items():
-        match = pattern.match(key)
-        if match:
-            instance_name = match.group(1).lower()
-            field_name = match.group(2).lower()
-            
-            # 类型转换
-            converted_value = _convert_value(value, type_hints.get(field_name))
-            
-            if instance_name not in instances:
-                instances[instance_name] = {}
-            instances[instance_name][field_name] = converted_value
+        # 检查前缀
+        if not key.upper().startswith(prefix_with_sep):
+            continue
+        
+        # 移除前缀后分割
+        remainder = key[len(prefix_with_sep):]
+        parts = remainder.split("__", 1)  # 只分割一次：INSTANCE__FIELD
+        
+        if len(parts) != 2:
+            continue
+        
+        instance_name = parts[0].lower()
+        field_name = parts[1].lower()
+        field_name_upper = parts[1].upper()
+        
+        # 如果指定了字段列表，进行过滤
+        if valid_fields and field_name_upper not in valid_fields:
+            continue
+        
+        # 类型转换
+        converted_value = _convert_value(value, type_hints.get(field_name))
+        
+        if instance_name not in instances:
+            instances[instance_name] = {}
+        instances[instance_name][field_name] = converted_value
     
     return instances
 

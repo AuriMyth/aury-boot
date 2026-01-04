@@ -555,7 +555,7 @@ async def transfer_money(session: AsyncSession, from_id: str, to_id: str, amount
 
 ```bash
 # .env
-DATABASE_ISOLATION_LEVEL=REPEATABLE READ
+DATABASE__ISOLATION_LEVEL=REPEATABLE READ
 ```
 
 **支持的隔离级别**：
@@ -580,7 +580,7 @@ from aury.boot.infrastructure.database import DatabaseConfig
 )
 
 # 或通过环境变量
-DATABASE_ISOLATION_LEVEL=SERIALIZABLE
+DATABASE__ISOLATION_LEVEL=SERIALIZABLE
 ```
 
 **选择建议**：
@@ -642,23 +642,23 @@ async def get_statistics(repo: UserRepository):
 ### PostgreSQL
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/dbname
-DATABASE_POOL_SIZE=10
-DATABASE_MAX_OVERFLOW=20
-DATABASE_POOL_RECYCLE=3600
-DATABASE_ECHO=false  # 是否打印 SQL
+DATABASE__URL=postgresql+asyncpg://user:password@localhost:5432/dbname
+DATABASE__POOL_SIZE=10
+DATABASE__MAX_OVERFLOW=20
+DATABASE__POOL_RECYCLE=3600
+DATABASE__ECHO=false  # 是否打印 SQL
 ```
 
 ### MySQL
 
 ```bash
-DATABASE_URL=mysql+aiomysql://user:password@localhost:3306/dbname
+DATABASE__URL=mysql+aiomysql://user:password@localhost:3306/dbname
 ```
 
 ### SQLite（开发用）
 
 ```bash
-DATABASE_URL=sqlite+aiosqlite:///./test.db
+DATABASE__URL=sqlite+aiosqlite:///./test.db
 ```
 
 ## 常见问题

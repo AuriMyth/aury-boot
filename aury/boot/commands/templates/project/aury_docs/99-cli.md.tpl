@@ -65,13 +65,13 @@ aury worker       # 运行 Dramatiq Worker
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `DATABASE_URL` | 数据库连接 URL | `sqlite+aiosqlite:///./dev.db` |
-| `CACHE_TYPE` | 缓存类型 (memory/redis) | `memory` |
-| `CACHE_URL` | Redis URL | - |
-| `LOG_LEVEL` | 日志级别 | `INFO` |
-| `LOG_DIR` | 日志目录 | `logs` |
-| `SCHEDULER_ENABLED` | 启用内嵌调度器 | `true` |
-| `TASK_BROKER_URL` | 任务队列 Broker URL | - |
+| `DATABASE__URL` | 数据库连接 URL | `sqlite+aiosqlite:///./dev.db` |
+| `CACHE__CACHE_TYPE` | 缓存类型 (memory/redis) | `memory` |
+| `CACHE__URL` | Redis URL | - |
+| `LOG__LEVEL` | 日志级别 | `INFO` |
+| `LOG__DIR` | 日志目录 | `logs` |
+| `SCHEDULER__ENABLED` | 启用内嵌调度器 | `true` |
+| `TASK__BROKER_URL` | 任务队列 Broker URL | - |
 
 ## 管理后台（Admin Console）
 
@@ -81,12 +81,12 @@ aury worker       # 运行 Dramatiq Worker
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `ADMIN_ENABLED` | 是否启用管理后台 | `false` |
-| `ADMIN_PATH` | 管理后台路径 | `/api/admin-console` |
-| `ADMIN_DATABASE_URL` | 管理后台同步数据库 URL（可覆盖自动推导） | - |
-| `ADMIN_AUTH_MODE` | 认证模式（basic/bearer/none/custom/jwt） | `basic` |
-| `ADMIN_AUTH_SECRET_KEY` | session 签名密钥（生产必配） | - |
-| `ADMIN_AUTH_BASIC_USERNAME` | basic 用户名 | - |
-| `ADMIN_AUTH_BASIC_PASSWORD` | basic 密码 | - |
-| `ADMIN_AUTH_BEARER_TOKENS` | bearer token 白名单 | `[]` |
-| `ADMIN_AUTH_BACKEND` | 自定义认证后端导入路径（module:attr） | - |
+| `ADMIN__ENABLED` | 是否启用管理后台 | `false` |
+| `ADMIN__PATH` | 管理后台路径 | `/api/admin-console` |
+| `ADMIN__DATABASE_URL` | 管理后台同步数据库 URL（可覆盖自动推导） | - |
+| `ADMIN__AUTH_MODE` | 认证模式（basic/bearer/none/custom/jwt） | `basic` |
+| `ADMIN__AUTH_SECRET_KEY` | session 签名密钥（生产必配） | - |
+| `ADMIN__AUTH_BASIC_USERNAME` | basic 用户名 | - |
+| `ADMIN__AUTH_BASIC_PASSWORD` | basic 密码 | - |
+| `ADMIN__AUTH_BEARER_TOKENS` | bearer token 白名单 | `[]` |
+| `ADMIN__AUTH_BACKEND` | 自定义认证后端导入路径（module:attr） | - |
