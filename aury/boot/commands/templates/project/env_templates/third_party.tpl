@@ -20,10 +20,10 @@
 # THIRD_PARTY__PAYMENT__API_SECRET=
 # THIRD_PARTY__PAYMENT__TIMEOUT=30
 # THIRD_PARTY__PAYMENT__RETRY_TIMES=3
-# THIRD_PARTY__PAYMENT__METHOD_MODES={"query": "real", "refund": "disabled"}
+# THIRD_PARTY__PAYMENT__METHOD_MODES={{"query": "real", "refund": "disabled"}}
 # THIRD_PARTY__PAYMENT__MOCK_STRATEGY=success
 # THIRD_PARTY__PAYMENT__MOCK_DELAY=0.1
-# THIRD_PARTY__PAYMENT__MOCK_DEFAULT_RESPONSE={"success": true, "mock": true}
+# THIRD_PARTY__PAYMENT__MOCK_DEFAULT_RESPONSE={{"success": true, "mock": true}}
 #
 # ---------- 短信接口示例 (SMS) ----------
 # THIRD_PARTY__SMS__ENABLED=true
@@ -33,11 +33,11 @@
 # THIRD_PARTY__SMS__API_SECRET=xxx
 # THIRD_PARTY__SMS__TIMEOUT=10
 # THIRD_PARTY__SMS__MOCK_STRATEGY=success
-# THIRD_PARTY__SMS__MOCK_DEFAULT_RESPONSE={"code": "OK", "message": "mock sent"}
+# THIRD_PARTY__SMS__MOCK_DEFAULT_RESPONSE={{"code": "OK", "message": "mock sent"}}
 #
 # ---------- 微信接口示例 (WECHAT) ----------
 # THIRD_PARTY__WECHAT__ENABLED=true
 # THIRD_PARTY__WECHAT__MODE=mock
 # THIRD_PARTY__WECHAT__BASE_URL=https://api.weixin.qq.com
 # THIRD_PARTY__WECHAT__TIMEOUT=15
-# THIRD_PARTY__WECHAT__EXTRA={"appid": "wx123", "secret": "xxx"}
+# THIRD_PARTY__WECHAT__EXTRA={{"appid": "wx123", "secret": "xxx"}}
