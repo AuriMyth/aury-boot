@@ -253,6 +253,69 @@ SERVICE_NAME={project_name_snake}
 # STORAGE_STS_DURATION_SECONDS=3600
 
 # =============================================================================
+# 第三方接口适配器配置 (THIRD_PARTY_)
+# =============================================================================
+# 用于配置支付、短信、微信等第三方接口的模式切换和挡板设置
+# 格式: THIRD_PARTY_{{ADAPTER_NAME}}_{{FIELD}}
+#
+# 模式说明:
+# - real: 真实调用第三方接口（生产环境）
+# - sandbox: 调用第三方沙箱环境（如果有）
+# - mock: 使用本地挡板实现，不发出真实请求（测试/开发环境）
+# - disabled: 禁用该接口，调用时抛出 AdapterDisabledError
+#
+# ---------- 支付接口示例 (PAYMENT) ----------
+# 是否启用
+# THIRD_PARTY_PAYMENT_ENABLED=true
+# 全局模式（开发/测试环境建议用 mock）
+# THIRD_PARTY_PAYMENT_MODE=mock
+# 真实接口地址
+# THIRD_PARTY_PAYMENT_BASE_URL=https://api.payment.com/v1
+# 沙箱接口地址
+# THIRD_PARTY_PAYMENT_SANDBOX_URL=https://sandbox.payment.com/v1
+# API 密钥
+# THIRD_PARTY_PAYMENT_API_KEY=sk_live_xxx
+# API Secret
+# THIRD_PARTY_PAYMENT_API_SECRET=
+# 请求超时（秒）
+# THIRD_PARTY_PAYMENT_TIMEOUT=30
+# 重试次数
+# THIRD_PARTY_PAYMENT_RETRY_TIMES=3
+#
+# 方法级模式覆盖（JSON 格式）
+# 可以让查询接口走真实，写入接口走挡板
+# THIRD_PARTY_PAYMENT_METHOD_MODES={"query": "real", "refund": "disabled"}
+#
+# 挡板配置
+# 挡板策略: success/failure/echo/noop/custom
+# THIRD_PARTY_PAYMENT_MOCK_STRATEGY=success
+# 模拟网络延迟（秒）
+# THIRD_PARTY_PAYMENT_MOCK_DELAY=0.1
+# 默认挡板响应（JSON 格式）
+# THIRD_PARTY_PAYMENT_MOCK_DEFAULT_RESPONSE={"success": true, "mock": true}
+# 按方法配置挡板响应（JSON 格式）
+# THIRD_PARTY_PAYMENT_MOCK_METHOD_RESPONSES={"create": {"id": "mock_pay_123", "status": "paid"}}
+#
+# ---------- 短信接口示例 (SMS) ----------
+# THIRD_PARTY_SMS_ENABLED=true
+# THIRD_PARTY_SMS_MODE=mock
+# THIRD_PARTY_SMS_BASE_URL=https://sms.aliyuncs.com
+# THIRD_PARTY_SMS_API_KEY=LTAI5xxx
+# THIRD_PARTY_SMS_API_SECRET=xxx
+# THIRD_PARTY_SMS_TIMEOUT=10
+# 挡板配置: 默认返回成功
+# THIRD_PARTY_SMS_MOCK_STRATEGY=success
+# THIRD_PARTY_SMS_MOCK_DEFAULT_RESPONSE={"code": "OK", "message": "mock sent"}
+#
+# ---------- 微信接口示例 (WECHAT) ----------
+# THIRD_PARTY_WECHAT_ENABLED=true
+# THIRD_PARTY_WECHAT_MODE=mock
+# THIRD_PARTY_WECHAT_BASE_URL=https://api.weixin.qq.com
+# THIRD_PARTY_WECHAT_TIMEOUT=15
+# 额外配置（放在 extra 字段）
+# THIRD_PARTY_WECHAT_EXTRA={"appid": "wx123", "secret": "xxx"}
+
+# =============================================================================
 # RPC 客户端配置 (RPC_CLIENT_)
 # =============================================================================
 # 服务地址映射 {{service_name: url}}

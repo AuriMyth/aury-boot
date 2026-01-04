@@ -104,6 +104,8 @@ nav:
   - CLI 工具:
     - 命令参考: 24-cli-commands.md
     - 脚手架指南: 25-scaffold-guide.md
+  - 第三方集成:
+    - 第三方接口适配器: 27-adapter-guide.md
 
 extra:
   social:

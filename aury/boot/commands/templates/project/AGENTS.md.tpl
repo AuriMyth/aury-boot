@@ -68,7 +68,7 @@ mypy {package_name}/
 开发 CRUD 功能时，按顺序阅读以下文档：
 
 1. **[aury_docs/01-model.md](./aury_docs/01-model.md)** - Model 定义规范
-   - 基类选择（UUIDAuditableStateModel 等）
+   - 基类选择（AuditableStateModel 等）
    - 字段类型映射
    - 约束定义（软删除模型的复合唯一约束）
 
@@ -110,6 +110,10 @@ mypy {package_name}/
 - **[aury_docs/14-mq.md](./aury_docs/14-mq.md)** - 消息队列
 - **[aury_docs/15-events.md](./aury_docs/15-events.md)** - 事件总线
 
+### 第三方集成
+
+- **[aury_docs/16-adapter.md](./aury_docs/16-adapter.md)** - 第三方接口适配器（Mock/真实切换）
+
 ### 配置 / CLI / 环境变量
 
 - **[aury_docs/00-overview.md](./aury_docs/00-overview.md)** - 项目概览与最佳实践
@@ -121,15 +125,15 @@ mypy {package_name}/
 ### Model 规范
 
 - **必须**继承框架预定义基类，**不要**直接继承 `Base`
-- **推荐**使用 `UUIDAuditableStateModel`（UUID 主键 + 时间戳 + 软删除）
+- **推荐**使用 `AuditableStateModel`（int 主键 + 时间戳 + 软删除）
 - 软删除模型**必须**使用复合唯一约束（包含 `deleted_at`），不能单独使用 `unique=True`
 - **不建议**使用数据库外键（`ForeignKey`），通过程序控制关系，便于分库分表和微服务拆分
 
 ```python
 # ✅ 正确
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
-class User(UUIDAuditableStateModel):
+class User(AuditableStateModel):
     __tablename__ = "users"
     email: Mapped[str] = mapped_column(String(255), index=True)
     __table_args__ = (

@@ -13,6 +13,15 @@ from aury.boot.domain.transaction import (
     transactional_context,
 )
 
+# 第三方适配器
+from aury.boot.application.adapter import (
+    AdapterError,
+    AdapterSettings,
+    BaseAdapter,
+    HttpAdapter,
+    adapter_method,
+)
+
 # 依赖注入容器（从 infrastructure 导入）
 from aury.boot.infrastructure.di import Container, Lifetime, Scope, ServiceDescriptor
 from aury.boot.infrastructure.events import (
@@ -67,8 +76,12 @@ from .scheduler import run_scheduler, run_scheduler_sync
 from .server import ApplicationServer, run_app
 
 __all__ = [
+    # 第三方适配器
+    "AdapterError",
+    "AdapterSettings",
     # 服务器集成
     "ApplicationServer",
+    "BaseAdapter",
     # 配置
     "BaseConfig",
     # 中间件
@@ -92,6 +105,7 @@ __all__ = [
     "EventType",
     # 应用框架
     "FoundationApp",
+    "HttpAdapter",
     "IEventBus",
     "Lifetime",
     "LogSettings",
@@ -114,6 +128,8 @@ __all__ = [
     # 事务管理
     "TransactionManager",
     "TransactionRequiredError",
+    # 第三方适配器装饰器
+    "adapter_method",
     "ensure_transaction",
     # HTTP 中间件装饰器
     "log_request",

@@ -2,33 +2,40 @@
 
 用于 SSE（Server-Sent Events）和实时通信。支持 memory 和 redis 后端。
 
+## 核心概念
+
+- **ChannelManager**：管理器，支持命名多实例（如 sse、notification 独立管理）
+- **channel 参数**：通道名/Topic，用于区分不同的消息流（如 `user:123`、`order:456`）
+
 ## 13.1 基本用法
 
 ```python
 from aury.boot.infrastructure.channel import ChannelManager
 
-# 获取实例
-channel = ChannelManager.get_instance()
+# 命名多实例（推荐）- 不同业务场景使用不同实例
+sse_channel = ChannelManager.get_instance("sse")
+notification_channel = ChannelManager.get_instance("notification")
 
-# 初始化（Memory 后端 - 单进程）
-await channel.initialize(backend="memory")
+# Memory 后端（单进程）
+await sse_channel.initialize(backend="memory")
 
-# 初始化（Redis 后端 - 多进程/分布式）
+# Redis 后端（多进程/分布式）
 from aury.boot.infrastructure.clients.redis import RedisClient
 redis_client = RedisClient.get_instance()
 await redis_client.initialize(url="redis://localhost:6379/0")
-await channel.initialize(backend="redis", redis_client=redis_client)
+await notification_channel.initialize(backend="redis", redis_client=redis_client)
 ```
 
-## 13.2 发布消息
+## 13.2 发布和订阅（Topic 管理）
 
 ```python
-# 发布消息到频道
-await channel.publish("user:123", {{"event": "message", "data": "hello"}})
+# 发布消息到指定 Topic
+await sse_channel.publish("user:123", {{"event": "message", "data": "hello"}})
+await sse_channel.publish("order:456", {{"status": "shipped"}})
 
 # 发布到多个用户
 for user_id in user_ids:
-    await channel.publish(f"user:{{user_id}}", notification)
+    await sse_channel.publish(f"user:{{user_id}}", notification)
 ```
 
 ## 13.3 SSE 端点示例
@@ -42,14 +49,17 @@ from fastapi.responses import StreamingResponse
 from aury.boot.infrastructure.channel import ChannelManager
 
 router = APIRouter(tags=["SSE"])
-channel = ChannelManager.get_instance()
+
+# 获取命名实例（在 app 启动时已初始化）
+sse_channel = ChannelManager.get_instance("sse")
 
 
 @router.get("/sse/{{user_id}}")
 async def sse_stream(user_id: str):
     \"\"\"SSE 实时消息流。\"\"\"
     async def event_generator():
-        async for message in channel.subscribe(f"user:{{user_id}}"):
+        # user_id 作为 Topic，区分不同用户的消息流
+        async for message in sse_channel.subscribe(f"user:{{user_id}}"):
             yield f"data: {{json.dumps(message)}}\n\n"
     
     return StreamingResponse(
@@ -61,21 +71,23 @@ async def sse_stream(user_id: str):
 
 @router.post("/notify/{{user_id}}")
 async def send_notification(user_id: str, message: str):
-    \"\"\"发送通知。\"\"\"
-    await channel.publish(f"user:{{user_id}}", {{"message": message}})
+    \"\"\"\u53d1\u9001\u901a\u77e5\u3002\"\"\"
+    await sse_channel.publish(f"user:{{user_id}}", {{"message": message}})
     return {{"status": "sent"}}
 ```
 
-## 13.4 多实例
+## 13.4 应用场景示例
 
 ```python
-# 不同用途的通道实例
-notifications = ChannelManager.get_instance("notifications")
-chat = ChannelManager.get_instance("chat")
+# 不同业务场景使用不同的命名实例
+sse_channel = ChannelManager.get_instance("sse")           # 前端 SSE 推送
+chat_channel = ChannelManager.get_instance("chat")         # 聊天消息
+notify_channel = ChannelManager.get_instance("notify")     # 系统通知
 
-# 分别初始化
-await notifications.initialize(backend="redis", redis_client=redis_client)
-await chat.initialize(backend="redis", redis_client=redis_client)
+# 分别初始化（可使用不同后端）
+await sse_channel.initialize(backend="memory")  # 单进程即可
+await chat_channel.initialize(backend="redis", redis_client=redis_client)  # 需要跨进程
+await notify_channel.initialize(backend="redis", redis_client=redis_client)
 ```
 
 ## 13.5 环境变量

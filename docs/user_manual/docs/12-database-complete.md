@@ -11,21 +11,22 @@ Kit 使用 **SQLAlchemy 2.0+** 作为 ORM，支持异步操作和全功能的关
 **重要**：不要直接继承 `Base` 类，应使用 Foundation Kit 提供的预定义模型。
 
 **推荐使用**：
-- `UUIDAuditableStateModel`：UUID 主键 + 时间戳 + 软删除（最常用）
-- `UUIDModel`：UUID 主键 + 时间戳（不需要软删除时）
-- `Model`：整数主键 + 时间戳（使用整数主键时）
+- `AuditableStateModel`：int 主键 + 时间戳 + 软删除（最常用）
+- `Model`：int 主键 + 时间戳（不需要软删除时）
+- `IDOnlyModel`：纯 int 主键，无时间戳（适用于关系表/中间表）
+- `FullFeaturedModel`：int 主键 + 时间戳 + 软删除 + 乐观锁（完整功能）
 
 ```python
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, Text
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
-class User(UUIDAuditableStateModel):
-    """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+class User(AuditableStateModel):
+    """用户模型 - 自动获得主键、时间戳和软删除功能"""
     __tablename__ = "users"
     
-    # UUIDAuditableStateModel 自动提供：
-    # - id: UUID 主键
+    # AuditableStateModel 自动提供：
+    # - id: int 自增主键
     # - created_at: 创建时间
     # - updated_at: 更新时间
     # - deleted_at: 软删除时间（0 未删除，>0 已删除时间戳）
@@ -52,22 +53,21 @@ class User(UUIDAuditableStateModel):
 > **最佳实践**：不建议使用数据库外键，通过程序控制关系。便于分库分表、微服务拆分，避免级联操作影响性能，简化数据迁移。
 
 ```python
-import uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Text
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
-class Post(UUIDAuditableStateModel):
-    """文章模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+class Post(AuditableStateModel):
+    """文章模型 - 自动获得主键、时间戳和软删除功能"""
     __tablename__ = "posts"
     
-    # UUIDAuditableStateModel 自动提供 id、created_at、updated_at、deleted_at
+    # AuditableStateModel 自动提供 id、created_at、updated_at、deleted_at
     
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     
     # 关联字段（不使用 ForeignKey，通过程序控制关系）
-    author_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    author_id: Mapped[int] = mapped_column(nullable=False, index=True)
     
     # 自定义时间戳
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)

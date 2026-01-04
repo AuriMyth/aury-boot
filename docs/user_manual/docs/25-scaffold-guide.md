@@ -203,14 +203,14 @@ aury generate model user email:str:unique age:int? status:str=active
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
 
-class User(UUIDAuditableStateModel):
+class User(AuditableStateModel):
     """User 模型。
     
-    继承 UUIDAuditableStateModel 自动获得：
-    - id: UUID 主键
+    继承 AuditableStateModel 自动获得：
+    - id: int 自增主键
     - created_at: 创建时间
     - updated_at: 更新时间
     - deleted_at: 软删除时间戳
@@ -422,7 +422,7 @@ aury migrate status
 
 ```python
 # models/user.py
-class User(UUIDAuditableStateModel):
+class User(AuditableStateModel):
     __tablename__ = "users"
     
     name: Mapped[str] = mapped_column(String(100))
@@ -529,30 +529,30 @@ aury generate crud user --force
 使用 `--base` 选项指定基类：
 
 ```bash
-# UUID 主键 + 软删除（默认推荐）
-aury generate crud user -b UUIDAuditableStateModel
-
-# int 主键 + 时间戳
-aury generate crud user -b Model
-
-# int 主键 + 软删除
+# int 主键 + 软删除（默认推荐）
 aury generate crud user -b AuditableStateModel
 
-# UUID 主键 + 乐观锁
-aury generate crud user -b VersionedUUIDModel
+# int 主键 + 时间戳（无软删除）
+aury generate crud user -b Model
+
+# int 主键 + 完整功能
+aury generate crud user -b FullFeaturedModel
+
+# UUID 主键（如果需要）
+aury generate crud user -b UUIDAuditableStateModel
 ```
 
 可用基类：
 - `IDOnlyModel` - 纯 int 主键（无时间戳）
 - `UUIDOnlyModel` - 纯 UUID 主键（无时间戳）
 - `Model` - int 主键 + 时间戳
-- `AuditableStateModel` - int 主键 + 软删除
+- `AuditableStateModel` - int 主键 + 软删除（默认推荐）
 - `UUIDModel` - UUID 主键 + 时间戳
-- `UUIDAuditableStateModel` - UUID 主键 + 软删除（默认推荐）
+- `UUIDAuditableStateModel` - UUID 主键 + 软删除
 - `VersionedModel` - int 主键 + 乐观锁
 - `VersionedTimestampedModel` - int 主键 + 乐观锁 + 时间戳
 - `VersionedUUIDModel` - UUID 主键 + 乐观锁
-- `FullFeaturedModel` - int 主键 + 全功能
+- `FullFeaturedModel` - int 主键 + 全功能（推荐）
 - `FullFeaturedUUIDModel` - UUID 主键 + 全功能
 
 ### Q: 如何自定义模板？

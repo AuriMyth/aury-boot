@@ -121,39 +121,44 @@ await client.cleanup()
 
 用于 SSE（Server-Sent Events）和实时通信场景。
 
+### 核心概念
+
+- **ChannelManager**：管理器，支持命名多实例（如 sse、notification 独立管理）
+- **channel 参数**：通道名/Topic，用于区分不同的消息流（如 `user:123`、`order:456`）
+
 ### 基本用法
 
 ```python
 from aury.boot.infrastructure.channel import ChannelManager
 
-# 获取实例
-channel = ChannelManager.get_instance()
-notifications = ChannelManager.get_instance("notifications")
+# 命名多实例（推荐）- 不同业务场景使用不同实例
+sse_channel = ChannelManager.get_instance("sse")
+notification_channel = ChannelManager.get_instance("notification")
 
-# 配置 - Memory 后端（单进程）
-channel.configure(backend="memory")
+# Memory 后端（单进程）
+await sse_channel.initialize(backend="memory")
 
-# 配置 - Redis 后端（多进程/分布式）
-channel.configure(
+# Redis 后端（多进程/分布式）- 需要提供 RedisClient
+from aury.boot.infrastructure.clients.redis import RedisClient
+redis_client = RedisClient.get_instance()
+await redis_client.initialize(url="redis://localhost:6379/0")
+
+await notification_channel.initialize(
     backend="redis",
-    redis_url="redis://localhost:6379/0",
-    key_prefix="channel:",
-    ttl=86400
+    redis_client=redis_client
 )
-
-# 初始化
-await channel.initialize()
 ```
 
-### 发布和订阅
+### 发布和订阅（Topic 管理）
 
 ```python
-# 发布消息到频道
-await channel.publish("user:123", {"event": "message", "data": "hello"})
+# 发布消息到指定 Topic
+await sse_channel.publish("user:123", {"event": "message", "data": "hello"})
+await sse_channel.publish("order:456", {"status": "shipped"})
 
-# 订阅频道（用于 SSE）
+# 订阅指定 Topic
 async def sse_endpoint(user_id: str):
-    async for message in channel.subscribe(f"user:{user_id}"):
+    async for message in sse_channel.subscribe(f"user:{user_id}"):
         yield f"data: {json.dumps(message)}\n\n"
 ```
 
@@ -162,13 +167,18 @@ async def sse_endpoint(user_id: str):
 ```python
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from aury.boot.infrastructure.channel import ChannelManager
 
 router = APIRouter()
+
+# 获取命名实例（在 app 启动时已初始化）
+sse_channel = ChannelManager.get_instance("sse")
 
 @router.get("/sse/{user_id}")
 async def sse_stream(user_id: str):
     async def event_generator():
-        async for message in channel.subscribe(f"user:{user_id}"):
+        # user_id 作为 Topic，区分不同用户的消息流
+        async for message in sse_channel.subscribe(f"user:{user_id}"):
             yield f"data: {json.dumps(message)}\n\n"
     
     return StreamingResponse(
@@ -178,7 +188,7 @@ async def sse_stream(user_id: str):
 
 @router.post("/notify/{user_id}")
 async def send_notification(user_id: str, message: str):
-    await channel.publish(f"user:{user_id}", {"message": message})
+    await sse_channel.publish(f"user:{user_id}", {"message": message})
     return {"status": "sent"}
 ```
 
@@ -400,7 +410,7 @@ await SchedulerManager.get_instance().initialize()
 await TaskManager.get_instance().initialize()
 
 # Channel
-await ChannelManager.get_instance().configure(...).initialize()
+await ChannelManager.get_instance("sse").initialize(backend="memory")
 
 # MQ
 await MQManager.get_instance().configure(...).initialize()

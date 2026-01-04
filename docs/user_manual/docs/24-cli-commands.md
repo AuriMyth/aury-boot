@@ -187,7 +187,7 @@ Arguments:
 
 Options:
   -i, --interactive   交互式添加字段
-  -b, --base TEXT     模型基类（默认 UUIDAuditableStateModel）
+  -b, --base TEXT     模型基类（默认 AuditableStateModel）
   -f, --force         强制覆盖
   --no-soft-delete    禁用软删除
   --no-timestamps     禁用时间戳
@@ -195,7 +195,7 @@ Options:
 
 可用基类：IDOnlyModel, UUIDOnlyModel, Model, AuditableStateModel, UUIDModel, UUIDAuditableStateModel, VersionedModel, VersionedTimestampedModel, VersionedUUIDModel, FullFeaturedModel, FullFeaturedUUIDModel。
 
-生成 `models/{name}.py`，默认继承 `UUIDAuditableStateModel`。
+生成 `models/{name}.py`，默认继承 `AuditableStateModel`。
 
 ```bash
 # 基本用法
@@ -259,7 +259,7 @@ aury generate crud NAME [FIELDS...] [OPTIONS]
 
 Options:
   -i, --interactive   交互式添加字段
-  -b, --base TEXT     模型基类（默认 UUIDAuditableStateModel）
+  -b, --base TEXT     模型基类（默认 AuditableStateModel）
   -f, --force         强制覆盖
   --no-soft-delete    禁用软删除
   --no-timestamps     禁用时间戳

@@ -30,14 +30,17 @@ class RequestLoggingMiddleware(Middleware):
 
     自动记录所有 HTTP 请求的详细信息，包括：
     - 请求方法、路径、查询参数
-    - 客户端 IP、User-Agent
+    - 客户端IP、User-Agent
     - 响应状态码、耗时
     - 链路追踪 ID（X-Trace-ID / X-Request-ID）
+    - 请求上下文（user_id, tenant_id 等用户注册的字段）
+    
+    注意：用户的认证中间件应设置 order < 100，以便在日志记录前设置用户信息。
     """
 
     name = MiddlewareName.REQUEST_LOGGING
     enabled = True
-    order = 0  # 最先执行，确保日志记录所有请求
+    order = 100  # 用户中间件可使用 0-99 在此之前执行
 
     def build(self, config: BaseConfig) -> StarletteMiddleware:
         """构建请求日志中间件实例。"""
@@ -56,7 +59,7 @@ class CORSMiddleware(Middleware):
 
     name = MiddlewareName.CORS
     enabled = True
-    order = 10  # 在请求日志之后执行
+    order = 110  # 在日志中间件之后执行
 
     def can_enable(self, config: BaseConfig) -> bool:
         """仅当配置了 origins 时启用。"""
@@ -85,7 +88,7 @@ class WebSocketLoggingMiddleware(Middleware):
 
     name = MiddlewareName.WEBSOCKET_LOGGING
     enabled = True
-    order = 1  # 紧随 HTTP 日志中间件
+    order = 101  # 紧随 HTTP 日志中间件
 
     def build(self, config: BaseConfig) -> StarletteMiddleware:
         """构建 WebSocket 日志中间件实例。"""

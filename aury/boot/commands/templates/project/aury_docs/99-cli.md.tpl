@@ -36,10 +36,10 @@ aury generate schema user     # Pydantic Schema
 aury generate model user --fields "name:str,email:str,age:int"
 
 # 指定模型基类
-aury generate model user --base UUIDAuditableStateModel  # UUID主键 + 软删除（推荐）
-aury generate model user --base UUIDModel                # UUID主键 + 时间戳
+aury generate model user --base AuditableStateModel      # int主键 + 软删除（推荐）
 aury generate model user --base Model                    # int主键 + 时间戳
-aury generate model user --base VersionedUUIDModel       # UUID + 乐观锁 + 时间戳
+aury generate model user --base FullFeaturedModel        # int主键 + 全功能
+aury generate model user --base UUIDAuditableStateModel  # UUID主键（如需要）
 ```
 
 ## 数据库迁移

@@ -79,6 +79,7 @@ recommended = [
     "dramatiq-kombu-broker>=0.2.2",
     "apscheduler>=3.11.1",
     "aury-sdk-storage[aws]>=0.0.1",
+    "aiosqlite>=0.21.0",
 ]
 # 完整：所有可选依赖
 all = [

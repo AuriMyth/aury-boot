@@ -576,14 +576,14 @@ async def create_user_with_profile(session: AsyncSession, name: str):
 ```python
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
-class User(UUIDAuditableStateModel):
-    """用户模型 - 自动获得 UUID 主键、时间戳和软删除功能"""
+class User(AuditableStateModel):
+    """用户模型 - 自动获得主键、时间戳和软删除功能"""
     __tablename__ = "users"
     
-    # UUIDAuditableStateModel 自动提供：
-    # - id: UUID 主键
+    # AuditableStateModel 自动提供：
+    # - id: int 自增主键
     # - created_at: 创建时间
     # - updated_at: 更新时间
     # - deleted_at: 软删除时间
@@ -969,16 +969,15 @@ Aury Boot 提供多个预定义模型组合，推荐直接使用而不是 `Base`
 
 ```python
 from aury.boot.domain.models import (
-    UUIDAuditableStateModel,  # 【推荐】UUID主键 + 时间戳 + 软删除
-    UUIDModel,                # UUID主键 + 时间戳
-    Model,                    # 整数主键 + 时间戳
-    FullFeaturedUUIDModel,    # 完整功能：UUID + 时间戳 + 软删除 + 乐观锁
+    AuditableStateModel,      # 【推荐】int主键 + 时间戳 + 软删除
+    Model,                    # int主键 + 时间戳
+    FullFeaturedModel,        # 完整功能：int + 时间戳 + 软删除 + 乐观锁
 )
 
-# ✅ 推荐：使用 UUIDAuditableStateModel
-class Identity(UUIDAuditableStateModel):
+# ✅ 推荐：使用 AuditableStateModel
+class Identity(AuditableStateModel):
     """身份模型 - 自动获得以下字段：
-    - id: UUID 主键
+    - id: int 自增主键
     - created_at: 创建时间
     - updated_at: 更新时间  
     - deleted_at: 软删除时间（0 未删除，>0 已删除时间戳）
@@ -994,12 +993,11 @@ class BadModel(Base):
 
 **预定义模型对比**：
 
-| 模型 | UUID 主键 | 时间戳 | 软删除 | 乐观锁 | 用途 |
-|------|----------|--------|--------|--------|------|
-| **UUIDAuditableStateModel** | ✅ | ✅ | ✅ | ❌ | 【推荐】大多数业务模型 |
-| **UUIDModel** | ✅ | ✅ | ❌ | ❌ | 不需要软删除的模型 |
-| **Model** | ❌ | ✅ | ❌ | ❌ | 使用整数主键 |
-| **FullFeaturedUUIDModel** | ✅ | ✅ | ✅ | ✅ | 需要完整功能的关键业务 |
+| 模型 | 主键 | 时间戳 | 软删除 | 乐观锁 | 用途 |
+|------|------|--------|--------|--------|------|
+| **AuditableStateModel** | int | ✅ | ✅ | ❌ | 【推荐】大多数业务模型 |
+| **Model** | int | ✅ | ❌ | ❌ | 不需要软删除的模型 |
+| **FullFeaturedModel** | int | ✅ | ✅ | ✅ | 需要完整功能的关键业务 |
 
 ### 贫血模型 + Repository 模式
 
@@ -1007,19 +1005,19 @@ class BadModel(Base):
 
 ```python
 # ✅ 模型层（纯数据结构）
-class Tenant(UUIDAuditableStateModel):
+class Tenant(AuditableStateModel):
     __tablename__ = "tenants"
     name: Mapped[str] = mapped_column(String(100))
     # 不定义 relationship，不定义 ForeignKey
 
 # ✅ 仓库层（负责所有查询）
 class TenantRepository(BaseRepository[Tenant]):
-    async def get_with_members(self, tenant_id: GUID):
+    async def get_with_members(self, tenant_id: int):
         # 显式 join，可控的查询
         stmt = select(Tenant).where(Tenant.id == tenant_id)
         return await self.session.scalar(stmt)
     
-    async def list_members(self, tenant_id: GUID):
+    async def list_members(self, tenant_id: int):
         # 显式查询成员，避免隐式 N+1
         stmt = select(TenantMembership).where(TenantMembership.tenant_id == tenant_id)
         return await self.session.scalars(stmt)
@@ -1087,14 +1085,15 @@ REDIS_SESSION_URL=redis://localhost:6379/2
 ```python
 from aury.boot.infrastructure.channel import ChannelManager
 
-channel = ChannelManager.get_instance()
-await channel.configure(backend="redis", redis_url="redis://localhost:6379/0").initialize()
+# 命名多实例（推荐）
+sse_channel = ChannelManager.get_instance("sse")
+await sse_channel.initialize(backend="memory")
 
-# 发布
-await channel.publish("user:123", {"event": "message"})
+# 发布到指定 Topic
+await sse_channel.publish("user:123", {"event": "message"})
 
-# 订阅
-async for msg in channel.subscribe("user:123"):
+# 订阅指定 Topic
+async for msg in sse_channel.subscribe("user:123"):
     print(msg)
 ```
 

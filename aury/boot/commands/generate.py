@@ -183,7 +183,7 @@ MODEL_BASE_CLASSES = {
         "has_timestamps": True,
     },
     "AuditableStateModel": {
-        "desc": "标准模型 + 软删除",
+        "desc": "int 主键 + 软删除（推荐）",
         "features": ["id: int", "created_at", "updated_at", "deleted_at"],
         "id_type": "int",
         "has_timestamps": True,
@@ -195,7 +195,7 @@ MODEL_BASE_CLASSES = {
         "has_timestamps": True,
     },
     "UUIDAuditableStateModel": {
-        "desc": "UUID 主键 + 软删除（推荐）",
+        "desc": "UUID 主键 + 软删除",
         "features": ["id: UUID", "created_at", "updated_at", "deleted_at"],
         "id_type": "uuid",
         "has_timestamps": True,
@@ -219,13 +219,13 @@ MODEL_BASE_CLASSES = {
         "has_timestamps": True,
     },
     "FullFeaturedModel": {
-        "desc": "完整功能 int版",
+        "desc": "int 主键 + 全功能",
         "features": ["id: int", "created_at", "updated_at", "deleted_at", "version"],
         "id_type": "int",
         "has_timestamps": True,
     },
     "FullFeaturedUUIDModel": {
-        "desc": "完整功能 UUID版",
+        "desc": "UUID 主键 + 全功能",
         "features": ["id: UUID", "created_at", "updated_at", "deleted_at", "version"],
         "id_type": "uuid",
         "has_timestamps": True,
@@ -250,9 +250,9 @@ class ModelDefinition:
     def id_type(self) -> str:
         """获取 id 类型：'int' 或 'uuid'。"""
         if self.base_class:
-            return MODEL_BASE_CLASSES.get(self.base_class, {}).get("id_type", "uuid")
-        # 默认通过 soft_delete/timestamps 推断时使用 UUID
-        return "uuid"
+            return MODEL_BASE_CLASSES.get(self.base_class, {}).get("id_type", "int")
+        # 默认使用 int 主键
+        return "int"
 
     @property
     def id_py_type(self) -> str:
@@ -373,14 +373,14 @@ def _collect_base_class_interactive() -> str:
         info = MODEL_BASE_CLASSES[name]
         # 推荐的加标记
         desc = info["desc"]
-        if name == "UUIDAuditableStateModel":
+        if name == "AuditableStateModel":
             desc = f"[bold green]★ {desc}[/bold green]"
         table.add_row(str(i), name, desc, ", ".join(info["features"]))
     
     console.print(table)
     console.print()
     
-    # 默认选择 UUIDAuditableStateModel（第 4 个）
+    # 默认选择 AuditableStateModel（第 4 个）
     choice = Prompt.ask(
         "请选择基类序号",
         default="4",
@@ -556,16 +556,16 @@ def _generate_model_content(model: ModelDefinition) -> str:
         features = base_info.get("features", [])
         base_doc = f"继承 {base_class} 自动获得：\n    - " + "\n    - ".join(features) if features else f"继承 {base_class} 基类。"
     elif model.soft_delete and model.timestamps:
-        base_class = "UUIDAuditableStateModel"
-        base_doc = """继承 UUIDAuditableStateModel 自动获得：
-    - id: UUID 主键
+        base_class = "AuditableStateModel"
+        base_doc = """继承 AuditableStateModel 自动获得：
+    - id: int 自增主键
     - created_at: 创建时间
     - updated_at: 更新时间
     - deleted_at: 软删除时间戳"""
     elif model.timestamps:
-        base_class = "UUIDModel"
-        base_doc = """继承 UUIDModel 自动获得：
-    - id: UUID 主键
+        base_class = "Model"
+        base_doc = """继承 Model 自动获得：
+    - id: int 自增主键
     - created_at: 创建时间
     - updated_at: 更新时间"""
     else:
@@ -773,7 +773,7 @@ def generate_model(
     ),
     base: str | None = typer.Option(
         None, "--base", "-b",
-        help="模型基类（Model/UUIDModel/UUIDAuditableStateModel/VersionedModel 等）"
+        help="模型基类（AuditableStateModel/Model/FullFeaturedModel 等）"
     ),
     force: bool = typer.Option(False, "--force", "-f", help="强制覆盖"),
     no_soft_delete: bool = typer.Option(False, "--no-soft-delete", help="禁用软删除"),
@@ -803,9 +803,9 @@ def generate_model(
         (length)       - 字符串长度，如 str(100)
 
     可用基类：
-        Model, AuditableStateModel, UUIDModel, UUIDAuditableStateModel,
-        VersionedModel, VersionedTimestampedModel, VersionedUUIDModel,
-        FullFeaturedModel, FullFeaturedUUIDModel
+        AuditableStateModel, Model, FullFeaturedModel,
+        UUIDModel, UUIDAuditableStateModel, FullFeaturedUUIDModel,
+        VersionedModel, VersionedTimestampedModel, VersionedUUIDModel
 
     示例：
         aury generate model user
@@ -1104,7 +1104,7 @@ def generate_crud(
     ),
     base: str | None = typer.Option(
         None, "--base", "-b",
-        help="模型基类（Model/UUIDModel/UUIDAuditableStateModel/VersionedModel 等）"
+        help="模型基类（AuditableStateModel/Model/FullFeaturedModel 等）"
     ),
     force: bool = typer.Option(False, "--force", "-f", help="强制覆盖"),
     no_soft_delete: bool = typer.Option(False, "--no-soft-delete", help="禁用软删除"),
@@ -1122,8 +1122,8 @@ def generate_crud(
 
     示例：
         aury generate crud user
-        aury generate crud user --base Model  # 使用 int 主键
-        aury generate crud user --base UUIDAuditableStateModel  # 使用 UUID 主键（推荐）
+        aury generate crud user --base AuditableStateModel  # int 主键 + 软删除（推荐）
+        aury generate crud user --base Model  # int 主键 + 时间戳
         aury generate crud user email:str:unique age:int? --force
         aury generate crud article title:str(200) content:text status:str=draft
     """

@@ -5,14 +5,15 @@
 框架提供多种预组合基类，按需选择：
 
 | 基类 | 主键 | 时间戳 | 软删除 | 乐观锁 | 场景 |
-|------|------|--------|--------|--------|------|
-| `Model` | int | ✓ | ✗ | ✗ | 简单实体 |
-| `AuditableStateModel` | int | ✓ | ✓ | ✗ | 需软删除 |
-| `UUIDModel` | UUID | ✓ | ✗ | ✗ | 分布式 |
-| `UUIDAuditableStateModel` | UUID | ✓ | ✓ | ✗ | **推荐** |
-| `VersionedModel` | int | ✗ | ✗ | ✓ | 乐观锁 |
-| `VersionedUUIDModel` | UUID | ✓ | ✗ | ✓ | UUID+乐观锁 |
-| `FullFeaturedUUIDModel` | UUID | ✓ | ✓ | ✓ | 全功能 |
+||------|------|--------|--------|--------|------|
+|| `Model` | int | ✓ | ✗ | ✗ | 简单实体 |
+|| `AuditableStateModel` | int | ✓ | ✓ | ✗ | **推荐** |
+|| `FullFeaturedModel` | int | ✓ | ✓ | ✓ | 全功能 |
+|| `UUIDModel` | UUID | ✓ | ✗ | ✗ | UUID主键 |
+|| `UUIDAuditableStateModel` | UUID | ✓ | ✓ | ✗ | UUID+软删除 |
+|| `VersionedModel` | int | ✗ | ✗ | ✓ | 乐观锁 |
+|| `VersionedUUIDModel` | UUID | ✓ | ✗ | ✓ | UUID+乐观锁 |
+|| `FullFeaturedUUIDModel` | UUID | ✓ | ✓ | ✓ | UUID全功能 |
 
 ## 1.2 基类自动提供的字段
 
@@ -70,14 +71,14 @@ version: Mapped[int]  # 版本号，自动管理
 from sqlalchemy import String, Boolean, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
 
-class User(UUIDAuditableStateModel):
+class User(AuditableStateModel):
     """User 模型。
 
-    继承 UUIDAuditableStateModel 自动获得：
-    - id: UUID 主键（使用 SQLAlchemyUuid 自动适配数据库）
+    继承 AuditableStateModel 自动获得：
+    - id: int 自增主键
     - created_at, updated_at: 时间戳
     - deleted_at: 软删除支持
     """
@@ -116,7 +117,7 @@ from sqlalchemy import String, Integer, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 import uuid
 
-class Example(UUIDAuditableStateModel):
+class Example(AuditableStateModel):
     __tablename__ = "examples"
     
     # 可选字段
@@ -132,7 +133,7 @@ class Example(UUIDAuditableStateModel):
     # 注意：软删除模型不能单独使用 unique=True，必须使用复合唯一约束
     
     # 关联字段（不使用数据库外键，通过程序控制关系）
-    category_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+    category_id: Mapped[int | None] = mapped_column(index=True)
     
     # 复合索引和复合唯一约束：必须使用 __table_args__（SQLAlchemy 要求）
     # 软删除模型必须使用复合唯一约束（包含 deleted_at），避免删除后无法插入相同值
@@ -143,7 +144,7 @@ class Example(UUIDAuditableStateModel):
 
 
 # 非软删除模型可以直接使用 unique=True 和 index=True
-class Config(UUIDModel):  # UUIDModel 不包含软删除
+class Config(Model):  # Model 不包含软删除
     __tablename__ = "configs"
     
     # 单列唯一约束：直接在 mapped_column 中使用（推荐）
@@ -179,5 +180,5 @@ class Config(UUIDModel):  # UUIDModel 不包含软删除
    - 简化数据迁移
    ```python
    # 只存储关联 ID，不使用 ForeignKey
-   category_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+   category_id: Mapped[int | None] = mapped_column(index=True)
    ```

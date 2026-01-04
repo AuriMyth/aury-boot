@@ -159,13 +159,13 @@ class UserRepository(BaseRepository[User]):
 # models/user.py
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
-from aury.boot.domain.models import UUIDAuditableStateModel
+from aury.boot.domain.models import AuditableStateModel
 
-class User(UUIDAuditableStateModel):
+class User(AuditableStateModel):
     """用户模型。
     
-    继承 UUIDAuditableStateModel 自动获得：
-    - id: UUID 主键
+    继承 AuditableStateModel 自动获得：
+    - id: int 自增主键
     - created_at: 创建时间
     - updated_at: 更新时间
     - deleted_at: 软删除时间戳
