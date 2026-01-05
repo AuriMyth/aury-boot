@@ -25,11 +25,15 @@ config = AppConfig()
 #   - HEALTH_CHECK_PATH: 健康检查路径（默认 /api/health）
 #   - HEALTH_CHECK_ENABLED: 是否启用（默认 true）
 #
+# 日志拦截：
+#   框架默认拦截 uvicorn/sqlalchemy.engine，可通过 intercept_loggers 追加额外的 logger
+#
 app = FoundationApp(
     title="{project_name}",
     version="0.1.0",
     description="{project_name} - 基于 Aury Boot",
     config=config,
+    intercept_loggers=[],
 )
 
 # 注册 API 路由

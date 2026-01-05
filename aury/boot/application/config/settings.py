@@ -372,6 +372,14 @@ class LogSettings(BaseModel):
         default=False,
         description="是否记录 WebSocket 消息内容（注意性能和敏感数据）"
     )
+    intercept_loggers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "额外需要由 loguru 接管的标准 logging logger 名称列表。"
+            "框架默认已拦截 uvicorn、uvicorn.error、uvicorn.access、sqlalchemy.engine，"
+            "此处配置会追加到默认列表。"
+        ),
+    )
 
 
 class ServiceSettings(BaseModel):

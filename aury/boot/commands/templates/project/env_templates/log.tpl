@@ -16,3 +16,5 @@
 # LOG__ENABLE_FILE_ROTATION=true
 # 是否输出日志到控制台
 # LOG__ENABLE_CONSOLE=true
+# 额外需要拦截的标准 logging logger (默认已拦截 uvicorn、sqlalchemy.engine)
+# LOG__INTERCEPT_LOGGERS=["my_package", "third_party_lib"]

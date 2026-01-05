@@ -44,11 +44,14 @@ from aury.boot.common.logging.format import (
     log_exception,
 )
 from aury.boot.common.logging.setup import (
+    DEFAULT_INTERCEPT_LOGGERS,
     register_log_sink,
+    setup_intercept,
     setup_logging,
 )
 
 __all__ = [
+    "DEFAULT_INTERCEPT_LOGGERS",
     "ServiceContext",
     "format_exception_java_style",
     "get_class_logger",
@@ -63,6 +66,7 @@ __all__ = [
     "register_request_context",
     "set_service_context",
     "set_trace_id",
+    "setup_intercept",
     "setup_logging",
 ]
 

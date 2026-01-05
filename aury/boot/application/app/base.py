@@ -203,6 +203,7 @@ class FoundationApp(FastAPI):
         title: str = "Aury Service",
         version: str = "1.0.0",
         description: str | None = None,
+        intercept_loggers: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """初始化应用。
@@ -212,6 +213,9 @@ class FoundationApp(FastAPI):
             title: 应用标题
             version: 应用版本
             description: 应用描述
+            intercept_loggers: 额外需要拦截的标准 logging logger 名称列表，
+                会追加到框架默认列表 (uvicorn, sqlalchemy.engine 等)。
+                也可通过配置 LOG__INTERCEPT_LOGGERS 设置。
             **kwargs: 传递给 FastAPI 的其他参数
         """
         # 加载配置
@@ -223,6 +227,11 @@ class FoundationApp(FastAPI):
         frame = sys._getframe(1)
         self._caller_module = frame.f_globals.get("__name__", "__main__")
 
+        # 合并 intercept_loggers：参数 + 配置
+        merged_intercept = list(config.log.intercept_loggers)
+        if intercept_loggers:
+            merged_intercept.extend(intercept_loggers)
+
         # 初始化日志（必须在其他操作之前）
         setup_logging(
             log_level=config.log.level,
@@ -232,6 +241,7 @@ class FoundationApp(FastAPI):
             retention_days=config.log.retention_days,
             enable_file_rotation=config.log.enable_file_rotation,
             enable_console=config.log.enable_console,
+            intercept_loggers=merged_intercept,
         )
         
         # 注册 access 日志（HTTP 请求日志）
