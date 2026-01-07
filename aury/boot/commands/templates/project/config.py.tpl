@@ -9,6 +9,8 @@
     LOG__LEVEL=INFO
 """
 
+from functools import lru_cache
+
 from aury.boot.application.config import BaseConfig
 
 
@@ -28,3 +30,9 @@ class AppConfig(BaseConfig):
     # 添加自定义配置项
     # my_setting: str = Field(default="value", description="自定义配置")
     pass
+
+
+@lru_cache
+def get_settings() -> AppConfig:
+    """获取应用配置单例。"""
+    return AppConfig()

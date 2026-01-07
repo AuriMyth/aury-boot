@@ -117,6 +117,8 @@ def run_migrations_offline() -> None:
         dialect_opts={{"paramstyle": "named"}},
         compare_type=True,
         compare_server_default=True,
+        # 启用 batch 模式以更好地支持 SQLite 等不完整 DDL 的后端
+        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -129,6 +131,8 @@ def _do_run_migrations(connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
+        # 启用 batch 模式以更好地支持 SQLite 等不完整 DDL 的后端
+        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
