@@ -52,7 +52,7 @@ class PaymentAdapter(BaseAdapter):
     async def query_order(self, transaction_id: str) -> dict:
         """查询支付订单。"""
         response = await self.http_client.get(
-            f"https://api.payment.com/orders/{transaction_id}"
+            f"https://api.payment.com/orders/{{transaction_id}}"
         )
         return response.json()
 
@@ -98,10 +98,10 @@ settings = AdapterSettings()
 # 方式 2：代码显式配置
 settings = AdapterSettings(
     mode="mock",
-    method_modes={
+    method_modes={{
         "query_order": "real",  # query_order 使用真实调用
         "create_order": "mock", # create_order 使用 Mock
-    },
+    }},
     debug=True,
 )
 
@@ -146,7 +146,7 @@ class WechatAdapter(HttpAdapter):
     @send_message.mock
     async def send_message_mock(self, openid: str, content: str) -> dict:
         """发送消息（Mock）。"""
-        return {"errcode": 0, "errmsg": "ok", "mock": True}
+        return {{"errcode": 0, "errmsg": "ok", "mock": True}}
 ```
 
 ## 16.5 方法级模式覆盖
@@ -272,7 +272,7 @@ class CompositePaymentAdapter(BaseAdapter):
         elif channel == "wechat":
             return await self.wechat.create_order(amount, order_id)
         else:
-            raise ValueError(f"不支持的支付渠道: {channel}")
+            raise ValueError(f"不支持的支付渠道: {{channel}}")
 
     @pay.mock
     async def pay_mock(self, channel: str, amount: int, order_id: str) -> dict:
@@ -350,7 +350,7 @@ THIRD_PARTY__DEBUG=true
 
 # 测试环境 (.env.testing)
 THIRD_PARTY__GATEWAY_MODE=mock
-THIRD_PARTY__METHOD_MODES={"query": "sandbox"}
+THIRD_PARTY__METHOD_MODES={{"query": "sandbox"}}
 
 # 生产环境 (.env.production)
 THIRD_PARTY__GATEWAY_MODE=real

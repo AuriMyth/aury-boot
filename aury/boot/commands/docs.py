@@ -83,8 +83,15 @@ def _detect_project_info(project_dir: Path) -> dict[str, str]:
 def _render_template(template_name: str, context: dict[str, str]) -> str:
     """渲染模板。
     
-    支持根目录模板和 aury_docs/ 子目录模板。
+    支持根目录模板、aury_docs/ 子目录模板，且 .env.example 复用 init.py 的 env_templates 逻辑。
     """
+    # 特殊处理 env.example.tpl（通过 init.py 的 env_templates 目录合并生成）
+    if template_name == "env.example.tpl":
+        from .init import _read_env_template  # 复用初始化脚手架的 env 生成逻辑
+
+        content = _read_env_template()
+        return content.format(**context)
+
     # 先在根目录找
     template_path = TEMPLATES_DIR / template_name
     if not template_path.exists():
@@ -173,6 +180,60 @@ def _get_aury_docs_templates() -> list[Path]:
     return sorted(AURY_DOCS_TPL_DIR.glob("*.md.tpl"))
 
 
+def generate_aury_docs(
+    *,
+    project_dir: Path,
+    context: dict[str, str],
+    force: bool = False,
+    dry_run: bool = False,
+    quiet: bool = False,
+) -> int:
+    """核心实现：根据 aury_docs 模板生成开发文档包。
+
+    被 `aury docs dev` 和 `aury init` 复用，确保生成逻辑一致。
+    返回成功生成的文档数量。
+    """
+    if not quiet:
+        console.print()
+
+    # 确保输出目录存在
+    aury_docs_dir = project_dir / "aury_docs"
+    if not dry_run:
+        aury_docs_dir.mkdir(parents=True, exist_ok=True)
+
+    success_count = 0
+    for tpl_path in _get_aury_docs_templates():
+        try:
+            output_name = tpl_path.stem  # 去掉 .tpl 后缀，保留 .md
+            output_path = aury_docs_dir / output_name
+            content = tpl_path.read_text(encoding="utf-8")
+            content = content.format(**context)
+            # init 直接写文件，不走 rich 提示
+            if quiet:
+                if output_path.exists() and not force and not dry_run:
+                    continue
+                if not dry_run:
+                    output_path.write_text(content, encoding="utf-8")
+                success_count += 1
+            else:
+                if _write_file(output_path, content, force=force, dry_run=dry_run):
+                    success_count += 1
+        except Exception as e:
+            if not quiet:
+                console.print(f"[red]❌ 生成 {tpl_path.name} 失败: {e}[/red]")
+            # 静默模式下（init）忽略单个文档失败
+            continue
+
+    if not quiet:
+        console.print()
+        if dry_run:
+            console.print(f"[dim]🔍 预览模式完成，将生成 {success_count} 个文档到 aury_docs/ 目录[/dim]")
+        else:
+            console.print(f"[green]✨ 完成！成功生成 {success_count} 个文档到 aury_docs/ 目录[/green]")
+
+    return success_count
+
+
 @app.command(name="dev")
 def generate_dev_doc(
     project_dir: Path = typer.Argument(
@@ -198,32 +259,16 @@ def generate_dev_doc(
 ) -> None:
     """生成/更新 aury_docs/ 开发文档包。"""
     context = _detect_project_info(project_dir)
-    
+
     console.print(f"[cyan]📚 检测到项目: {context['project_name']}[/cyan]")
-    console.print()
-    
-    # 确保输出目录存在
-    aury_docs_dir = project_dir / "aury_docs"
-    if not dry_run:
-        aury_docs_dir.mkdir(parents=True, exist_ok=True)
-    
-    success_count = 0
-    for tpl_path in _get_aury_docs_templates():
-        try:
-            output_name = tpl_path.stem  # 去掉 .tpl 后缀，保留 .md
-            output_path = aury_docs_dir / output_name
-            content = tpl_path.read_text(encoding="utf-8")
-            content = content.format(**context)
-            if _write_file(output_path, content, force=force, dry_run=dry_run):
-                success_count += 1
-        except Exception as e:
-            console.print(f"[red]❌ 生成 {tpl_path.name} 失败: {e}[/red]")
-    
-    console.print()
-    if dry_run:
-        console.print(f"[dim]🔍 预览模式完成，将生成 {success_count} 个文档到 aury_docs/ 目录[/dim]")
-    else:
-        console.print(f"[green]✨ 完成！成功生成 {success_count} 个文档到 aury_docs/ 目录[/green]")
+
+    generate_aury_docs(
+        project_dir=project_dir,
+        context=context,
+        force=force,
+        dry_run=dry_run,
+        quiet=False,
+    )
 
 
 @app.command(name="cli")

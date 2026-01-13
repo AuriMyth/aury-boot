@@ -836,25 +836,17 @@ def init(
     else:
         console.print("  [dim]ℹ️  migrations/ 目录已存在，跳过[/dim]")
 
-    # 5. 生成开发文档 (aury_docs/) - 动态扫描模板目录
+    # 5. 生成开发文档 (aury_docs/) - 复用 docs.generate_aury_docs
     console.print("\n[bold]📚 生成开发文档...[/bold]")
-    aury_docs_tpl_dir = TEMPLATES_DIR / "aury_docs"
-    aury_docs_dir = base_path / "aury_docs"
-    aury_docs_dir.mkdir(parents=True, exist_ok=True)
-    docs_count = 0
-    if aury_docs_tpl_dir.exists():
-        for tpl_path in sorted(aury_docs_tpl_dir.glob("*.md.tpl")):
-            output_name = tpl_path.stem  # 去掉 .tpl 后缀，保留 .md
-            output_path = aury_docs_dir / output_name
-            if output_path.exists() and not force:
-                continue
-            try:
-                content = tpl_path.read_text(encoding="utf-8")
-                content = content.format(**template_vars)
-                output_path.write_text(content, encoding="utf-8")
-                docs_count += 1
-            except Exception:
-                pass
+    from .docs import generate_aury_docs
+
+    docs_count = generate_aury_docs(
+        project_dir=base_path,
+        context=template_vars,
+        force=force,
+        dry_run=False,
+        quiet=True,
+    )
     console.print(f"  [green]✅ 已生成 {docs_count} 个文档到 aury_docs/[/green]")
 
     # 6. 生成 Docker 配置
