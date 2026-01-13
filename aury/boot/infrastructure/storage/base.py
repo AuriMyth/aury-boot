@@ -9,10 +9,11 @@ from aury.boot.common.logging import logger
 from aury.sdk.storage.storage import (
     IStorage,
     LocalStorage,
-    S3Storage,
-    StorageBackend,
     StorageConfig,
     StorageFile,
+)
+from aury.sdk.storage.storage import (
+    StorageFactory as SDKStorageFactory,
 )
 
 
@@ -78,11 +79,8 @@ class StorageManager:
             self: 支持链式调用
         """
         self._config = config
-        if config.backend == StorageBackend.LOCAL:
-            self._backend = LocalStorage(base_path=config.base_path or "./storage")
-        else:
-            # S3/COS/OSS/MinIO 统一走 S3Storage
-            self._backend = S3Storage(config)
+        # 使用 SDK 的 StorageFactory 创建后端实例
+        self._backend = SDKStorageFactory.from_config(config)
         logger.info(f"存储管理器初始化完成: {config.backend.value}")
         return self
 
@@ -168,8 +166,7 @@ class StorageManager:
 __all__ = [
     "IStorage",
     "LocalStorage",
-    "S3Storage",
-    "StorageBackend",
+    "SDKStorageFactory",
     "StorageConfig",
     "StorageFile",
     "StorageManager",

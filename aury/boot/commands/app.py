@@ -86,12 +86,14 @@ def _get_app() -> typer.Typer:
         from .generate import app as generate_app
         from .init import init
         from .migrate import app as migrate_app
+        from .pkg import app as pkg_app
         from .scheduler import app as scheduler_app
         from .server import app as server_app
         from .worker import app as worker_app
 
         app.command(name="init", help="🎯 初始化项目脚手架")(init)
         app.add_typer(add_app, name="add", help="➕ 添加可选模块")
+        app.add_typer(pkg_app, name="pkg", help="📦 包管理")
         app.add_typer(generate_app, name="generate", help="⚡ 代码生成器")
         app.add_typer(server_app, name="server", help="🖥️  服务器管理")
         app.add_typer(scheduler_app, name="scheduler", help="🕐 独立运行调度器")
@@ -162,6 +164,10 @@ def register_commands(
         from .add import app as add_app
         target_app.add_typer(add_app, name="add", help="➕ 添加可选模块")
     
+    # pkg 命令始终注册（包管理是通用功能）
+    from .pkg import app as pkg_app
+    target_app.add_typer(pkg_app, name="pkg", help="📦 包管理")
+    
     if include_generate:
         from .generate import app as generate_app
         target_app.add_typer(generate_app, name="generate", help="⚡ 代码生成器")
@@ -205,11 +211,12 @@ def get_command_modules() -> dict[str, type]:
         # {'init': <module>, 'add': <module>, 'server': <module>, ...}
         ```
     """
-    from . import add, docker, docs, generate, init, migrate, scheduler, server, worker
+    from . import add, docker, docs, generate, init, migrate, pkg, scheduler, server, worker
     
     return {
         "init": init,
         "add": add,
+        "pkg": pkg,
         "generate": generate,
         "server": server,
         "scheduler": scheduler,

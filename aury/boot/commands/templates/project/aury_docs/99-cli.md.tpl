@@ -59,6 +59,31 @@ aury scheduler    # 独立运行调度器
 aury worker       # 运行 Dramatiq Worker
 ```
 
+## 包管理
+
+```bash
+# 查看所有可用模块
+aury pkg list
+
+# 查看预设配置
+aury pkg preset
+aury pkg preset api              # 查看某个预设详情
+
+# 安装模块
+aury pkg install postgres redis  # 安装指定模块
+aury pkg install --preset api    # 按预设安装（postgres + redis + admin）
+aury pkg install --preset worker # 按预设安装（任务队列 + 调度器）
+
+# 卸载模块
+aury pkg remove redis
+```
+
+可用预设：
+- `minimal` - 本地开发（sqlite）
+- `api` - API 服务（postgres + redis + admin）
+- `worker` - 后台 Worker（postgres + redis + tasks + rabbitmq + scheduler）
+- `full` - 完整功能
+
 ## 环境变量配置
 
 所有配置项都可通过环境变量设置，优先级：命令行参数 > 环境变量 > .env 文件 > 默认值
