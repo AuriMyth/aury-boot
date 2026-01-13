@@ -818,7 +818,7 @@ from aury.boot.infrastructure.storage import (
 storage = StorageManager.get_instance()
 
 # 初始化（一般由 StorageComponent 自动完成）
-await storage.init(StorageConfig(
+await storage.initialize(StorageConfig(
     backend=StorageBackend.COS,
     bucket_name="my-bucket-1250000000",
     region="ap-guangzhou",

@@ -66,7 +66,54 @@ uv sync
 
 Foundation Kit 采用模块化的可选依赖设计，按需安装。
 
-### 安装方式
+### 方式 1：使用 aury pkg 命令（推荐）
+
+`aury pkg` 命令提供了更友好的包管理体验：
+
+```bash
+# 查看所有可用模块
+aury pkg list
+
+# 查看预设配置
+aury pkg preset
+
+# 安装指定模块
+aury pkg install postgres redis admin
+
+# 按预设安装
+aury pkg install --preset api      # API 服务：postgres + redis + admin
+aury pkg install --preset worker   # 后台 Worker：postgres + redis + tasks + rabbitmq + scheduler
+aury pkg install --preset full     # 完整功能
+
+# 卸载模块
+aury pkg remove redis
+```
+
+#### 可用模块
+
+| 分类 | 模块 | 用途 |
+|------|------|------|
+| 数据库 | postgres | DatabaseManager 使用 PostgreSQL |
+| 数据库 | mysql | DatabaseManager 使用 MySQL |
+| 数据库 | sqlite | DatabaseManager 使用 SQLite（本地开发推荐） |
+| 缓存 | redis | CacheManager Redis 后端 |
+| 任务 | tasks | TaskManager 异步任务（Dramatiq） |
+| 任务 | rabbitmq | RabbitMQ 消息队列后端（需配合 tasks） |
+| 调度 | scheduler | SchedulerManager 定时任务 |
+| 管理 | admin | SQLAdmin 管理后台 |
+| 存储 | s3 | StorageManager S3 兼容存储 |
+| 存储 | storage-cos | StorageManager 腾讯云 COS（原生 SDK） |
+
+#### 预设配置
+
+| 预设 | 说明 | 包含模块 |
+|------|------|----------|
+| minimal | 本地开发/测试 | sqlite |
+| api | API 服务 | postgres, redis, admin |
+| worker | 后台 Worker | postgres, redis, tasks, rabbitmq, scheduler |
+| full | 完整功能 | 所有模块 |
+
+### 方式 2：直接使用 uv/pip
 
 ```bash
 # 核心（只有核心框架，不含数据库/缓存等驱动）
@@ -82,7 +129,7 @@ uv add "aury-boot[postgres,redis,scheduler]"
 uv add "aury-boot[all]"
 ```
 
-### 可选依赖清单
+### 可选依赖清单（extras）
 
 | 名称 | 说明 | 包含的库 |
 |------|------|----------|

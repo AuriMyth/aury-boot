@@ -33,7 +33,7 @@ class PaymentAdapter(BaseAdapter):
         # 真实调用第三方 API
         response = await self.http_client.post(
             "https://api.payment.com/orders",
-            json={"amount": amount, "order_id": order_id},
+            json={{"amount": amount, "order_id": order_id}},
         )
         return response.json()
 
@@ -41,12 +41,12 @@ class PaymentAdapter(BaseAdapter):
     async def create_order_mock(self, amount: int, order_id: str) -> dict:
         """创建支付订单（Mock 实现）。"""
         if amount > 100000:
-            return {"success": False, "error": "金额超限"}
-        return {
+            return {{"success": False, "error": "金额超限"}}
+        return {{
             "success": True,
-            "transaction_id": f"mock_tx_{order_id}",
+            "transaction_id": f"mock_tx_{{order_id}}",
             "amount": amount,
-        }
+        }}
 
     @adapter_method("query_order")
     async def query_order(self, transaction_id: str) -> dict:
@@ -59,11 +59,11 @@ class PaymentAdapter(BaseAdapter):
     @query_order.mock
     async def query_order_mock(self, transaction_id: str) -> dict:
         """查询支付订单（Mock）。"""
-        return {
+        return {{
             "transaction_id": transaction_id,
             "status": "paid",
             "mock": True,
-        }
+        }}
 ```
 
 ## 16.3 Adapter 配置
@@ -78,7 +78,7 @@ THIRD_PARTY__GATEWAY_MODE=mock
 
 # 方法级模式覆盖（JSON 格式）
 # 例如：query 方法使用 real，其他方法使用全局配置
-THIRD_PARTY__METHOD_MODES={"query_order": "real"}
+THIRD_PARTY__METHOD_MODES={{"query_order": "real"}}
 
 # Mock 策略：decorator（装饰器）/ auto（自动生成）
 THIRD_PARTY__MOCK_STRATEGY=decorator
@@ -140,7 +140,7 @@ class WechatAdapter(HttpAdapter):
         return await self._request(
             "POST",
             "/cgi-bin/message/send",
-            json={"touser": openid, "content": content},
+            json={{"touser": openid, "content": content}},
         )
 
     @send_message.mock
@@ -156,13 +156,13 @@ class WechatAdapter(HttpAdapter):
 ```python
 settings = AdapterSettings(
     mode="mock",  # 默认 Mock
-    method_modes={
+    method_modes={{
         "query_order": "real",      # 查询走真实接口
         "create_order": "mock",     # 创建走 Mock
         "refund": "disabled",       # 退款禁用
-    },
+    }},
+    debug=True,
 )
-
 adapter = PaymentAdapter("payment", settings)
 
 # query_order 会调用真实 API
@@ -237,19 +237,19 @@ class PaymentAdapter(HttpAdapter):
         self, method: str, args: tuple, kwargs: dict
     ) -> None:
         """调用前钩子。"""
-        logger.info(f"调用 {method}，参数: {args}")
+        logger.info(f"调用 {{method}}，参数: {{args}}")
 
     async def _on_after_call(
         self, method: str, args: tuple, kwargs: dict, result: Any
     ) -> None:
         """调用后钩子。"""
-        logger.info(f"{method} 返回: {result}")
+        logger.info(f"{{method}} 返回: {{result}}")
 
     async def _on_call_error(
         self, method: str, args: tuple, kwargs: dict, error: Exception
     ) -> None:
         """调用异常钩子。"""
-        logger.error(f"{method} 异常: {error}")
+        logger.error(f"{{method}} 异常: {{error}}")
         # 可以在这里发送告警
 ```
 
@@ -277,11 +277,11 @@ class CompositePaymentAdapter(BaseAdapter):
     @pay.mock
     async def pay_mock(self, channel: str, amount: int, order_id: str) -> dict:
         """统一 Mock 实现。"""
-        return {
+        return {{
             "success": True,
             "channel": channel,
-            "transaction_id": f"mock_{channel}_{order_id}",
-        }
+            "transaction_id": f"mock_{{channel}}_{{order_id}}",
+        }}
 ```
 
 ## 16.8 异常处理
@@ -303,9 +303,9 @@ except AdapterTimeoutError:
     logger.error("支付适配器超时")
     # 重试或告警
 except AdapterValidationError as e:
-    logger.error(f"参数校验失败: {e}")
+    logger.error(f"参数校验失败: {{e}}")
 except AdapterError as e:
-    logger.error(f"适配器错误: {e}")
+    logger.error(f"适配器错误: {{e}}")
 ```
 
 ## 16.9 最佳实践
@@ -329,16 +329,16 @@ async def create_order_mock(self, amount: int, order_id: str) -> dict:
     """Mock 应模拟各种场景。"""
     # 模拟金额校验
     if amount <= 0:
-        return {"success": False, "error": "金额必须大于0"}
+        return {{"success": False, "error": "金额必须大于0"}}
     if amount > 100000:
-        return {"success": False, "error": "金额超限"}
+        return {{"success": False, "error": "金额超限"}}
 
     # 模拟偶发失败（可选）
     import random
     if random.random() < 0.01:
-        return {"success": False, "error": "系统繁忙"}
+        return {{"success": False, "error": "系统繁忙"}}
 
-    return {"success": True, "transaction_id": f"mock_{order_id}"}
+    return {{"success": True, "transaction_id": f"mock_{{order_id}}"}}
 ```
 
 ### 3. 环境配置建议
@@ -381,11 +381,11 @@ class OrderService(BaseService):
     async def create_order(self, user_id: str, amount: int) -> Order:
         """创建订单并发起支付。"""
         # 1. 创建订单记录
-        order = await self.order_repo.create({
+        order = await self.order_repo.create({{
             "user_id": user_id,
             "amount": amount,
             "status": "pending",
-        })
+        }})
 
         # 2. 调用支付适配器
         pay_result = await self.payment.create_order(amount, str(order.id))
@@ -394,10 +394,10 @@ class OrderService(BaseService):
             raise PaymentError(pay_result["error"])
 
         # 3. 更新订单状态
-        await self.order_repo.update(order, {
+        await self.order_repo.update(order, {{
             "transaction_id": pay_result["transaction_id"],
             "status": "paid",
-        })
+        }})
 
         return order
 ```

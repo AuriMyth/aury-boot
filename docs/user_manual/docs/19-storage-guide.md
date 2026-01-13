@@ -13,7 +13,7 @@ pip install "aury-sdk-storage[aws]"
 
 ## 基本用法（StorageManager）
 
-框架提供 `StorageManager` 单例管理器，支持命名多实例：
+框架提供 `StorageManager` 单例管理器，支持命名多实例。内部由 `aury-sdk-storage` 的 `StorageFactory.from_config()` 创建具体后端（COS 原生 / S3 兼容等），对上层暴露统一接口：
 
 ```python
 from io import BytesIO
@@ -29,7 +29,7 @@ source = StorageManager.get_instance("source")
 target = StorageManager.get_instance("target")
 
 # 初始化（一般由 StorageComponent 自动完成，以下仅演示手动调用）
-await storage.init(StorageConfig(
+await storage.initialize(StorageConfig(
     backend=StorageBackend.COS,
     bucket_name="my-bucket-1250000000",
     region="ap-guangzhou",
@@ -74,7 +74,7 @@ from aury.boot.infrastructure.storage import (
 )
 
 storage = StorageManager.get_instance()
-await storage.init(StorageConfig(
+await storage.initialize(StorageConfig(
     backend=StorageBackend.LOCAL,
     base_path="./dev_storage",
 ))
@@ -84,6 +84,37 @@ url = await storage.upload_file(
 )
 # url: file:///path/to/dev_storage/default/test.txt
 ```
+
+## 高级用法：直接使用 SDK 工厂 / StorageType
+
+在需要更精细控制后端类型（如在基础设施层扩展存储实现）时，可以直接使用 `aury.boot.infrastructure.storage` 中导出的 SDK 类型：
+
+```python
+from aury.boot.infrastructure.storage import (
+    COSStorage,
+    LocalStorage,
+    S3Storage,
+    SDKStorageFactory,  # SDK 工厂（基于 StorageType 枚举）
+    StorageConfig,
+    StorageFile,
+    StorageType,
+)
+
+# 使用 StorageType 创建后端
+config = StorageConfig(
+    backend=StorageType.COS,
+    bucket_name="my-bucket-1250000000",
+    region="ap-guangzhou",
+)
+
+backend = SDKStorageFactory.from_config(config)
+result = await backend.upload_file(
+    StorageFile(object_name="dev/test.txt", data=b"hello"),
+)
+print(result.url)
+```
+
+> 一般业务代码直接通过 `StorageManager` 即可，只有在需要自定义装配流程或编写基础设施扩展时，才需要直接使用 `SDKStorageFactory` / `StorageType` / `COSStorage` 等类型。
 
 ## STS 临时凭证（前端直传）
 

@@ -11,17 +11,20 @@ pip install "aury-sdk-storage[aws]"
 
 ## 10.2 基本用法（StorageManager）
 
-`StorageManager` 支持**命名多实例**，可以同时管理多个存储后端。
+`StorageManager` 支持**命名多实例**，内部使用 `aury-sdk-storage` 提供的 `StorageFactory.from_config()` 智能选择后端（COS 原生 / S3 兼容等），对上层暴露统一接口。
 
 ```python
 from aury.boot.infrastructure.storage import (
-    StorageManager, StorageConfig, StorageBackend, StorageFile,
+    StorageManager,
+    StorageConfig,
+    StorageBackend,
+    StorageFile,
 )
 
 # 默认实例
 storage = StorageManager.get_instance()
 await storage.initialize(StorageConfig(
-    backend=StorageBackend.COS,
+    backend=StorageBackend.COS,  # 自动选择 COS 原生 SDK 或 S3 兼容模式
     bucket_name="my-bucket-1250000000",
     region="ap-guangzhou",
     endpoint="https://cos.ap-guangzhou.myqcloud.com",
@@ -45,6 +48,12 @@ url = await storage.upload_file(
     )
 )
 
+# 批量上传
+urls = await storage.upload_files([
+    StorageFile(object_name="img/1.jpg", data=b"..."),
+    StorageFile(object_name="img/2.jpg", data=b"..."),
+])
+
 # 下载文件
 content = await storage.download_file("user/123/avatar.png")
 
@@ -58,7 +67,38 @@ exists = await storage.file_exists("user/123/avatar.png")
 await storage.delete_file("user/123/avatar.png")
 ```
 
-## 10.3 STS 临时凭证（前端直传）
+## 10.3 高级用法：直接使用 SDKStorageFactory / StorageType
+
+对于需要更精细控制后端类型（如在脚手架或基础设施层扩展存储实现）的场景，可以直接使用 SDK 导出的类型：
+
+```python
+from aury.boot.infrastructure.storage import (
+    COSStorage,
+    LocalStorage,
+    S3Storage,
+    SDKStorageFactory,  # SDK 工厂（基于 StorageType 枚举）
+    StorageConfig,
+    StorageFile,
+    StorageType,
+)
+
+# 使用 StorageType 创建后端
+config = StorageConfig(
+    backend=StorageType.COS,
+    bucket_name="my-bucket-1250000000",
+    region="ap-guangzhou",
+)
+
+backend = SDKStorageFactory.from_config(config)
+result = await backend.upload_file(
+    StorageFile(object_name="dev/test.txt", data=b"hello"),
+)
+print(result.url)
+```
+
+> 一般业务代码直接通过 `StorageManager` 即可，只有在需要自定义装配流程或编写基础设施扩展时才需要直接使用 `SDKStorageFactory` / `StorageType` / `COSStorage` 等类型。
+
+## 10.4 STS 临时凭证（前端直传）
 
 ```python
 from aury.sdk.storage.sts import (
@@ -95,11 +135,14 @@ return {{
 }}
 ```
 
-## 10.4 本地存储（开发测试）
+## 10.5 本地存储（开发测试）
 
 ```python
 from aury.boot.infrastructure.storage import (
-    StorageManager, StorageConfig, StorageBackend, StorageFile,
+    StorageManager,
+    StorageConfig,
+    StorageBackend,
+    StorageFile,
 )
 
 storage = StorageManager.get_instance()
