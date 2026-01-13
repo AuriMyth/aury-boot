@@ -104,14 +104,79 @@ aury pkg remove redis
 
 常用环境变量：
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `ADMIN__ENABLED` | 是否启用管理后台 | `false` |
-| `ADMIN__PATH` | 管理后台路径 | `/api/admin-console` |
-| `ADMIN__DATABASE_URL` | 管理后台同步数据库 URL（可覆盖自动推导） | - |
-| `ADMIN__AUTH_MODE` | 认证模式（basic/bearer/none/custom/jwt） | `basic` |
-| `ADMIN__AUTH_SECRET_KEY` | session 签名密钥（生产必配） | - |
-| `ADMIN__AUTH_BASIC_USERNAME` | basic 用户名 | - |
-| `ADMIN__AUTH_BASIC_PASSWORD` | basic 密码 | - |
-| `ADMIN__AUTH_BEARER_TOKENS` | bearer token 白名单 | `[]` |
-| `ADMIN__AUTH_BACKEND` | 自定义认证后端导入路径（module:attr） | - |
+|| 变量 | 说明 | 默认值 |
+||------|------|--------|
+|| `ADMIN__ENABLED` | 是否启用管理后台 | `false` |
+|| `ADMIN__PATH` | 管理后台路径 | `/api/admin-console` |
+|| `ADMIN__DATABASE_URL` | 管理后台同步数据库 URL（可覆盖自动推导） | - |
+|| `ADMIN__AUTH_MODE` | 认证模式（basic/bearer/none/custom/jwt） | `basic` |
+|| `ADMIN__AUTH_SECRET_KEY` | session 签名密钥（生产必配） | - |
+|| `ADMIN__AUTH_BASIC_USERNAME` | basic 用户名 | - |
+|| `ADMIN__AUTH_BASIC_PASSWORD` | basic 密码 | - |
+|| `ADMIN__AUTH_BEARER_TOKENS` | bearer token 白名单 | `[]` |
+|| `ADMIN__AUTH_BACKEND` | 自定义认证后端导入路径（module:attr） | - |
+
+## 注册 CLI 与扩展命令
+
+### 内置 `aury` 命令如何注册
+
+Aury Boot 安装后会自动注册一个全局命令 `aury`（见框架自身的 `pyproject.toml`）：
+
+```toml
+[project.scripts]
+aury = "aury.boot.commands:main"
+```
+
+- `aury.boot.commands:main` 是 Typer 应用入口，内部通过 `app.add_typer(...)` 注册了 `init/generate/server/scheduler/worker/migrate/docker/docs/pkg` 等子命令。
+
+### 在你自己的项目里注册一个 CLI
+
+如果你希望在自己的服务里有一个独立的 CLI（例如 `{project_name_snake}`），并且复用 Aury Boot 的全部基础命令，可以这样做：
+
+1. 新建模块 `{package_name}/cli.py`：
+
+```python
+from typer import Typer
+from aury.boot.commands import register_commands
+
+# 创建项目自己的 CLI
+app = Typer(name="{project_name_snake}")
+
+# 继承 aury-boot 的所有基础命令
+register_commands(app)
+
+# 或者按需关闭某些命令，例如不暴露 docker 命令：
+# register_commands(app, include_docker=False)
+
+
+# 添加你自己的项目命令
+@app.command()
+async def hello(name: str = "world") -> None:
+    """示例：项目自定义命令。"""
+    print(f"Hello, {name} from {project_name_snake}!")
+```
+
+> 注意：这里的 `app` 是 Typer 应用实例，`register_commands` 会把所有内置的 `init/generate/server/...` 等命令挂到你自己的 CLI 下。
+
+2. 在你项目自己的 `pyproject.toml` 中注册脚本入口（**不是框架本身的 pyproject**）：
+
+```toml
+[project.scripts]
+{project_name_snake} = "{package_name}.cli:app"
+```
+
+3. 安装项目后，你就可以使用：
+
+```bash
+# 使用项目 CLI 运行 aury-boot 命令
+{project_name_snake} init
+{project_name_snake} generate crud user -i
+{project_name_snake} server dev
+
+# 调用你自定义的命令
+{project_name_snake} hello --name dev
+```
+
+这样：
+- 基础命令仍由 Aury Boot 维护和升级；
+- 你的项目可以在自己的命名空间下扩展命令，而不用直接修改框架的 `aury` 命令。

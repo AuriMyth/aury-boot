@@ -131,7 +131,7 @@ class WechatAdapter(HttpAdapter):
     async def _prepare_headers(self, headers: dict | None) -> dict:
         """添加认证头。"""
         headers = await super()._prepare_headers(headers)
-        headers["Authorization"] = f"Bearer {await self._get_access_token()}"
+        headers["Authorization"] = f"Bearer {{await self._get_access_token()}}"
         return headers
 
     @adapter_method("send_message")
