@@ -10,7 +10,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from sqlalchemy import text
-from sqlalchemy.exc import DisconnectionError, OperationalError
+from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from aury.boot.common.logging import logger
@@ -237,9 +237,15 @@ class DatabaseManager:
         try:
             await self._check_session_connection(session)
             yield session
-        except Exception as exc:
+        except SQLAlchemyError as exc:
+            # 只捕获数据库相关异常
             await session.rollback()
             logger.exception(f"数据库会话异常: {exc}")
+            raise
+        except Exception:
+            # 非数据库异常（如请求验证错误）：仍需回滚以确保事务一致性
+            # 但不记录为数据库异常，直接传播
+            await session.rollback()
             raise
         finally:
             await session.close()
