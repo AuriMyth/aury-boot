@@ -1,11 +1,10 @@
 """日志上下文管理。
 
-提供链路追踪 ID、服务上下文、请求上下文的管理。
+提供链路追踪 ID、服务上下文的管理。
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from contextvars import ContextVar
 from enum import Enum
 import uuid
@@ -24,8 +23,6 @@ _service_context: ContextVar[ServiceContext] = ContextVar("service_context", def
 # 链路追踪 ID
 _trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
 
-# 请求上下文字段注册表（用户可注册自定义字段，如 user_id, tenant_id）
-_request_context_getters: dict[str, Callable[[], str]] = {}
 
 
 def get_service_context() -> ServiceContext:
@@ -75,58 +72,10 @@ def set_trace_id(trace_id: str) -> None:
     _trace_id_var.set(trace_id)
 
 
-def register_request_context(name: str, getter: Callable[[], str]) -> None:
-    """注册请求上下文字段。
-    
-    注册后，该字段会在每个请求结束时记录一次（与 trace_id 关联）。
-    适用于 user_id、tenant_id 等需要关联到请求但不需要每行日志都记录的信息。
-    
-    Args:
-        name: 字段名（如 "user_id", "tenant_id"）
-        getter: 获取当前值的函数（通常从 ContextVar 读取）
-    
-    使用示例:
-        from contextvars import ContextVar
-        from aury.boot.common.logging import register_request_context
-        
-        # 定义上下文变量
-        _user_id: ContextVar[str] = ContextVar("user_id", default="")
-        
-        def set_user_id(uid: str):
-            _user_id.set(uid)
-        
-        # 启动时注册（一次）
-        register_request_context("user_id", _user_id.get)
-        
-        # Auth 中间件中设置（每次请求）
-        set_user_id(str(user.id))
-    """
-    _request_context_getters[name] = getter
-
-
-def get_request_contexts() -> dict[str, str]:
-    """获取所有已注册的请求上下文当前值。
-    
-    Returns:
-        字段名到值的字典（仅包含非空值）
-    """
-    result = {}
-    for name, getter in _request_context_getters.items():
-        try:
-            value = getter()
-            if value:  # 只包含非空值
-                result[name] = value
-        except Exception:
-            pass  # 忽略获取失败的字段
-    return result
-
-
 __all__ = [
     "ServiceContext",
-    "get_request_contexts",
     "get_service_context",
     "get_trace_id",
-    "register_request_context",
     "set_service_context",
     "set_trace_id",
 ]

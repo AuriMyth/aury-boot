@@ -5,7 +5,6 @@
 框架日志系统基于 loguru，提供：
 - **自动链路追踪**：trace_id 自动注入每条日志，无需手动记录
 - **服务上下文隔离**：API/Scheduler/Worker 日志自动分离
-- **请求上下文注入**：支持注入 user_id 等自定义字段
 - **自定义日志文件**：按业务分离日志（如 payment.log, audit.log）
 
 ## 基础使用
@@ -49,91 +48,10 @@ except Exception as e:
 # 响应日志（包含状态码和耗时）
 ← POST /api/users | 状态: 201 | 耗时: 0.123s | Trace-ID: abc123
 
-# 请求上下文（用户注册的字段）
-[REQUEST_CONTEXT] Trace-ID: abc123 | user_id: 123 | tenant_id: 456
-
 # 慢请求警告（超过 1 秒）
 慢请求: GET /api/reports | 耗时: 2.345s (超过1秒) | Trace-ID: abc123
 ```
 
-## 注入用户信息
-
-框架不内置用户系统，但支持注入自定义请求上下文：
-
-### 步骤 1：定义上下文变量
-
-```python
-# app/auth/context.py
-from contextvars import ContextVar
-from aury.boot.common.logging import register_request_context
-
-# 定义上下文变量
-_user_id: ContextVar[str] = ContextVar("user_id", default="")
-_tenant_id: ContextVar[str] = ContextVar("tenant_id", default="")
-
-def set_user_id(uid: str) -> None:
-    _user_id.set(uid)
-
-def set_tenant_id(tid: str) -> None:
-    _tenant_id.set(tid)
-
-# 启动时注册（只需一次）
-register_request_context("user_id", _user_id.get)
-register_request_context("tenant_id", _tenant_id.get)
-```
-
-### 步骤 2：创建认证中间件
-
-```python
-# app/auth/middleware.py
-from aury.boot.application.app import Middleware
-from starlette.middleware import Middleware as StarletteMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from app.auth.context import set_user_id, set_tenant_id
-
-class AuthLoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        # 验证用户（你的认证逻辑）
-        user = await verify_token(request)
-        if user:
-            set_user_id(str(user.id))
-            set_tenant_id(str(user.tenant_id))
-        
-        return await call_next(request)
-
-class AuthMiddleware(Middleware):
-    name = "auth"
-    enabled = True
-    order = 50  # 小于 100，在日志中间件之前执行
-    
-    def build(self, config):
-        return StarletteMiddleware(AuthLoggingMiddleware)
-```
-
-### 步骤 3：注册中间件
-
-```python
-# app/main.py
-from aury.boot.application.app import FoundationApp
-from aury.boot.application.app.middlewares import (
-    RequestLoggingMiddleware,
-    CORSMiddleware,
-)
-from app.auth.middleware import AuthMiddleware
-
-class MyApp(FoundationApp):
-    middlewares = [
-        AuthMiddleware,           # order=50，先执行
-        RequestLoggingMiddleware, # order=100，后执行，此时 user_id 已设置
-        CORSMiddleware,
-    ]
-```
-
-结果：
-```
-← GET /api/users | 状态: 200 | 耗时: 0.05s | Trace-ID: abc123
-[REQUEST_CONTEXT] Trace-ID: abc123 | user_id: 123 | tenant_id: 456
-```
 
 ## 自定义日志文件
 
@@ -267,7 +185,6 @@ from aury.boot.common.logging import (
     get_trace_id,              # 获取 trace_id
     set_trace_id,              # 设置 trace_id（跨进程任务用）
     register_log_sink,         # 注册自定义日志文件
-    register_request_context,  # 注册请求上下文字段
     log_performance,           # 性能监控装饰器
     log_exceptions,            # 异常日志装饰器
 )

@@ -14,12 +14,11 @@ my-service/
 ├── .env.example             # 环境变量模板
 ├── README.md                # 项目说明
 │
-├── api/                     # API 层
-│   └── v1/
-│       ├── __init__.py
-│       ├── users.py         # 用户相关路由
-│       ├── orders.py        # 订单相关路由
-│       └── health.py        # 健康检查
+├── api/                     # API 层（按资源/上下文拆分模块）
+│   ├── __init__.py
+│   ├── users_v1.py          # 用户相关路由（v1 版本）
+│   ├── orders_v1.py         # 订单相关路由（v1 版本）
+│   └── health.py            # 健康检查（通常不区分版本）
 │
 ├── services/                # Service 层（业务逻辑）
 │   ├── __init__.py
@@ -80,20 +79,26 @@ my-service/
 
 ### API 层（api/）
 
-处理 HTTP 请求和响应。
+处理 HTTP 请求和响应。推荐按**资源/上下文 + 版本号后缀**组织文件，而不是用 `api/v1/` 子目录：
 
 ```python
-# api/v1/users.py
+# api/users_v1.py
 from fastapi import APIRouter, Depends
 from aury.boot.application.interfaces.egress import BaseResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/v1/users", tags=["Users"])
 
-@router.get("/users/{user_id}")
+@router.get("/{user_id}")
 async def get_user(user_id: str, service=Depends(get_user_service)):
     user = await service.get_user(user_id)
     return BaseResponse(code=200, message="成功", data=user)
 ```
+
+> 说明：
+> - 以前的结构常见写法是 `api/v1/users.py` + `APIRouter(prefix="/users")` + `app.include_router(api_router, prefix="/api/v1")`。
+> - 新推荐方式是：**统一在模块内显式声明版本前缀**（如 `/v1/users`），并通过文件名区分版本（`users_v1.py` / `users_v2.py`）。
+> - 这样可以避免多级目录嵌套，同时在 IDE 中更容易通过文件名快速定位不同版本的路由实现。
+> - 如果当前只有一个版本，可以直接使用 `users.py`（不带后缀），语义上视为 v1；将来需要引入 v2 时，再把现有文件重命名为 `users_v1.py` 并新增 `users_v2.py` 即可。
 
 **职责**：
 - HTTP 请求解析
@@ -212,11 +217,31 @@ class UserResponse(BaseModel):
 
 ### 按包组织
 
+推荐通过 `api` 包导出按模块划分的路由对象（而不是从 `api.v1` 导入）：
+
+```python
+# api/__init__.py
+from .users_v1 import router as users_v1_router
+from .orders_v1 import router as orders_v1_router
+
+__all__ = [
+    "users_v1_router",
+    "orders_v1_router",
+]
+```
+
 ```python
 # main.py
-from api.v1 import users_router, orders_router
+from fastapi import FastAPI, APIRouter
+from api import users_v1_router, orders_v1_router
 from services import UserService, OrderService
 from repositories import UserRepository, OrderRepository
+
+app = FastAPI()
+api_router = APIRouter(prefix="/api")
+api_router.include_router(users_v1_router)
+api_router.include_router(orders_v1_router)
+app.include_router(api_router)
 ```
 
 ### 按功能组织
@@ -264,18 +289,18 @@ app = FoundationApp(
 
 ## 路由组织
 
-### 分模块路由
+### 分模块路由（按文件名区分版本）
 
 ```python
 # main.py
 from fastapi import APIRouter
-from api.v1 import users, orders, payments
+from api import users_v1, orders_v1, payments_v1
 
 # 创建主路由
-api_router = APIRouter(prefix="/api/v1")
-api_router.include_router(users.router, prefix="/users", tags=["Users"])
-api_router.include_router(orders.router, prefix="/orders", tags=["Orders"])
-api_router.include_router(payments.router, prefix="/payments", tags=["Payments"])
+api_router = APIRouter(prefix="/api")
+api_router.include_router(users_v1.router)
+api_router.include_router(orders_v1.router)
+api_router.include_router(payments_v1.router)
 
 # 注册到应用
 app.include_router(api_router)
@@ -284,22 +309,24 @@ app.include_router(api_router)
 ### 路由文件结构
 
 ```python
-# api/v1/users.py
+# api/users_v1.py
 from fastapi import APIRouter, Depends
 
-router = APIRouter()
+router = APIRouter(prefix="/v1/users", tags=["Users"])
 
 # 定义路由
 @router.get("/{user_id}")
 async def get_user(user_id: str):
-    pass
+    ...
 
 @router.post("")
 async def create_user(request: UserCreateRequest):
-    pass
+    ...
 
-# 注意：不要在这里创建 APIRouter 的实例
+# 注意：不要在这里创建 FastAPI 实例，只负责声明路由对象
 ```
+
+> 如果将来需要新增 v2 版本，可以新增 `api/users_v2.py`，将 `router = APIRouter(prefix="/v2/users", ...)`，并在 `api/__init__.py` 中额外导出 `users_v2_router` 供 main 注册。这样版本分层完全通过**文件名 + prefix** 控制，无需 `api/v1/` 子目录。
 
 ## 依赖管理
 

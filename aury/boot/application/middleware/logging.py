@@ -17,7 +17,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from aury.boot.application.errors import global_exception_handler
-from aury.boot.common.logging import get_request_contexts, logger, set_trace_id
+from aury.boot.common.logging import logger, set_trace_id
 
 
 def log_request[T](func: Callable[..., T]) -> Callable[..., T]:
@@ -187,12 +187,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
             logger.log(log_level.upper(), response_log)
             
-            # 记录请求上下文（user_id, tenant_id 等用户注册的字段）
-            request_contexts = get_request_contexts()
-            if request_contexts:
-                ctx_str = " | ".join(f"{k}: {v}" for k, v in request_contexts.items())
-                logger.info(f"[REQUEST_CONTEXT] Trace-ID: {trace_id} | {ctx_str}")
-            
             # 写入 access 日志（简洁格式）
             logger.bind(access=True).info(
                 f"{request.method} {request.url.path} {status_code} {duration:.3f}s"
@@ -215,12 +209,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 f"请求处理失败: {request.method} {request.url.path} | "
                 f"耗时: {duration:.3f}s | Trace-ID: {trace_id}"
             )
-            
-            # 记录请求上下文（即使异常也要记录，便于追踪问题）
-            request_contexts = get_request_contexts()
-            if request_contexts:
-                ctx_str = " | ".join(f"{k}: {v}" for k, v in request_contexts.items())
-                logger.info(f"[REQUEST_CONTEXT] Trace-ID: {trace_id} | {ctx_str}")
             
             # 使用全局异常处理器生成响应，而不是直接抛出异常
             # BaseHTTPMiddleware 中直接 raise 会绕过 FastAPI 的异常处理器

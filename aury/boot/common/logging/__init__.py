@@ -5,7 +5,6 @@
 - 性能监控装饰器
 - 异常日志装饰器
 - 链路追踪 ID 支持
-- 请求上下文注入（user_id 等）
 - 自定义日志 sink 注册 API
 
 日志文件：
@@ -27,10 +26,8 @@ logger.remove()
 # 从子模块导入
 from aury.boot.common.logging.context import (
     ServiceContext,
-    get_request_contexts,
     get_service_context,
     get_trace_id,
-    register_request_context,
     set_service_context,
     set_trace_id,
 )
@@ -55,7 +52,6 @@ __all__ = [
     "ServiceContext",
     "format_exception_java_style",
     "get_class_logger",
-    "get_request_contexts",
     "get_service_context",
     "get_trace_id",
     "log_exception",
@@ -63,7 +59,6 @@ __all__ = [
     "log_performance",
     "logger",
     "register_log_sink",
-    "register_request_context",
     "set_service_context",
     "set_trace_id",
     "setup_intercept",

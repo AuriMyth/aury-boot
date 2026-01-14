@@ -19,44 +19,8 @@ logger.exception("异常信息")  # 自动记录堆栈
 2024-01-15 12:00:00 | INFO | app.service:create:42 | abc123 - 操作成功
 ```
 
-## 11.2 注入用户信息
 
-框架不内置用户系统，但支持注入自定义请求上下文：
-
-```python
-# app/auth/context.py
-from contextvars import ContextVar
-from aury.boot.common.logging import register_request_context
-
-_user_id: ContextVar[str] = ContextVar("user_id", default="")
-
-def set_user_id(uid: str) -> None:
-    _user_id.set(uid)
-
-# 启动时注册（只需一次）
-register_request_context("user_id", _user_id.get)
-```
-
-在认证中间件中设置（order < 100 以在日志中间件前执行）：
-
-```python
-class AuthMiddleware(Middleware):
-    order = 50  # 在日志中间件(order=100)之前执行
-    
-    async def dispatch(self, request, call_next):
-        user = await verify_token(request)
-        if user:
-            set_user_id(str(user.id))
-        return await call_next(request)
-```
-
-结果：
-```
-← GET /api/users | 状态: 200 | 耗时: 0.05s | Trace-ID: abc123
-[REQUEST_CONTEXT] Trace-ID: abc123 | user_id: 123
-```
-
-## 11.3 性能监控装饰器
+## 11.2 性能监控装饰器
 
 ```python
 from aury.boot.common.logging import log_performance, log_exceptions
@@ -70,7 +34,7 @@ async def risky_operation():
     ...
 ```
 
-## 11.4 HTTP 请求日志
+## 11.3 HTTP 请求日志
 
 框架内置 `RequestLoggingMiddleware` 自动记录：
 
@@ -85,7 +49,7 @@ async def risky_operation():
 慢请求: GET /api/reports | 耗时: 2.345s (超过1秒) | Trace-ID: abc123
 ```
 
-## 11.5 自定义日志文件
+## 11.4 自定义日志文件
 
 为特定业务创建独立的日志文件：
 
@@ -99,7 +63,7 @@ register_log_sink("payment", filter_key="payment")
 logger.bind(payment=True).info(f"支付成功 | 订单: {{order_id}}")
 ```
 
-## 11.6 异步任务链路追踪
+## 11.5 异步任务链路追踪
 
 跨进程任务需要手动传递 trace_id：
 
@@ -117,7 +81,7 @@ async def process_order(order_id: str, trace_id: str | None = None):
     logger.info(f"处理订单: {{order_id}}")  # 自动包含 trace_id
 ```
 
-## 11.7 服务上下文隔离
+## 11.6 服务上下文隔离
 
 日志自动按服务类型分离：
 
