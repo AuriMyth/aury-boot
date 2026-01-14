@@ -126,9 +126,9 @@ from apscheduler.executors.asyncio import AsyncIOExecutor
 
 scheduler = SchedulerManager.get_instance(
     "distributed",
-    jobstores={"default": RedisJobStore(host="localhost", port=6379)},
-    executors={"default": AsyncIOExecutor()},
-    job_defaults={"coalesce": True, "max_instances": 1},
+    jobstores={{"default": RedisJobStore(host="localhost", port=6379)}},
+    executors={{"default": AsyncIOExecutor()}},
+    job_defaults={{"coalesce": True, "max_instances": 1}},
     timezone="Asia/Shanghai",
 )
 ```
