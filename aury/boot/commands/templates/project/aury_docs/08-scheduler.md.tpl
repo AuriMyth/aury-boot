@@ -118,6 +118,28 @@ from datetime import datetime, timedelta
 scheduler.add_job(my_task, DateTrigger(run_date=datetime.now() + timedelta(seconds=10)))
 ```
 
+## 条件加载
+
+通过 `enabled` 参数控制任务是否注册：
+
+```python
+from config import settings
+
+# 根据配置开关决定是否启用
+@scheduler.scheduled_job("cron", hour=2, enabled=settings.ENABLE_REPORT)
+async def daily_report():
+    """仅在 ENABLE_REPORT=true 时注册。"""
+    ...
+
+# 区分环境
+@scheduler.scheduled_job("interval", minutes=5, enabled=settings.ENV == "production")
+async def prod_only_task():
+    """仅生产环境执行。"""
+    ...
+```
+
+`enabled=False` 时任务不会注册，日志记录：`任务已禁用，跳过注册: xxx`
+
 ## 多实例支持
 
 支持不同业务线使用独立的调度器实例：

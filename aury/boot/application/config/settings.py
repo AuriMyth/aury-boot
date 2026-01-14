@@ -507,10 +507,9 @@ class MessageQueueSettings(BaseModel):
     - Task: 基于 Dramatiq，用于异步任务处理（API + Worker 模式）
     - MQ: 通用消息队列，用于服务间通信、事件驱动架构
     
-    支持的后端（通过 Kombu）：
+    支持的后端：
     - Redis: redis://localhost:6379/0
     - RabbitMQ: amqp://guest:guest@localhost:5672//
-    - Amazon SQS: sqs://
     """
     
     enabled: bool = Field(

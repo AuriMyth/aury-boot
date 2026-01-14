@@ -138,8 +138,8 @@ uv add "aury-boot[all]"
 | `sqlite` | SQLite 数据库 | aiosqlite |
 | `redis` | Redis 缓存 | redis |
 | `s3` | S3 对象存储 | aioboto3 |
-| `tasks` | 任务队列（Dramatiq + Kombu） | dramatiq, kombu, dramatiq-kombu-broker |
-| `rabbitmq` | RabbitMQ 支持（配合 tasks） | amqp |
+| `tasks` | 任务队列（Dramatiq） | dramatiq, redis |
+| `rabbitmq` | RabbitMQ 支持（配合 tasks） | pika |
 | `scheduler` | 定时调度 | apscheduler |
 | `recommended` | 推荐组合 | postgres + redis + tasks + scheduler |
 | `all` | 全部依赖 | 以上所有 |

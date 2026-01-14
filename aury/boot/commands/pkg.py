@@ -97,16 +97,16 @@ MODULES: dict[str, ModuleInfo] = {
     "tasks": ModuleInfo(
         name="tasks",
         desc="Dramatiq 任务队列",
-        usage="TaskManager 异步任务时需要",
+        usage="TaskManager 异步任务时需要（默认使用 Redis Broker）",
         category=Category.TASK,
-        deps=["dramatiq", "kombu", "dramatiq-kombu-broker"],
+        deps=["dramatiq", "redis"],
     ),
     "rabbitmq": ModuleInfo(
         name="rabbitmq",
         desc="RabbitMQ 消息队列后端",
         usage="TaskManager/EventBus 使用 RabbitMQ 时需要（需配合 tasks）",
         category=Category.TASK,
-        deps=["amqp"],
+        deps=["pika"],
     ),
     # 调度器
     "scheduler": ModuleInfo(

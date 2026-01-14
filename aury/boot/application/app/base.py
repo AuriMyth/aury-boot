@@ -11,8 +11,10 @@ from contextlib import asynccontextmanager
 import sys
 from typing import Any, ClassVar
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware import Middleware as StarletteMiddleware
 
 from aury.boot.application.config import BaseConfig
@@ -279,8 +281,11 @@ class FoundationApp(FastAPI):
             **kwargs,
         )
 
-        # 异常处理
-        self.add_exception_handler(Exception, global_exception_handler)
+        # 异常处理：显式注册以覆盖 FastAPI/Starlette 默认处理器，确保统一响应格式
+        self.add_exception_handler(RequestValidationError, global_exception_handler)  # 422
+        self.add_exception_handler(HTTPException, global_exception_handler)  # 4xx/5xx
+        self.add_exception_handler(StarletteHTTPException, global_exception_handler)  # Starlette 异常
+        self.add_exception_handler(Exception, global_exception_handler)  # 其他未处理异常
 
         # 设置路由
         self.setup_routes()

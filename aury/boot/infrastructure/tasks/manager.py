@@ -34,16 +34,40 @@ except ImportError:
         CurrentMessage = None
         TimeLimit = None
 
-# 延迟导入 kombu broker（可选依赖）
+# 可选导入 Redis/RabbitMQ broker（不再使用 KombuBroker）
 try:
-    from dramatiq_kombu_broker import KombuBroker
-    _KOMBU_BROKER_AVAILABLE = True
-except ImportError:
-    _KOMBU_BROKER_AVAILABLE = False
-    if TYPE_CHECKING:
-        from dramatiq_kombu_broker import KombuBroker
-    else:
-        KombuBroker = None
+    from dramatiq.brokers.redis import RedisBroker  # type: ignore
+    _REDIS_BROKER_AVAILABLE = True
+except Exception:
+    RedisBroker = None  # type: ignore
+    _REDIS_BROKER_AVAILABLE = False
+
+try:
+    from dramatiq.brokers.rabbitmq import RabbitmqBroker  # type: ignore
+    _RABBIT_BROKER_AVAILABLE = True
+except Exception:
+    RabbitmqBroker = None  # type: ignore
+    _RABBIT_BROKER_AVAILABLE = False
+
+
+def _create_broker(url: str, middleware_list: list) -> Any:
+    """根据 URL 创建 Dramatiq 原生 Broker，并挂载中间件。"""
+    scheme = url.split(":", 1)[0].lower() if url else ""
+    if scheme.startswith("redis"):
+        if not _REDIS_BROKER_AVAILABLE:
+            raise ImportError("未安装 redis 或 dramatiq 的 RedisBroker 不可用，请安装: pip install dramatiq redis")
+        broker = RedisBroker(url=url)  # type: ignore[call-arg]
+        for m in middleware_list:
+            broker.add_middleware(m)
+        return broker
+    if scheme in {"amqp", "amqps"}:
+        if not _RABBIT_BROKER_AVAILABLE:
+            raise ImportError("RabbitMQ broker 不可用，请安装: pip install 'dramatiq[rabbitmq]'")
+        broker = RabbitmqBroker(url=url)  # type: ignore[call-arg]
+        for m in middleware_list:
+            broker.add_middleware(m)
+        return broker
+    raise ValueError(f"不支持的任务队列 URL: {url}")
 
 
 class TaskProxy:
@@ -170,7 +194,7 @@ class TaskManager:
             name: 实例名称
         """
         self.name = name
-        self._broker: Any = None  # KombuBroker | None
+        self._broker: Any = None  # Dramatiq Broker | None
         self._initialized: bool = False
         self._task_config: TaskConfig | None = None
         self._run_mode: TaskRunMode = TaskRunMode.WORKER  # 默认 Worker 模式（调度者）
@@ -255,10 +279,6 @@ class TaskManager:
                 "dramatiq 未安装。请安装可选依赖: pip install 'aury-boot[queue-dramatiq]'"
             )
         
-        if not _KOMBU_BROKER_AVAILABLE:
-            raise ImportError(
-                "dramatiq-kombu-broker 未安装。请安装可选依赖: pip install 'aury-boot[queue-dramatiq-kombu]'"
-            )
         
         try:
             # 使用函数式编程创建默认中间件（如果未提供）
@@ -268,11 +288,11 @@ class TaskManager:
             
             middleware_list = middleware if middleware is not None else create_default_middleware()
             
-            # 使用 KombuBroker，支持多种后端（Redis、RabbitMQ、SQS 等）
-            self._broker = KombuBroker(url=url, middleware=middleware_list)
+            # 使用 Dramatiq 原生 Broker（Redis/RabbitMQ），不再依赖 KombuBroker
+            self._broker = _create_broker(url, middleware_list)
             dramatiq.set_broker(self._broker)
             self._initialized = True
-            logger.info(f"任务管理器初始化完成（使用 Kombu Broker: {url}）")
+            logger.info(f"任务管理器初始化完成（broker={type(self._broker).__name__}, url={url}）")
         except Exception as exc:
             logger.error(f"任务队列初始化失败: {exc}")
             raise

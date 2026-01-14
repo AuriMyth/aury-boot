@@ -61,7 +61,7 @@ aury/kit/
 *   **Cache**: `CacheManager` 提供统一接口，支持 Redis, Memory, Memcached 后端。
 *   **Events**: `EventBus` 提供事件发布/订阅能力。
     *   **Local Mode**: 内存中的观察者模式。
-    *   **Distributed Mode**: 基于 Kombu 的消息队列集成（Redis/RabbitMQ）。
+    *   **Distributed Mode**: 基于 Redis/RabbitMQ 的消息队列集成。
 *   **Tasks**: `TaskManager` 封装了 `dramatiq`。
     *   **Conditional Task**: 支持 Worker 模式（注册 Actor）和 API 模式（仅作为 Producer 发送消息）的自动切换。
 *   **Dependency Injection**: `Container` 提供轻量级依赖注入，支持 Singleton, Scoped, Transient 生命周期。

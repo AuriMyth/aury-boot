@@ -138,6 +138,26 @@ scheduler.add_job(
 )
 ```
 
+## 条件加载
+
+通过 `enabled` 参数控制任务是否注册：
+
+```python
+from config import settings
+
+# 根据配置开关决定是否启用
+@scheduler.scheduled_job("cron", hour=2, enabled=settings.ENABLE_REPORT)
+async def daily_report():
+    ...
+
+# 区分环境
+@scheduler.scheduled_job("interval", minutes=5, enabled=settings.ENV == "production")
+async def prod_only_task():
+    ...
+```
+
+`enabled=False` 时任务不会注册。
+
 ## 任务管理
 
 ### 获取任务

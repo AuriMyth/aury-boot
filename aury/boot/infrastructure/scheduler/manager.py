@@ -518,7 +518,16 @@ class SchedulerManager:
         
         self._scheduler.start()
         self._started = True
-        logger.info("调度器已启动")
+        
+        # 打印已加载的任务列表
+        jobs = self._scheduler.get_jobs()
+        if jobs:
+            logger.info(f"调度器已启动，共加载 {len(jobs)} 个定时任务:")
+            for job in jobs:
+                next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "已暂停"
+                logger.info(f"  - {job.id} | 触发器: {type(job.trigger).__name__} | 下次执行: {next_run}")
+        else:
+            logger.info("调度器已启动，无定时任务")
     
     def shutdown(self) -> None:
         """关闭调度器。"""
@@ -543,6 +552,7 @@ class SchedulerManager:
         trigger: TriggerType | BaseTrigger,
         *,
         id: str | None = None,
+        enabled: bool = True,
         **kwargs: Any,
     ) -> Callable[[Callable], Callable]:
         """任务注册装饰器。
@@ -569,9 +579,10 @@ class SchedulerManager:
             async def hourly_task():
                 print("每小时整点执行")
             
-            @scheduler.scheduled_job("cron", day_of_week="mon-fri", hour=9)
-            async def workday_task():
-                print("工作日 9 点执行")
+            # === 条件加载 ===
+            @scheduler.scheduled_job("cron", hour=2, enabled=settings.ENABLE_REPORT)
+            async def daily_report():
+                print("每日报告")
             
             # === 原生对象模式 ===
             from apscheduler.triggers.cron import CronTrigger
@@ -585,12 +596,19 @@ class SchedulerManager:
                 - 字符串: "cron" 或 "interval"
                 - 对象: CronTrigger(...) 或 IntervalTrigger(...)
             id: 任务ID（可选，默认使用函数完整路径）
+            enabled: 是否启用任务，默认 True。设为 False 时跳过注册
             **kwargs: 触发器参数（字符串模式）或其他 APScheduler add_job 参数
         
         Returns:
             装饰器函数
         """
         def decorator(func: Callable) -> Callable:
+            # enabled=False 时跳过注册
+            if not enabled:
+                job_id = id or f"{func.__module__}.{func.__name__}"
+                logger.debug(f"任务已禁用，跳过注册: {job_id}")
+                return func
+            
             job_config = {
                 "func": func,
                 "trigger": trigger,

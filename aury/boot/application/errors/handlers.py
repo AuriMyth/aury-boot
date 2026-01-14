@@ -174,6 +174,7 @@ class ValidationErrorHandler(ErrorHandler):
     """验证异常处理器。
     
     处理 Pydantic ValidationError 和 FastAPI RequestValidationError。
+    返回 422 Unprocessable Entity（符合 FastAPI 规范）。
     """
     
     def can_handle(self, exception: Exception) -> bool:
@@ -182,24 +183,38 @@ class ValidationErrorHandler(ErrorHandler):
     
     async def handle(self, exception: Exception, request: Request) -> JSONResponse:
         """处理验证异常。"""
-        logger.warning(f"数据验证失败: {exception}")
-        
         errors = []
         for error in exception.errors():
+            # 构建友好的字段路径：跳过 body 前缀
+            loc = error.get("loc", ())
+            # FastAPI 会在 loc 前加 'body'/'query'/'path' 等，保留第一个作为来源
+            source = str(loc[0]) if loc else ""
+            field_path = ".".join(str(part) for part in loc[1:]) if len(loc) > 1 else str(loc[0]) if loc else ""
+            
             errors.append({
-                "field": ".".join(str(loc) for loc in error["loc"]),
-                "message": error["msg"],
-                "type": error["type"],
+                "field": field_path,
+                "source": source,  # body / query / path / header
+                "message": error.get("msg", ""),
+                "type": error.get("type", ""),
+                "input": error.get("input"),  # 实际输入值（便于调试）
             })
         
+        # 详细日志：方便开发调试
+        error_summary = "; ".join(
+            f"{e['source']}.{e['field']}({e['type']}): {e['message']}" for e in errors
+        )
+        logger.warning(
+            f"参数校验失败 [{request.method} {request.url.path}]: {error_summary}"
+        )
+        
         response = ResponseBuilder.fail(
-            message="数据验证失败",
-            code=400,
+            message="参数校验失败",
+            code=422,
             errors=errors,
         )
         
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=response.model_dump(mode="json"),
         )
 
