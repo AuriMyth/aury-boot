@@ -163,9 +163,9 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 def job_listener(event):
     if event.exception:
-        logger.error(f"任务失败: {event.job_id}")
+        logger.error(f"任务失败: {{event.job_id}}")
     else:
-        logger.info(f"任务完成: {event.job_id}")
+        logger.info(f"任务完成: {{event.job_id}}")
 
 scheduler.scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 ```
