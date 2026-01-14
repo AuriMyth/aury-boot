@@ -5,9 +5,42 @@
 ## 调度器初始化
 
 ```python
-from aury.boot.infrastructure.scheduler.manager import SchedulerManager
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.date import DateTrigger
+
+from aury.boot.infrastructure.scheduler import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
+```
+
+### 带持久化存储的调度器
+
+```python
+from apscheduler.jobstores.redis import RedisJobStore
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.executors.asyncio import AsyncIOExecutor
+
+# Redis 持久化
+scheduler = SchedulerManager.get_instance(
+    "persistent",
+    jobstores={"default": RedisJobStore(host="localhost", port=6379)},
+)
+
+# SQLAlchemy 数据库存储
+scheduler = SchedulerManager.get_instance(
+    "db",
+    jobstores={"default": SQLAlchemyJobStore(url="sqlite:///jobs.db")},
+)
+
+# 完整配置
+scheduler = SchedulerManager.get_instance(
+    "full",
+    jobstores={"default": RedisJobStore(host="localhost")},
+    executors={"default": AsyncIOExecutor()},
+    job_defaults={"coalesce": True, "max_instances": 3, "misfire_grace_time": 60},
+    timezone="Asia/Shanghai",
+)
 ```
 
 ## Cron 任务
@@ -18,9 +51,7 @@ scheduler = SchedulerManager.get_instance()
 # 每天凌晨 2 点 30 分执行
 scheduler.add_job(
     func=daily_report,
-    trigger="cron",
-    hour=2,
-    minute=30,
+    trigger=CronTrigger(hour=2, minute=30),
     id="daily_report",
     name="每日报告生成"
 )
@@ -32,9 +63,7 @@ scheduler.add_job(
 # 每周一上午 9 点执行
 scheduler.add_job(
     func=weekly_summary,
-    trigger="cron",
-    day_of_week="mon",
-    hour=9,
+    trigger=CronTrigger(day_of_week="mon", hour=9),
     id="weekly_summary"
 )
 ```
@@ -45,9 +74,7 @@ scheduler.add_job(
 # 每个月的第一天执行
 scheduler.add_job(
     func=monthly_cleanup,
-    trigger="cron",
-    day=1,
-    hour=0,
+    trigger=CronTrigger(day=1, hour=0),
     id="monthly_cleanup"
 )
 ```
@@ -58,10 +85,19 @@ scheduler.add_job(
 # 工作日（周一至周五）每小时执行
 scheduler.add_job(
     func=check_status,
-    trigger="cron",
-    day_of_week="mon-fri",
-    hour="*",
+    trigger=CronTrigger(day_of_week="mon-fri", hour="*"),
     id="workday_check"
+)
+```
+
+### 使用 crontab 表达式
+
+```python
+# 每天凌晨 2 点执行
+scheduler.add_job(
+    func=daily_task,
+    trigger=CronTrigger.from_crontab("0 2 * * *"),
+    id="daily_task"
 )
 ```
 
@@ -73,24 +109,21 @@ scheduler.add_job(
 # 每 30 秒执行一次
 scheduler.add_job(
     func=heartbeat,
-    trigger="interval",
-    seconds=30,
+    trigger=IntervalTrigger(seconds=30),
     id="heartbeat"
 )
 
 # 每 5 分钟执行一次
 scheduler.add_job(
     func=sync_data,
-    trigger="interval",
-    minutes=5,
+    trigger=IntervalTrigger(minutes=5),
     id="sync_data"
 )
 
 # 每小时执行一次
 scheduler.add_job(
     func=hourly_task,
-    trigger="interval",
-    hours=1,
+    trigger=IntervalTrigger(hours=1),
     id="hourly_task"
 )
 ```
@@ -106,8 +139,7 @@ from datetime import datetime, timedelta
 run_time = datetime.now() + timedelta(seconds=10)
 scheduler.add_job(
     func=delayed_task,
-    trigger="date",
-    run_date=run_time,
+    trigger=DateTrigger(run_date=run_time),
     id="delayed_task"
 )
 ```
@@ -124,8 +156,7 @@ async def process_user(user_id: str, action: str = "default"):
 # 添加任务，传递参数
 scheduler.add_job(
     func=process_user,
-    trigger="cron",
-    hour=3,
+    trigger=CronTrigger(hour=3),
     args=["user123"],          # 位置参数
     kwargs={"action": "sync"},  # 关键字参数
     id="process_user_sync"
@@ -174,9 +205,7 @@ scheduler.remove_all_jobs()
 # 重新安排任务
 scheduler.reschedule_job(
     "daily_report",
-    trigger="cron",
-    hour=3,  # 改为凌晨 3 点
-    minute=0
+    trigger=CronTrigger(hour=3, minute=0),  # 改为凌晨 3 点
 )
 ```
 
@@ -185,7 +214,7 @@ scheduler.reschedule_job(
 ### 数据同步
 
 ```python
-@scheduler.scheduled_job("interval", minutes=5)
+@scheduler.scheduled_job(IntervalTrigger(minutes=5))
 async def sync_from_external_api():
     """每 5 分钟同步外部数据"""
     try:
@@ -198,8 +227,7 @@ async def sync_from_external_api():
 # 或使用 add_job
 scheduler.add_job(
     func=sync_from_external_api,
-    trigger="interval",
-    minutes=5,
+    trigger=IntervalTrigger(minutes=5),
     id="data_sync"
 )
 ```
@@ -217,9 +245,7 @@ async def cleanup_expired_records():
 
 scheduler.add_job(
     func=cleanup_expired_records,
-    trigger="cron",
-    hour=2,
-    minute=0,
+    trigger=CronTrigger(hour=2, minute=0),
     id="cleanup_expired"
 )
 ```
@@ -237,8 +263,7 @@ async def backup_database():
 
 scheduler.add_job(
     func=backup_database,
-    trigger="cron",
-    hour=1,  # 每天凌晨 1 点
+    trigger=CronTrigger(hour=1),  # 每天凌晨 1 点
     id="db_backup"
 )
 ```
@@ -257,8 +282,7 @@ async def collect_metrics():
 
 scheduler.add_job(
     func=collect_metrics,
-    trigger="interval",
-    minutes=1,
+    trigger=IntervalTrigger(minutes=1),
     id="collect_metrics"
 )
 ```
@@ -282,8 +306,7 @@ async def health_check():
 
 scheduler.add_job(
     func=health_check,
-    trigger="interval",
-    seconds=30,
+    trigger=IntervalTrigger(seconds=30),
     id="health_check"
 )
 ```
@@ -303,8 +326,7 @@ async def safe_task():
 
 scheduler.add_job(
     func=safe_task,
-    trigger="interval",
-    hours=1,
+    trigger=IntervalTrigger(hours=1),
     id="safe_task"
 )
 ```
@@ -323,22 +345,77 @@ async def timeout_protected_task():
 
 scheduler.add_job(
     func=timeout_protected_task,
-    trigger="cron",
-    hour=2,
+    trigger=CronTrigger(hour=2),
     id="timeout_protected"
 )
 ```
 
-## 任务配置
+## 配置项
 
 在 `.env` 中配置：
 
 ```bash
-# 调度器模式
-SCHEDULER_MODE=embedded  # embedded, standalone, disabled
+SCHEDULER__ENABLED=true                          # 是否启用
+SCHEDULER__TIMEZONE=Asia/Shanghai                # 时区
+SCHEDULER__COALESCE=true                         # 合并错过的任务执行
+SCHEDULER__MAX_INSTANCES=1                       # 同一任务最大并发实例数
+SCHEDULER__MISFIRE_GRACE_TIME=60                 # 任务错过容忍时间(秒)
+SCHEDULER__JOBSTORE_URL=redis://localhost:6379/0 # 分布式存储（可选）
+```
 
-# 并发执行数
-SCHEDULER_MAX_WORKERS=5
+## 多实例支持
+
+支持不同业务线使用独立的调度器实例：
+
+```python
+# 默认实例
+scheduler = SchedulerManager.get_instance()
+
+# 命名实例
+report_scheduler = SchedulerManager.get_instance("report")
+cleanup_scheduler = SchedulerManager.get_instance("cleanup")
+```
+
+## 分布式调度
+
+多节点部署时，配置相同的 `SCHEDULER__JOBSTORE_URL`，所有节点共享任务状态，APScheduler 自动协调防止重复执行。
+
+### 支持的存储后端
+
+- **Redis**：`redis://localhost:6379/0`
+- **SQLite**：`sqlite:///jobs.db`
+- **PostgreSQL**：`postgresql://user:pass@host/db`
+- **MySQL**：`mysql://user:pass@host/db`
+
+### 代码方式配置（高级）
+
+```python
+from apscheduler.jobstores.redis import RedisJobStore
+from apscheduler.executors.asyncio import AsyncIOExecutor
+
+scheduler = SchedulerManager.get_instance(
+    "distributed",
+    jobstores={"default": RedisJobStore(host="localhost", port=6379)},
+    executors={"default": AsyncIOExecutor()},
+    job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 60},
+    timezone="Asia/Shanghai",
+)
+```
+
+## 监听器
+
+通过底层 APScheduler 实例访问：
+
+```python
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
+
+def job_listener(event):
+    if event.exception:
+        logger.error(f"任务失败: {event.job_id}, 异常: {event.exception}")
+    else:
+        logger.info(f"任务完成: {event.job_id}")
+
+scheduler.scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 ```
 
 ## 监控和调试
@@ -374,8 +451,7 @@ async def logged_task():
 
 scheduler.add_job(
     func=logged_task,
-    trigger="interval",
-    hours=1,
+    trigger=IntervalTrigger(hours=1),
     id="logged_task"
 )
 ```
@@ -385,14 +461,13 @@ scheduler.add_job(
 ### 1. 使用明确的 ID
 
 ```python
-# ❌ 不清楚
-scheduler.add_job(func=my_task, trigger="interval", minutes=5)
+# ✘ 不清楚
+scheduler.add_job(func=my_task, trigger=IntervalTrigger(minutes=5))
 
-# ✅ 清楚
+# ✔ 清楚
 scheduler.add_job(
     func=my_task,
-    trigger="interval",
-    minutes=5,
+    trigger=IntervalTrigger(minutes=5),
     id="sync_user_data",
     name="同步用户数据"
 )
@@ -401,11 +476,11 @@ scheduler.add_job(
 ### 2. 合理设置执行间隔
 
 ```python
-# ❌ 太频繁
-scheduler.add_job(func=heavy_task, trigger="interval", seconds=1)
+# ✘ 太频繁
+scheduler.add_job(func=heavy_task, trigger=IntervalTrigger(seconds=1))
 
-# ✅ 合理间隔
-scheduler.add_job(func=heavy_task, trigger="interval", minutes=5)
+# ✔ 合理间隔
+scheduler.add_job(func=heavy_task, trigger=IntervalTrigger(minutes=5))
 ```
 
 ### 3. 处理任务失败

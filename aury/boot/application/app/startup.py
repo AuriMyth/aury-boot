@@ -152,7 +152,7 @@ def collect_component_status() -> list[ComponentStatus]:
                     name="Cache" if name == "default" else f"Cache [{name}]",
                     status="ok",
                     backend=instance.backend_type,
-                    url=instance._config.get("CACHE_URL") if instance._config else None,
+                    url=(instance._config or {}).get("CACHE_URL"),
                 )
             )
 

@@ -710,24 +710,23 @@ await bus.publish(OrderCreatedEvent(order_id="1001", amount=99.9))
 ## 16. 定时调度
 
 ```python
-from aury.boot.infrastructure.scheduler.manager import SchedulerManager
-from datetime import datetime
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+from aury.boot.infrastructure.scheduler import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
 
 # Cron 任务
 scheduler.add_job(
     func=daily_report,
-    trigger="cron",
-    hour=2, minute=30,
+    trigger=CronTrigger(hour=2, minute=30),
     id="daily_report"
 )
 
 # 间隔任务
 scheduler.add_job(
     func=heartbeat,
-    trigger="interval",
-    seconds=30
+    trigger=IntervalTrigger(seconds=30)
 )
 ```
 

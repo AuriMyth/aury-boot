@@ -281,18 +281,65 @@ class SchedulerComponent(Component):
             except Exception as e:
                 logger.warning(f"加载定时任务模块失败 ({module_name}): {e}")
 
+    def _build_scheduler_config(self, config: BaseConfig) -> dict:
+        """根据配置构建 APScheduler 初始化参数。"""
+        scheduler_kwargs: dict = {}
+        scheduler_config = config.scheduler
+        
+        # jobstores: 根据 URL 自动选择存储后端
+        if scheduler_config.jobstore_url:
+            url = scheduler_config.jobstore_url
+            if url.startswith("redis://"):
+                try:
+                    from apscheduler.jobstores.redis import RedisJobStore
+                    scheduler_kwargs["jobstores"] = {
+                        "default": RedisJobStore.from_url(url)
+                    }
+                    logger.info(f"调度器使用 Redis 存储: {url.split('@')[-1]}")
+                except ImportError:
+                    logger.warning("Redis jobstore 需要安装 redis: pip install redis")
+            else:
+                # SQLAlchemy 存储 (sqlite/postgresql/mysql)
+                try:
+                    from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+                    scheduler_kwargs["jobstores"] = {
+                        "default": SQLAlchemyJobStore(url=url)
+                    }
+                    logger.info("调度器使用 SQLAlchemy 存储")
+                except ImportError:
+                    logger.warning("SQLAlchemy jobstore 需要安装 sqlalchemy")
+        
+        # timezone
+        if scheduler_config.timezone:
+            scheduler_kwargs["timezone"] = scheduler_config.timezone
+        
+        # job_defaults
+        scheduler_kwargs["job_defaults"] = {
+            "coalesce": scheduler_config.coalesce,
+            "max_instances": scheduler_config.max_instances,
+            "misfire_grace_time": scheduler_config.misfire_grace_time,
+        }
+        
+        return scheduler_kwargs
+    
     async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
         """启动调度器。
         
-        1. 自动发现并加载定时任务模块
-        2. 启动调度器（注册装饰器收集的任务）
+        1. 根据配置初始化调度器（jobstore/timezone/job_defaults）
+        2. 自动发现并加载定时任务模块
+        3. 启动调度器（注册装饰器收集的任务）
         """
         try:
+            # 构建配置
+            scheduler_kwargs = self._build_scheduler_config(config)
+            
+            # 获取/创建调度器实例
+            scheduler = SchedulerManager.get_instance("default", **scheduler_kwargs)
+            
             # 自动发现并加载定时任务模块
             self._autodiscover_schedules(app, config)
             
             # 启动调度器
-            scheduler = SchedulerManager.get_instance()
             scheduler.start()
         except Exception as e:
             logger.warning(f"调度器启动失败（非关键）: {e}")

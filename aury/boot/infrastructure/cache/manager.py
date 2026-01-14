@@ -110,13 +110,15 @@ class CacheManager:
                 supported = ", ".join(b.value for b in CacheBackend)
                 raise ValueError(f"不支持的缓存后端: {backend}。支持: {supported}")
         
-        # 保存配置
+        # 保存配置（用于启动横幅等场景展示）
         self._config = {"CACHE_TYPE": backend.value}
         
         # 根据后端类型构建配置并创建后端
         if backend == CacheBackend.REDIS:
             if not url:
                 raise ValueError("Redis 缓存需要提供 url 参数")
+            # 记录 URL 以便在启动横幅中展示（会通过 mask_url 脱敏）
+            self._config["CACHE_URL"] = url
             self._backend = await CacheFactory.create(
                 "redis", url=url, serializer=serializer
             )
@@ -128,6 +130,8 @@ class CacheManager:
             cache_url = url or (servers[0] if servers else None)
             if not cache_url:
                 raise ValueError("Memcached 缓存需要提供 url 参数")
+            # 同样记录 URL，便于在启动横幅中展示
+            self._config["CACHE_URL"] = cache_url
             self._backend = await CacheFactory.create(
                 "memcached", servers=cache_url
             )

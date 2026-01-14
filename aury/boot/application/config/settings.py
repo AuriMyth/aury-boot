@@ -416,6 +416,10 @@ class SchedulerSettings(BaseModel):
     - SCHEDULER__ENABLED=false: 只运行 API，不启动调度器
     
     独立调度器通过 `aury scheduler` 命令运行，不需要此配置。
+    
+    分布式调度：
+    - 配置 SCHEDULER__JOBSTORE_URL 使用 Redis/SQLAlchemy 存储
+    - 多节点部署时共享任务状态
     """
     
     enabled: bool = Field(
@@ -425,6 +429,33 @@ class SchedulerSettings(BaseModel):
     schedule_modules: list[str] = Field(
         default_factory=list,
         description="定时任务模块列表。为空时自动发现 schedules 模块"
+    )
+    # APScheduler 配置
+    jobstore_url: str | None = Field(
+        default=None,
+        description=(
+            "任务存储 URL。支持：\n"
+            "- redis://localhost:6379/0（Redis 存储）\n"
+            "- sqlite:///jobs.db（SQLite 存储）\n"
+            "- postgresql://user:pass@host/db（PostgreSQL 存储）\n"
+            "- 不配置则使用内存存储"
+        )
+    )
+    timezone: str | None = Field(
+        default=None,
+        description="调度器时区，如 Asia/Shanghai、UTC"
+    )
+    coalesce: bool = Field(
+        default=True,
+        description="是否合并错过的任务执行（多次错过只执行一次）"
+    )
+    max_instances: int = Field(
+        default=1,
+        description="同一任务的最大并发实例数"
+    )
+    misfire_grace_time: int = Field(
+        default=60,
+        description="任务错过容忍时间（秒），超过此时间则跳过"
     )
 
 

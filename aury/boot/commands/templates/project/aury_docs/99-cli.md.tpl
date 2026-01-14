@@ -153,7 +153,7 @@ register_commands(app)
 @app.command()
 async def hello(name: str = "world") -> None:
     """示例：项目自定义命令。"""
-    print(f"Hello, {name} from {project_name_snake}!")
+    print(f"Hello, {{name}} from {project_name_snake}!")
 ```
 
 > 注意：这里的 `app` 是 Typer 应用实例，`register_commands` 会把所有内置的 `init/generate/server/...` 等命令挂到你自己的 CLI 下。

@@ -6,6 +6,7 @@
 - 生命周期管理
 - 自动设置日志上下文（调度器任务日志自动写入 scheduler_xxx.log）
 - 支持多个命名实例
+- 支持 APScheduler 完整配置（jobstores、executors、job_defaults、timezone）
 """
 
 from __future__ import annotations
@@ -20,52 +21,53 @@ from aury.boot.common.logging import logger, set_service_context
 # 延迟导入 apscheduler（可选依赖）
 try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    from apscheduler.triggers.cron import CronTrigger
-    from apscheduler.triggers.interval import IntervalTrigger
     _APSCHEDULER_AVAILABLE = True
 except ImportError:
     _APSCHEDULER_AVAILABLE = False
-    # 创建占位符类型，避免类型检查错误
     if TYPE_CHECKING:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
-        from apscheduler.triggers.cron import CronTrigger
-        from apscheduler.triggers.interval import IntervalTrigger
     else:
         AsyncIOScheduler = None
-        CronTrigger = None
-        IntervalTrigger = None
 
 
 class SchedulerManager:
     """调度器管理器（命名多实例）。
     
-    职责：
-    1. 管理调度器实例
-    2. 注册任务
-    3. 生命周期管理
-    4. 支持多个命名实例，如不同业务线的调度器
+    完全透传 APScheduler 的所有配置，支持：
+    - jobstores: 任务存储（内存/Redis/SQLAlchemy/MongoDB）
+    - executors: 执行器（AsyncIO/ThreadPool/ProcessPool）
+    - job_defaults: 任务默认配置（coalesce/max_instances/misfire_grace_time）
+    - timezone: 时区
     
     使用示例:
-        # 默认实例
-        scheduler = SchedulerManager.get_instance()
-        await scheduler.initialize()
+        from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
+        from apscheduler.jobstores.redis import RedisJobStore
+        from apscheduler.executors.asyncio import AsyncIOExecutor
         
-        # 命名实例
-        report_scheduler = SchedulerManager.get_instance("report")
-        cleanup_scheduler = SchedulerManager.get_instance("cleanup")
+        # 默认实例（内存存储）
+        scheduler = SchedulerManager.get_instance()
+        
+        # 带配置的实例
+        scheduler = SchedulerManager.get_instance(
+            "persistent",
+            jobstores={"default": RedisJobStore(host="localhost")},
+            executors={"default": AsyncIOExecutor()},
+            job_defaults={"coalesce": True, "max_instances": 3},
+            timezone="Asia/Shanghai",
+        )
         
         # 注册任务
-        scheduler.add_job(
-            func=my_task,
-            trigger="interval",
-            seconds=60
-        )
+        @scheduler.scheduled_job(IntervalTrigger(seconds=60))
+        async def my_task():
+            ...
         
         # 启动调度器
         scheduler.start()
     """
     
     _instances: dict[str, SchedulerManager] = {}
+    _instance_configs: dict[str, dict[str, Any]] = {}  # 存储实例配置
     
     def __init__(self, name: str = "default") -> None:
         """初始化调度器管理器。
@@ -80,16 +82,56 @@ class SchedulerManager:
         self._started: bool = False  # 调度器是否已启动
     
     @classmethod
-    def get_instance(cls, name: str = "default") -> SchedulerManager:
+    def get_instance(
+        cls,
+        name: str = "default",
+        *,
+        jobstores: dict[str, Any] | None = None,
+        executors: dict[str, Any] | None = None,
+        job_defaults: dict[str, Any] | None = None,
+        timezone: str | Any | None = None,
+    ) -> SchedulerManager:
         """获取指定名称的实例。
         
         首次获取时会同步初始化调度器实例，使装饰器可以在模块导入时使用。
         
         Args:
             name: 实例名称，默认为 "default"
+            jobstores: APScheduler jobstores 配置，如 {"default": RedisJobStore(...)}
+            executors: APScheduler executors 配置，如 {"default": AsyncIOExecutor()}
+            job_defaults: 任务默认配置，如 {"coalesce": True, "max_instances": 3}
+            timezone: 时区，如 "Asia/Shanghai" 或 pytz 时区对象
             
         Returns:
             SchedulerManager: 调度器管理器实例
+        
+        示例:
+            # 默认配置（内存存储）
+            scheduler = SchedulerManager.get_instance()
+            
+            # Redis 持久化存储
+            from apscheduler.jobstores.redis import RedisJobStore
+            scheduler = SchedulerManager.get_instance(
+                "persistent",
+                jobstores={"default": RedisJobStore(host="localhost", port=6379)},
+            )
+            
+            # SQLAlchemy 数据库存储
+            from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+            scheduler = SchedulerManager.get_instance(
+                "db",
+                jobstores={"default": SQLAlchemyJobStore(url="sqlite:///jobs.db")},
+            )
+            
+            # 完整配置
+            from apscheduler.executors.asyncio import AsyncIOExecutor
+            scheduler = SchedulerManager.get_instance(
+                "full",
+                jobstores={"default": RedisJobStore(host="localhost")},
+                executors={"default": AsyncIOExecutor()},
+                job_defaults={"coalesce": True, "max_instances": 3, "misfire_grace_time": 60},
+                timezone="Asia/Shanghai",
+            )
         """
         if name not in cls._instances:
             if not _APSCHEDULER_AVAILABLE:
@@ -97,9 +139,22 @@ class SchedulerManager:
                     "apscheduler 未安装。请安装可选依赖: pip install 'aury-boot[scheduler-apscheduler]'"
                 )
             instance = cls(name)
-            instance._scheduler = AsyncIOScheduler()
+            
+            # 构建 APScheduler 配置
+            scheduler_kwargs: dict[str, Any] = {}
+            if jobstores:
+                scheduler_kwargs["jobstores"] = jobstores
+            if executors:
+                scheduler_kwargs["executors"] = executors
+            if job_defaults:
+                scheduler_kwargs["job_defaults"] = job_defaults
+            if timezone:
+                scheduler_kwargs["timezone"] = timezone
+            
+            instance._scheduler = AsyncIOScheduler(**scheduler_kwargs)
             instance._initialized = True
             cls._instances[name] = instance
+            cls._instance_configs[name] = scheduler_kwargs
             logger.debug(f"调度器实例已创建: {name}")
         return cls._instances[name]
     
@@ -114,8 +169,10 @@ class SchedulerManager:
         """
         if name is None:
             cls._instances.clear()
+            cls._instance_configs.clear()
         elif name in cls._instances:
             del cls._instances[name]
+            cls._instance_configs.pop(name, None)
     
     async def initialize(self) -> SchedulerManager:
         """初始化调度器（链式调用）。
@@ -146,64 +203,42 @@ class SchedulerManager:
     def add_job(
         self,
         func: Callable,
-        trigger: str = "interval",
+        trigger: Any,
         *,
-        seconds: int | None = None,
-        minutes: int | None = None,
-        hours: int | None = None,
-        days: int | None = None,
-        cron: str | None = None,
         id: str | None = None,
         **kwargs: Any,
     ) -> None:
         """添加任务。
         
+        直接使用 APScheduler 原生 trigger 对象，不做任何封装。
+        
         Args:
             func: 任务函数
-            trigger: 触发器类型（interval/cron）
-            seconds: 间隔秒数
-            minutes: 间隔分钟数
-            hours: 间隔小时数
-            days: 间隔天数
-            cron: Cron表达式（如 "0 0 * * *"）
-            id: 任务ID
-            **kwargs: 其他参数
+            trigger: APScheduler 触发器对象，如：
+                - IntervalTrigger(seconds=60)
+                - CronTrigger(hour="*")
+                - CronTrigger.from_crontab("0 * * * *")
+            id: 任务ID（可选，默认使用函数完整路径）
+            **kwargs: 其他 APScheduler add_job 参数
+        
+        示例:
+            from apscheduler.triggers.cron import CronTrigger
+            from apscheduler.triggers.interval import IntervalTrigger
+            
+            # 每小时执行
+            scheduler.add_job(my_task, CronTrigger(hour="*"))
+            
+            # 每 30 分钟执行
+            scheduler.add_job(my_task, IntervalTrigger(minutes=30))
+            
+            # 每天凌晨 2 点执行
+            scheduler.add_job(my_task, CronTrigger(hour=2, minute=0))
+            
+            # 使用 crontab 表达式
+            scheduler.add_job(my_task, CronTrigger.from_crontab("0 2 * * *"))
         """
         if not self._initialized:
             raise RuntimeError("调度器未初始化")
-        
-        # 使用函数式编程构建触发器
-        def build_interval_trigger() -> IntervalTrigger:
-            """构建间隔触发器。"""
-            if seconds:
-                return IntervalTrigger(seconds=seconds)
-            if minutes:
-                return IntervalTrigger(minutes=minutes)
-            if hours:
-                return IntervalTrigger(hours=hours)
-            if days:
-                return IntervalTrigger(days=days)
-            raise ValueError("必须指定间隔时间")
-        
-        def build_cron_trigger() -> CronTrigger:
-            """构建Cron触发器。"""
-            if not cron:
-                raise ValueError("Cron触发器必须提供cron表达式")
-            return CronTrigger.from_crontab(cron)
-        
-        trigger_builders: dict[str, Callable[[], Any]] = {
-            "interval": build_interval_trigger,
-            "cron": build_cron_trigger,
-        }
-        
-        builder = trigger_builders.get(trigger)
-        if builder is None:
-            available = ", ".join(trigger_builders.keys())
-            raise ValueError(
-                f"不支持的触发器类型: {trigger}。可用类型: {available}"
-            )
-        
-        trigger_obj = builder()
         
         # 包装任务函数，自动设置日志上下文
         wrapped_func = self._wrap_with_context(func)
@@ -212,12 +247,12 @@ class SchedulerManager:
         job_id = id or f"{func.__module__}.{func.__name__}"
         self._scheduler.add_job(
             func=wrapped_func,
-            trigger=trigger_obj,
+            trigger=trigger,
             id=job_id,
             **kwargs,
         )
         
-        logger.info(f"任务已注册: {job_id} | 触发器: {trigger}")
+        logger.info(f"任务已注册: {job_id} | 触发器: {type(trigger).__name__}")
     
     def _wrap_with_context(self, func: Callable) -> Callable:
         """包装任务函数，自动设置 scheduler 日志上下文。"""
@@ -304,49 +339,19 @@ class SchedulerManager:
     def reschedule_job(
         self,
         job_id: str,
-        trigger: str = "interval",
-        *,
-        seconds: int | None = None,
-        minutes: int | None = None,
-        hours: int | None = None,
-        days: int | None = None,
-        cron: str | None = None,
+        trigger: Any,
     ) -> None:
-        """重新调度任务（修改触发器）。
+        """重新调度任务。
         
         Args:
             job_id: 任务ID
-            trigger: 触发器类型（interval/cron）
-            seconds: 间隔秒数
-            minutes: 间隔分钟数
-            hours: 间隔小时数
-            days: 间隔天数
-            cron: Cron表达式
+            trigger: APScheduler 触发器对象
         """
         if not self._scheduler:
             raise RuntimeError("调度器未初始化")
         
-        # 构建触发器
-        if trigger == "interval":
-            if seconds:
-                trigger_obj = IntervalTrigger(seconds=seconds)
-            elif minutes:
-                trigger_obj = IntervalTrigger(minutes=minutes)
-            elif hours:
-                trigger_obj = IntervalTrigger(hours=hours)
-            elif days:
-                trigger_obj = IntervalTrigger(days=days)
-            else:
-                raise ValueError("必须指定间隔时间")
-        elif trigger == "cron":
-            if not cron:
-                raise ValueError("Cron触发器必须提供cron表达式")
-            trigger_obj = CronTrigger.from_crontab(cron)
-        else:
-            raise ValueError(f"不支持的触发器类型: {trigger}")
-        
-        self._scheduler.reschedule_job(job_id, trigger=trigger_obj)
-        logger.info(f"任务已重新调度: {job_id} | 触发器: {trigger}")
+        self._scheduler.reschedule_job(job_id, trigger=trigger)
+        logger.info(f"任务已重新调度: {job_id} | 触发器: {type(trigger).__name__}")
     
     def pause_job(self, job_id: str) -> None:
         """暂停单个任务。
@@ -409,38 +414,35 @@ class SchedulerManager:
     
     def scheduled_job(
         self,
-        trigger: str = "interval",
+        trigger: Any,
         *,
-        seconds: int | None = None,
-        minutes: int | None = None,
-        hours: int | None = None,
-        days: int | None = None,
-        cron: str | None = None,
         id: str | None = None,
         **kwargs: Any,
     ) -> Callable[[Callable], Callable]:
         """任务注册装饰器。
         
         使用示例:
+            from apscheduler.triggers.cron import CronTrigger
+            from apscheduler.triggers.interval import IntervalTrigger
+            
             scheduler = SchedulerManager.get_instance()
             
-            @scheduler.scheduled_job("interval", seconds=60)
+            @scheduler.scheduled_job(IntervalTrigger(seconds=60))
             async def my_task():
                 print("Task executed")
             
-            @scheduler.scheduled_job("cron", cron="0 0 * * *")
+            @scheduler.scheduled_job(CronTrigger(hour="*"))
+            async def hourly_task():
+                print("Hourly task")
+            
+            @scheduler.scheduled_job(CronTrigger.from_crontab("0 0 * * *"))
             async def daily_task():
                 print("Daily task")
         
         Args:
-            trigger: 触发器类型（interval/cron）
-            seconds: 间隔秒数
-            minutes: 间隔分钟数
-            hours: 间隔小时数
-            days: 间隔天数
-            cron: Cron表达式
+            trigger: APScheduler 触发器对象
             id: 任务ID
-            **kwargs: 其他参数
+            **kwargs: 其他 APScheduler add_job 参数
         
         Returns:
             装饰器函数
@@ -449,11 +451,6 @@ class SchedulerManager:
             job_config = {
                 "func": func,
                 "trigger": trigger,
-                "seconds": seconds,
-                "minutes": minutes,
-                "hours": hours,
-                "days": days,
-                "cron": cron,
                 "id": id,
                 **kwargs,
             }
