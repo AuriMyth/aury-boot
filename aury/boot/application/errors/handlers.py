@@ -8,11 +8,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from starlette.exceptions import HTTPException
 
 from aury.boot.common.exceptions import FoundationError
 from aury.boot.common.logging import logger
@@ -149,23 +150,31 @@ class BaseErrorHandler(ErrorHandler):
 
 
 class HTTPExceptionHandler(ErrorHandler):
-    """FastAPI HTTP异常处理器。"""
+    """HTTP 异常处理器。
+    
+    处理 FastAPI 和 Starlette 的 HTTPException（包括 404、401、403 等）。
+    """
     
     def can_handle(self, exception: Exception) -> bool:
-        """判断是否为HTTP异常。"""
+        """判断是否为 HTTP 异常。"""
+        # Starlette HTTPException 是 FastAPI HTTPException 的基类
         return isinstance(exception, HTTPException)
     
     async def handle(self, exception: HTTPException, request: Request) -> JSONResponse:
-        """处理HTTP异常。"""
-        logger.warning(f"HTTP异常: {exception.status_code} - {exception.detail}")
+        """处理 HTTP 异常。"""
+        # 获取错误信息：Starlette 用 detail，FastAPI 也用 detail
+        detail = getattr(exception, "detail", str(exception))
+        status_code = exception.status_code
+        
+        logger.warning(f"HTTP 异常 [{request.method} {request.url.path}]: {status_code} - {detail}")
         
         response = ResponseBuilder.fail(
-            message=exception.detail,
-            code=exception.status_code,
+            message=detail if isinstance(detail, str) else str(detail),
+            code=status_code,
         )
         
         return JSONResponse(
-            status_code=exception.status_code,
+            status_code=status_code,
             content=response.model_dump(mode="json"),
         )
 
