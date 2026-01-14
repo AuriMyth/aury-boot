@@ -1,6 +1,6 @@
 # 定时任务（Scheduler）
 
-基于 APScheduler，完全透传原生 API。
+基于 APScheduler，支持两种触发器语法：字符串模式和原生对象模式。
 
 ## 基本用法
 
@@ -9,31 +9,38 @@
 ```python
 """定时任务模块。"""
 
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
-
 from aury.boot.common.logging import logger
 from aury.boot.infrastructure.scheduler import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
 
 
-@scheduler.scheduled_job(IntervalTrigger(seconds=60))
+# === 字符串模式（推荐，简洁）===
+@scheduler.scheduled_job("interval", seconds=60)
 async def every_minute():
     """每 60 秒执行。"""
     logger.info("定时任务执行中...")
 
 
-@scheduler.scheduled_job(CronTrigger(hour=0, minute=0))
+@scheduler.scheduled_job("cron", hour=0, minute=0)
 async def daily_task():
     """每天凌晨执行。"""
     logger.info("每日任务执行中...")
 
 
-@scheduler.scheduled_job(CronTrigger(day_of_week="mon", hour=9))
+@scheduler.scheduled_job("cron", day_of_week="mon", hour=9)
 async def weekly_report():
     """每周一 9 点执行。"""
     logger.info("周报任务执行中...")
+
+
+# === 原生对象模式（完整功能）===
+from apscheduler.triggers.cron import CronTrigger
+
+@scheduler.scheduled_job(CronTrigger.from_crontab("0 2 * * *"))
+async def crontab_task():
+    """每天凌晨 2 点执行（使用 crontab 表达式）。"""
+    logger.info("每日任务执行中...")
 ```
 
 启用方式：配置 `SCHEDULER__ENABLED=true`，框架自动加载 `{package_name}/schedules/` 模块。
@@ -50,39 +57,56 @@ SCHEDULER__MISFIRE_GRACE_TIME=60                 # 错过容忍时间(秒)
 SCHEDULER__JOBSTORE_URL=redis://localhost:6379/0 # 分布式存储（可选）
 ```
 
-## 触发器类型
+## 触发器语法
 
-### CronTrigger - 定时触发
+支持两种语法：
+
+| 语法 | 适用场景 | 示例 |
+|------|---------|------|
+| 字符串模式 | 日常使用，简洁 | `"cron", hour="*", minute=0` |
+| 原生对象 | crontab 表达式、复杂配置 | `CronTrigger.from_crontab("0 * * * *")` |
+
+### cron - 定时触发
 
 ```python
-from apscheduler.triggers.cron import CronTrigger
-
+# === 字符串模式 ===
 # 每天凌晨 2:30
-CronTrigger(hour=2, minute=30)
+@scheduler.scheduled_job("cron", hour=2, minute=30)
 
 # 每小时整点
-CronTrigger(hour="*", minute=0)
+@scheduler.scheduled_job("cron", hour="*", minute=0)
 
 # 工作日 9:00
-CronTrigger(day_of_week="mon-fri", hour=9)
+@scheduler.scheduled_job("cron", day_of_week="mon-fri", hour=9)
 
 # 每月 1 号
-CronTrigger(day=1, hour=0)
+@scheduler.scheduled_job("cron", day=1, hour=0)
+
+# === 原生对象模式 ===
+from apscheduler.triggers.cron import CronTrigger
 
 # 使用 crontab 表达式
-CronTrigger.from_crontab("0 2 * * *")  # 每天 2:00
+@scheduler.scheduled_job(CronTrigger.from_crontab("0 2 * * *"))  # 每天 2:00
 ```
 
-### IntervalTrigger - 间隔触发
+**cron 参数**：`year`, `month`, `day`, `week`, `day_of_week`, `hour`, `minute`, `second`, `start_date`, `end_date`, `timezone`, `jitter`
+
+### interval - 间隔触发
 
 ```python
+# === 字符串模式 ===
+@scheduler.scheduled_job("interval", seconds=30)   # 每 30 秒
+@scheduler.scheduled_job("interval", minutes=5)    # 每 5 分钟
+@scheduler.scheduled_job("interval", hours=1)      # 每小时
+@scheduler.scheduled_job("interval", days=1)       # 每天
+
+# === 原生对象模式 ===
 from apscheduler.triggers.interval import IntervalTrigger
 
-IntervalTrigger(seconds=30)   # 每 30 秒
-IntervalTrigger(minutes=5)    # 每 5 分钟
-IntervalTrigger(hours=1)      # 每小时
-IntervalTrigger(days=1)       # 每天
+@scheduler.scheduled_job(IntervalTrigger(hours=1, jitter=60))  # 每小时，随机抖动 60 秒
 ```
+
+**interval 参数**：`weeks`, `days`, `hours`, `minutes`, `seconds`, `start_date`, `end_date`, `timezone`, `jitter`
 
 ### DateTrigger - 一次性触发
 
@@ -91,7 +115,7 @@ from apscheduler.triggers.date import DateTrigger
 from datetime import datetime, timedelta
 
 # 10 秒后执行
-DateTrigger(run_date=datetime.now() + timedelta(seconds=10))
+scheduler.add_job(my_task, DateTrigger(run_date=datetime.now() + timedelta(seconds=10)))
 ```
 
 ## 多实例支持
@@ -136,7 +160,11 @@ scheduler = SchedulerManager.get_instance(
 ## 任务管理
 
 ```python
-# 添加任务
+# 添加任务（字符串模式）
+scheduler.add_job(my_task, "cron", hour=2, minute=0, id="my_task")
+
+# 添加任务（原生对象模式）
+from apscheduler.triggers.cron import CronTrigger
 scheduler.add_job(my_task, CronTrigger(hour=2), id="my_task")
 
 # 获取任务
@@ -150,7 +178,10 @@ scheduler.resume_job("my_task")
 # 移除
 scheduler.remove_job("my_task")
 
-# 重新调度
+# 重新调度（字符串模式）
+scheduler.reschedule_job("my_task", "cron", hour=3)
+
+# 重新调度（原生对象模式）
 scheduler.reschedule_job("my_task", CronTrigger(hour=3))
 ```
 

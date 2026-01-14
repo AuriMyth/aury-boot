@@ -2,13 +2,18 @@
 
 请参考 [00-quick-start.md](./00-quick-start.md) 第 15 章的基础用法。
 
+## 触发器语法
+
+框架支持两种触发器语法：
+
+| 语法 | 适用场景 | 示例 |
+|------|---------|------|
+| 字符串模式 | 日常使用，简洁 | `"cron", hour="*", minute=0` |
+| 原生对象 | crontab 表达式、复杂配置 | `CronTrigger.from_crontab("0 * * * *")` |
+
 ## 调度器初始化
 
 ```python
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.triggers.date import DateTrigger
-
 from aury.boot.infrastructure.scheduler import SchedulerManager
 
 scheduler = SchedulerManager.get_instance()
@@ -48,57 +53,41 @@ scheduler = SchedulerManager.get_instance(
 ### 每天定时执行
 
 ```python
-# 每天凌晨 2 点 30 分执行
-scheduler.add_job(
-    func=daily_report,
-    trigger=CronTrigger(hour=2, minute=30),
-    id="daily_report",
-    name="每日报告生成"
-)
+# 字符串模式（推荐）
+scheduler.add_job(daily_report, "cron", hour=2, minute=30, id="daily_report")
+
+# 原生对象模式
+from apscheduler.triggers.cron import CronTrigger
+scheduler.add_job(daily_report, CronTrigger(hour=2, minute=30), id="daily_report")
 ```
 
 ### 每周执行
 
 ```python
 # 每周一上午 9 点执行
-scheduler.add_job(
-    func=weekly_summary,
-    trigger=CronTrigger(day_of_week="mon", hour=9),
-    id="weekly_summary"
-)
+scheduler.add_job(weekly_summary, "cron", day_of_week="mon", hour=9, id="weekly_summary")
 ```
 
 ### 每月执行
 
 ```python
 # 每个月的第一天执行
-scheduler.add_job(
-    func=monthly_cleanup,
-    trigger=CronTrigger(day=1, hour=0),
-    id="monthly_cleanup"
-)
+scheduler.add_job(monthly_cleanup, "cron", day=1, hour=0, id="monthly_cleanup")
 ```
 
 ### 工作日执行
 
 ```python
 # 工作日（周一至周五）每小时执行
-scheduler.add_job(
-    func=check_status,
-    trigger=CronTrigger(day_of_week="mon-fri", hour="*"),
-    id="workday_check"
-)
+scheduler.add_job(check_status, "cron", day_of_week="mon-fri", hour="*", id="workday_check")
 ```
 
 ### 使用 crontab 表达式
 
 ```python
-# 每天凌晨 2 点执行
-scheduler.add_job(
-    func=daily_task,
-    trigger=CronTrigger.from_crontab("0 2 * * *"),
-    id="daily_task"
-)
+# 每天凌晨 2 点执行（仅原生对象模式支持）
+from apscheduler.triggers.cron import CronTrigger
+scheduler.add_job(daily_task, CronTrigger.from_crontab("0 2 * * *"), id="daily_task")
 ```
 
 ## 间隔任务
@@ -106,26 +95,14 @@ scheduler.add_job(
 ### 固定间隔
 
 ```python
-# 每 30 秒执行一次
-scheduler.add_job(
-    func=heartbeat,
-    trigger=IntervalTrigger(seconds=30),
-    id="heartbeat"
-)
+# 字符串模式（推荐）
+scheduler.add_job(heartbeat, "interval", seconds=30, id="heartbeat")
+scheduler.add_job(sync_data, "interval", minutes=5, id="sync_data")
+scheduler.add_job(hourly_task, "interval", hours=1, id="hourly_task")
 
-# 每 5 分钟执行一次
-scheduler.add_job(
-    func=sync_data,
-    trigger=IntervalTrigger(minutes=5),
-    id="sync_data"
-)
-
-# 每小时执行一次
-scheduler.add_job(
-    func=hourly_task,
-    trigger=IntervalTrigger(hours=1),
-    id="hourly_task"
-)
+# 原生对象模式
+from apscheduler.triggers.interval import IntervalTrigger
+scheduler.add_job(heartbeat, IntervalTrigger(seconds=30), id="heartbeat")
 ```
 
 ## 一次性任务
@@ -134,14 +111,11 @@ scheduler.add_job(
 
 ```python
 from datetime import datetime, timedelta
+from apscheduler.triggers.date import DateTrigger
 
 # 10 秒后执行一次
 run_time = datetime.now() + timedelta(seconds=10)
-scheduler.add_job(
-    func=delayed_task,
-    trigger=DateTrigger(run_date=run_time),
-    id="delayed_task"
-)
+scheduler.add_job(delayed_task, DateTrigger(run_date=run_time), id="delayed_task")
 ```
 
 ## 带参数的任务
@@ -155,8 +129,9 @@ async def process_user(user_id: str, action: str = "default"):
 
 # 添加任务，传递参数
 scheduler.add_job(
-    func=process_user,
-    trigger=CronTrigger(hour=3),
+    process_user,
+    "cron",
+    hour=3,
     args=["user123"],          # 位置参数
     kwargs={"action": "sync"},  # 关键字参数
     id="process_user_sync"

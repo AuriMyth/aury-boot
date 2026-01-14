@@ -7,6 +7,7 @@
 - 自动设置日志上下文（调度器任务日志自动写入 scheduler_xxx.log）
 - 支持多个命名实例
 - 支持 APScheduler 完整配置（jobstores、executors、job_defaults、timezone）
+- 支持两种触发器语法：字符串模式和原生对象模式
 """
 
 from __future__ import annotations
@@ -14,20 +15,32 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from aury.boot.common.logging import logger, set_service_context
 
 # 延迟导入 apscheduler（可选依赖）
 try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.base import BaseTrigger
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
     _APSCHEDULER_AVAILABLE = True
 except ImportError:
     _APSCHEDULER_AVAILABLE = False
     if TYPE_CHECKING:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.base import BaseTrigger
+        from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
     else:
         AsyncIOScheduler = None
+        BaseTrigger = None
+        CronTrigger = None
+        IntervalTrigger = None
+
+# 触发器类型别名
+TriggerType = Literal["cron", "interval"]
 
 
 class SchedulerManager:
@@ -38,6 +51,16 @@ class SchedulerManager:
     - executors: 执行器（AsyncIO/ThreadPool/ProcessPool）
     - job_defaults: 任务默认配置（coalesce/max_instances/misfire_grace_time）
     - timezone: 时区
+    
+    触发器支持两种语法：
+    
+    1. 字符串模式（简洁）:
+        @scheduler.scheduled_job("cron", hour="*", minute=0)
+        @scheduler.scheduled_job("interval", seconds=60)
+        
+    2. 原生对象模式（完整功能）:
+        @scheduler.scheduled_job(CronTrigger(hour="*"))
+        @scheduler.scheduled_job(IntervalTrigger(seconds=60))
     
     使用示例:
         from apscheduler.triggers.cron import CronTrigger
@@ -57,9 +80,14 @@ class SchedulerManager:
             timezone="Asia/Shanghai",
         )
         
-        # 注册任务
-        @scheduler.scheduled_job(IntervalTrigger(seconds=60))
+        # 字符串模式注册任务
+        @scheduler.scheduled_job("interval", seconds=60)
         async def my_task():
+            ...
+        
+        # 原生对象模式
+        @scheduler.scheduled_job(CronTrigger.from_crontab("0 * * * *"))
+        async def hourly_task():
             ...
         
         # 启动调度器
@@ -200,45 +228,87 @@ class SchedulerManager:
             raise RuntimeError("调度器未初始化，请先调用 initialize()")
         return self._scheduler
     
+    def _build_trigger(self, trigger: TriggerType | BaseTrigger, **trigger_kwargs: Any) -> BaseTrigger:
+        """构建触发器对象。
+        
+        Args:
+            trigger: 触发器类型字符串（"cron"/"interval"）或原生触发器对象
+            **trigger_kwargs: 触发器参数（仅字符串模式时有效）
+            
+        Returns:
+            APScheduler 触发器对象
+        """
+        # 如果已经是触发器对象，直接返回
+        if isinstance(trigger, BaseTrigger):
+            return trigger
+        
+        # 字符串模式，构建触发器
+        if trigger == "cron":
+            return CronTrigger(**trigger_kwargs)
+        elif trigger == "interval":
+            return IntervalTrigger(**trigger_kwargs)
+        else:
+            raise ValueError(f"不支持的触发器类型: {trigger}，支持 'cron' 或 'interval'")
+    
     def add_job(
         self,
         func: Callable,
-        trigger: Any,
+        trigger: TriggerType | BaseTrigger,
         *,
         id: str | None = None,
         **kwargs: Any,
     ) -> None:
         """添加任务。
         
-        直接使用 APScheduler 原生 trigger 对象，不做任何封装。
+        支持两种触发器语法：
+        
+        1. 字符串模式：trigger 为 "cron" 或 "interval"，触发器参数通过 kwargs 传递
+        2. 原生对象模式：trigger 为 APScheduler 触发器对象
         
         Args:
             func: 任务函数
-            trigger: APScheduler 触发器对象，如：
-                - IntervalTrigger(seconds=60)
-                - CronTrigger(hour="*")
-                - CronTrigger.from_crontab("0 * * * *")
+            trigger: 触发器类型或触发器对象
+                - 字符串: "cron" 或 "interval"
+                - 对象: CronTrigger(...) 或 IntervalTrigger(...)
             id: 任务ID（可选，默认使用函数完整路径）
-            **kwargs: 其他 APScheduler add_job 参数
+            **kwargs: 触发器参数（字符串模式）或其他 APScheduler add_job 参数（对象模式）
         
         示例:
+            # === 字符串模式 ===
+            # 每小时整点执行
+            scheduler.add_job(my_task, "cron", hour="*", minute=0)
+            
+            # 每 30 分钟执行
+            scheduler.add_job(my_task, "interval", minutes=30)
+            
+            # 每天凌晨 2 点执行
+            scheduler.add_job(my_task, "cron", hour=2, minute=0)
+            
+            # 每周一 9:00 执行
+            scheduler.add_job(my_task, "cron", day_of_week="mon", hour=9, minute=0)
+            
+            # === 原生对象模式 ===
             from apscheduler.triggers.cron import CronTrigger
             from apscheduler.triggers.interval import IntervalTrigger
             
-            # 每小时执行
-            scheduler.add_job(my_task, CronTrigger(hour="*"))
-            
-            # 每 30 分钟执行
-            scheduler.add_job(my_task, IntervalTrigger(minutes=30))
-            
-            # 每天凌晨 2 点执行
-            scheduler.add_job(my_task, CronTrigger(hour=2, minute=0))
-            
             # 使用 crontab 表达式
             scheduler.add_job(my_task, CronTrigger.from_crontab("0 2 * * *"))
+            
+            # 原生触发器对象
+            scheduler.add_job(my_task, IntervalTrigger(seconds=60))
         """
         if not self._initialized:
             raise RuntimeError("调度器未初始化")
+        
+        # 分离触发器参数和其他 add_job 参数
+        if isinstance(trigger, str):
+            # 字符串模式：需要从 kwargs 中分离触发器参数
+            trigger_params, job_params = self._separate_trigger_params(trigger, kwargs)
+            trigger_obj = self._build_trigger(trigger, **trigger_params)
+        else:
+            # 对象模式：kwargs 全部是 add_job 参数
+            trigger_obj = trigger
+            job_params = kwargs
         
         # 包装任务函数，自动设置日志上下文
         wrapped_func = self._wrap_with_context(func)
@@ -247,12 +317,52 @@ class SchedulerManager:
         job_id = id or f"{func.__module__}.{func.__name__}"
         self._scheduler.add_job(
             func=wrapped_func,
-            trigger=trigger,
+            trigger=trigger_obj,
             id=job_id,
-            **kwargs,
+            **job_params,
         )
         
-        logger.info(f"任务已注册: {job_id} | 触发器: {type(trigger).__name__}")
+        logger.info(f"任务已注册: {job_id} | 触发器: {type(trigger_obj).__name__}")
+    
+    def _separate_trigger_params(
+        self,
+        trigger_type: str,
+        kwargs: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """分离触发器参数和 add_job 参数。
+        
+        Args:
+            trigger_type: 触发器类型
+            kwargs: 混合参数
+            
+        Returns:
+            (trigger_params, job_params) 元组
+        """
+        # CronTrigger 支持的参数
+        cron_params = {
+            "year", "month", "day", "week", "day_of_week",
+            "hour", "minute", "second", "start_date", "end_date",
+            "timezone", "jitter"
+        }
+        # IntervalTrigger 支持的参数
+        interval_params = {
+            "weeks", "days", "hours", "minutes", "seconds",
+            "start_date", "end_date", "timezone", "jitter"
+        }
+        
+        # 根据触发器类型选择参数集
+        trigger_param_names = cron_params if trigger_type == "cron" else interval_params
+        
+        trigger_params: dict[str, Any] = {}
+        job_params: dict[str, Any] = {}
+        
+        for key, value in kwargs.items():
+            if key in trigger_param_names:
+                trigger_params[key] = value
+            else:
+                job_params[key] = value
+        
+        return trigger_params, job_params
     
     def _wrap_with_context(self, func: Callable) -> Callable:
         """包装任务函数，自动设置 scheduler 日志上下文。"""
@@ -339,19 +449,35 @@ class SchedulerManager:
     def reschedule_job(
         self,
         job_id: str,
-        trigger: Any,
+        trigger: TriggerType | BaseTrigger,
+        **trigger_kwargs: Any,
     ) -> None:
         """重新调度任务。
         
+        支持两种触发器语法：
+        
+        1. 字符串模式：trigger 为 "cron" 或 "interval"，触发器参数通过 kwargs 传递
+        2. 原生对象模式：trigger 为 APScheduler 触发器对象
+        
         Args:
             job_id: 任务ID
-            trigger: APScheduler 触发器对象
+            trigger: 触发器类型或触发器对象
+            **trigger_kwargs: 触发器参数（仅字符串模式时有效）
+        
+        示例:
+            # 字符串模式
+            scheduler.reschedule_job("my_job", "cron", hour="*/2")
+            scheduler.reschedule_job("my_job", "interval", minutes=15)
+            
+            # 原生对象模式
+            scheduler.reschedule_job("my_job", CronTrigger(hour="*/2"))
         """
         if not self._scheduler:
             raise RuntimeError("调度器未初始化")
         
-        self._scheduler.reschedule_job(job_id, trigger=trigger)
-        logger.info(f"任务已重新调度: {job_id} | 触发器: {type(trigger).__name__}")
+        trigger_obj = self._build_trigger(trigger, **trigger_kwargs)
+        self._scheduler.reschedule_job(job_id, trigger=trigger_obj)
+        logger.info(f"任务已重新调度: {job_id} | 触发器: {type(trigger_obj).__name__}")
     
     def pause_job(self, job_id: str) -> None:
         """暂停单个任务。
@@ -414,35 +540,52 @@ class SchedulerManager:
     
     def scheduled_job(
         self,
-        trigger: Any,
+        trigger: TriggerType | BaseTrigger,
         *,
         id: str | None = None,
         **kwargs: Any,
     ) -> Callable[[Callable], Callable]:
         """任务注册装饰器。
         
+        支持两种触发器语法：
+        
+        1. 字符串模式（推荐，简洁）:
+            @scheduler.scheduled_job("cron", hour="*", minute=0)
+            @scheduler.scheduled_job("interval", seconds=60)
+        
+        2. 原生对象模式（完整功能）:
+            @scheduler.scheduled_job(CronTrigger(hour="*"))
+            @scheduler.scheduled_job(IntervalTrigger(seconds=60))
+        
         使用示例:
-            from apscheduler.triggers.cron import CronTrigger
-            from apscheduler.triggers.interval import IntervalTrigger
-            
             scheduler = SchedulerManager.get_instance()
             
-            @scheduler.scheduled_job(IntervalTrigger(seconds=60))
+            # === 字符串模式 ===
+            @scheduler.scheduled_job("interval", seconds=60)
             async def my_task():
-                print("Task executed")
+                print("每分钟执行")
             
-            @scheduler.scheduled_job(CronTrigger(hour="*"))
+            @scheduler.scheduled_job("cron", hour="*", minute=0)
             async def hourly_task():
-                print("Hourly task")
+                print("每小时整点执行")
+            
+            @scheduler.scheduled_job("cron", day_of_week="mon-fri", hour=9)
+            async def workday_task():
+                print("工作日 9 点执行")
+            
+            # === 原生对象模式 ===
+            from apscheduler.triggers.cron import CronTrigger
             
             @scheduler.scheduled_job(CronTrigger.from_crontab("0 0 * * *"))
             async def daily_task():
-                print("Daily task")
+                print("每天 0 点执行")
         
         Args:
-            trigger: APScheduler 触发器对象
-            id: 任务ID
-            **kwargs: 其他 APScheduler add_job 参数
+            trigger: 触发器类型或触发器对象
+                - 字符串: "cron" 或 "interval"
+                - 对象: CronTrigger(...) 或 IntervalTrigger(...)
+            id: 任务ID（可选，默认使用函数完整路径）
+            **kwargs: 触发器参数（字符串模式）或其他 APScheduler add_job 参数
         
         Returns:
             装饰器函数
