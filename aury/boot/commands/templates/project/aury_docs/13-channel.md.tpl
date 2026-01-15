@@ -82,7 +82,7 @@ async def send_notification(user_id: str, message: str):
 async def space_events(space_id: str):
     \"\"\"订阅空间下所有事件。\"\"\"
     async def event_generator():
-        # 使用 psubscribe 订阅 space:{id}:* 下所有事件
+        # 使用 psubscribe 订阅 space:{{id}}:* 下所有事件
         async for msg in sse_channel.psubscribe(f"space:{{space_id}}:*"):
             yield msg.to_sse()  # 自动转换为 SSE 格式
     

@@ -41,6 +41,9 @@ class ComponentName(str, Enum):
     # 事件总线组件
     EVENT_BUS = "event_bus"
 
+    # 流式通道组件
+    CHANNEL = "channel"
+
     # 迁移组件
     MIGRATIONS = "migrations"
 

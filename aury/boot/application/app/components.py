@@ -15,6 +15,7 @@ from aury.boot.application.constants import ComponentName, ServiceType
 from aury.boot.application.migrations import MigrationManager
 from aury.boot.common.logging import logger
 from aury.boot.infrastructure.cache import CacheManager
+from aury.boot.infrastructure.channel import ChannelManager
 from aury.boot.infrastructure.database import DatabaseManager
 from aury.boot.infrastructure.events import EventBusManager
 from aury.boot.infrastructure.mq import MQManager
@@ -505,6 +506,49 @@ class MessageQueueComponent(Component):
                 logger.warning(f"消息队列 [{name}] 关闭失败: {e}")
 
 
+class ChannelComponent(Component):
+    """流式通道组件。
+    
+    用于 SSE（Server-Sent Events）和实时通信场景，支持 memory 和 redis 后端。
+    """
+
+    name = ComponentName.CHANNEL
+    enabled = True
+    depends_on: ClassVar[list[str]] = []
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """当配置了 Channel 实例时启用。"""
+        return self.enabled and bool(config.get_channels())
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化流式通道。"""
+        channel_configs = config.get_channels()
+        if not channel_configs:
+            logger.debug("未配置 Channel 实例，跳过通道初始化")
+            return
+        
+        for name, ch_config in channel_configs.items():
+            try:
+                channel_manager = ChannelManager.get_instance(name)
+                if not channel_manager.is_initialized:
+                    await channel_manager.initialize(
+                        backend=ch_config.backend,
+                        url=ch_config.url,
+                    )
+            except Exception as e:
+                logger.warning(f"通道 [{name}] 初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """关闭所有通道实例。"""
+        for name in list(ChannelManager._instances.keys()):
+            try:
+                channel_manager = ChannelManager.get_instance(name)
+                if channel_manager.is_initialized:
+                    await channel_manager.cleanup()
+            except Exception as e:
+                logger.warning(f"通道 [{name}] 关闭失败: {e}")
+
+
 class EventBusComponent(Component):
     """事件总线组件。
     
@@ -555,6 +599,7 @@ FoundationApp.components = [
     StorageComponent,
     TaskComponent,
     MessageQueueComponent,
+    ChannelComponent,
     EventBusComponent,
     SchedulerComponent,
 ]
@@ -563,6 +608,7 @@ FoundationApp.components = [
 __all__ = [
     "AdminConsoleComponent",
     "CacheComponent",
+    "ChannelComponent",
     "DatabaseComponent",
     "EventBusComponent",
     "MessageQueueComponent",
