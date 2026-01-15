@@ -71,12 +71,51 @@ async def sse_stream(user_id: str):
 
 @router.post("/notify/{{user_id}}")
 async def send_notification(user_id: str, message: str):
-    \"\"\"\u53d1\u9001\u901a\u77e5\u3002\"\"\"
+    \"\"\"发送通知。\"\"\"
     await sse_channel.publish(f"user:{{user_id}}", {{"message": message}})
     return {{"status": "sent"}}
 ```
 
-## 13.4 应用场景示例
+## 13.4 模式订阅（psubscribe）
+
+使用通配符订阅多个通道，适合一个 SSE 连接接收多种事件的场景。
+
+```python
+@router.get("/spaces/{{space_id}}/events")
+async def space_events(space_id: str):
+    \"\"\"订阅空间下所有事件。\"\"\"
+    async def event_generator():
+        # 使用 psubscribe 订阅 space:{id}:* 下所有事件
+        async for msg in sse_channel.psubscribe(f"space:{{space_id}}:*"):
+            yield msg.to_sse()  # 自动转换为 SSE 格式
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
+
+
+# 后端发布不同类型的事件
+await sse_channel.publish(f"space:{{space_id}}:file_analyzed", {{
+    "file_id": "abc",
+    "status": "done"
+}}, event="file_analyzed")
+
+await sse_channel.publish(f"space:{{space_id}}:comment_added", {{
+    "comment_id": "xyz",
+    "content": "..."
+}}, event="comment_added")
+```
+
+**通配符说明**：
+- `*` 匹配任意字符
+- `?` 匹配单个字符
+- `[seq]` 匹配 seq 中的任意字符
+- 示例：`space:123:*` 匹配 `space:123:file_analyzed`、`space:123:comment_added` 等
+
+Redis 后端使用 Redis 原生 `PSUBSCRIBE`，内存后端使用 `fnmatch` 实现。
+
+## 13.5 应用场景示例
 
 ```python
 # 不同业务场景使用不同的命名实例
@@ -90,7 +129,7 @@ await chat_channel.initialize(backend="redis", redis_client=redis_client)  # 需
 await notify_channel.initialize(backend="redis", redis_client=redis_client)
 ```
 
-## 13.5 环境变量
+## 13.6 环境变量
 
 ```bash
 # 默认实例

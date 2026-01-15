@@ -72,6 +72,48 @@ class RedisChannel(IChannel):
             await pubsub.unsubscribe(channel)
             await pubsub.close()
 
+    async def psubscribe(self, pattern: str) -> AsyncIterator[ChannelMessage]:
+        """模式订阅（通配符）。
+        
+        Args:
+            pattern: 通道模式，支持 * 和 ? 通配符
+                - * 匹配任意字符
+                - ? 匹配单个字符
+                - 示例: "space:123:*" 订阅 space:123 下所有事件
+        
+        Yields:
+            ChannelMessage: 接收到的消息
+        """
+        pubsub = self._client.connection.pubsub()
+        await pubsub.psubscribe(pattern)
+
+        try:
+            async for raw_message in pubsub.listen():
+                # psubscribe 的消息类型是 "pmessage"
+                if raw_message["type"] == "pmessage":
+                    try:
+                        data = json.loads(raw_message["data"])
+                        # pmessage 包含实际匹配的通道名
+                        actual_channel = raw_message.get("channel")
+                        if isinstance(actual_channel, bytes):
+                            actual_channel = actual_channel.decode("utf-8")
+                        
+                        message = ChannelMessage(
+                            data=data.get("data"),
+                            event=data.get("event"),
+                            id=data.get("id"),
+                            channel=actual_channel or data.get("channel"),
+                            timestamp=datetime.fromisoformat(data["timestamp"])
+                            if data.get("timestamp")
+                            else datetime.now(),
+                        )
+                        yield message
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.warning(f"解析通道消息失败: {e}")
+        finally:
+            await pubsub.punsubscribe(pattern)
+            await pubsub.close()
+
     async def unsubscribe(self, channel: str) -> None:
         """取消订阅通道。"""
         if self._pubsub:

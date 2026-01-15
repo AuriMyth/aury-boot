@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 import contextlib
+import fnmatch
 
 from aury.boot.common.logging import logger
 
@@ -31,18 +32,30 @@ class MemoryChannel(IChannel):
         self._max_subscribers = max_subscribers
         # channel -> list of queues
         self._subscribers: dict[str, list[asyncio.Queue[ChannelMessage]]] = {}
+        # pattern -> list of queues (用于 psubscribe)
+        self._pattern_subscribers: dict[str, list[asyncio.Queue[ChannelMessage]]] = {}
         self._lock = asyncio.Lock()
 
     async def publish(self, channel: str, message: ChannelMessage) -> None:
         """发布消息到通道。"""
         message.channel = channel
         async with self._lock:
+            # 精确匹配订阅者
             subscribers = self._subscribers.get(channel, [])
             for queue in subscribers:
                 try:
                     queue.put_nowait(message)
                 except asyncio.QueueFull:
                     logger.warning(f"通道 [{channel}] 订阅者队列已满，消息被丢弃")
+
+            # 模式匹配订阅者
+            for pattern, queues in self._pattern_subscribers.items():
+                if fnmatch.fnmatch(channel, pattern):
+                    for queue in queues:
+                        try:
+                            queue.put_nowait(message)
+                        except asyncio.QueueFull:
+                            logger.warning(f"模式 [{pattern}] 订阅者队列已满，消息被丢弃")
 
     async def subscribe(self, channel: str) -> AsyncIterator[ChannelMessage]:
         """订阅通道。"""
@@ -67,6 +80,35 @@ class MemoryChannel(IChannel):
                     if not self._subscribers[channel]:
                         del self._subscribers[channel]
 
+    async def psubscribe(self, pattern: str) -> AsyncIterator[ChannelMessage]:
+        """模式订阅通道。
+
+        使用 fnmatch 风格的通配符：
+        - `*` 匹配任意字符
+        - `?` 匹配单个字符
+        - `[seq]` 匹配 seq 中的任意字符
+        """
+        queue: asyncio.Queue[ChannelMessage] = asyncio.Queue(maxsize=100)
+
+        async with self._lock:
+            if pattern not in self._pattern_subscribers:
+                self._pattern_subscribers[pattern] = []
+            if len(self._pattern_subscribers[pattern]) >= self._max_subscribers:
+                raise RuntimeError(f"模式 [{pattern}] 订阅者数量已达上限")
+            self._pattern_subscribers[pattern].append(queue)
+
+        try:
+            while True:
+                message = await queue.get()
+                yield message
+        finally:
+            async with self._lock:
+                if pattern in self._pattern_subscribers:
+                    with contextlib.suppress(ValueError):
+                        self._pattern_subscribers[pattern].remove(queue)
+                    if not self._pattern_subscribers[pattern]:
+                        del self._pattern_subscribers[pattern]
+
     async def unsubscribe(self, channel: str) -> None:
         """取消订阅通道（清除所有订阅者）。"""
         async with self._lock:
@@ -77,6 +119,7 @@ class MemoryChannel(IChannel):
         """关闭通道，清理所有订阅。"""
         async with self._lock:
             self._subscribers.clear()
+            self._pattern_subscribers.clear()
         logger.debug("内存通道已关闭")
 
 

@@ -97,8 +97,8 @@ class EventBusManager:
         config: EventInstanceConfig | None = None,
         redis_client: RedisClient | None = None,
         url: str | None = None,
-        channel_prefix: str = "events:",
-        exchange_name: str = "events",
+        channel_prefix: str | None = None,
+        exchange_name: str = "aury.events",
     ) -> EventBusManager:
         """初始化事件总线（链式调用）。
 
@@ -107,8 +107,8 @@ class EventBusManager:
             config: Event 实例配置（推荐，自动根据 backend 初始化）
             redis_client: Redis 客户端（当 backend=redis 且 config=None 时需要）
             url: 连接 URL（当 config=None 时需要）
-            channel_prefix: Redis 频道前缀
-            exchange_name: RabbitMQ 交换机名称
+            channel_prefix: Redis 频道前缀，默认 "aury:event:"
+            exchange_name: RabbitMQ 交换机名称，默认 "aury.events"
 
         Returns:
             self: 支持链式调用
@@ -136,7 +136,11 @@ class EventBusManager:
         if backend == EventBackend.MEMORY:
             self._backend = MemoryEventBus()
         elif backend == EventBackend.REDIS:
-            self._backend = RedisEventBus(url=url, redis_client=redis_client, channel_prefix=channel_prefix)
+            # channel_prefix 为 None 时使用 RedisEventBus 的默认值
+            kwargs = {"url": url, "redis_client": redis_client}
+            if channel_prefix is not None:
+                kwargs["channel_prefix"] = channel_prefix
+            self._backend = RedisEventBus(**kwargs)
         elif backend == EventBackend.RABBITMQ:
             self._backend = RabbitMQEventBus(url=url, exchange_name=exchange_name)
         else:

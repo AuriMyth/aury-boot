@@ -178,6 +178,29 @@ class ChannelManager:
         async for message in self.backend.subscribe(channel):
             yield message
 
+    async def psubscribe(self, pattern: str) -> AsyncIterator[ChannelMessage]:
+        """模式订阅（通配符）。
+
+        Args:
+            pattern: 通道模式，支持 * 和 ? 通配符
+                - "space:123:*" 订阅 space:123 下所有事件
+                - "user:*:notification" 订阅所有用户的通知
+
+        Yields:
+            ChannelMessage: 接收到的消息
+        
+        示例:
+            # SSE 路由中订阅某个空间的所有事件
+            async for msg in channel.psubscribe(f"space:{{space_id}}:*"):
+                yield msg.to_sse()
+            
+            # 发布不同类型的事件
+            await channel.publish(f"space:{{space_id}}:file_analyzed", {{...}})
+            await channel.publish(f"space:{{space_id}}:comment_added", {{...}})
+        """
+        async for message in self.backend.psubscribe(pattern):
+            yield message
+
     async def unsubscribe(self, channel: str) -> None:
         """取消订阅通道。
 

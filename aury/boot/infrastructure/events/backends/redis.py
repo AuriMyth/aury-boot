@@ -17,10 +17,17 @@ if TYPE_CHECKING:
     from aury.boot.infrastructure.clients.redis import RedisClient
 
 
+# 框架默认前缀
+DEFAULT_CHANNEL_PREFIX = "aury:event:"
+
+
 class RedisEventBus(IEventBus):
     """Redis 事件总线实现。
 
     使用 Redis Pub/Sub 实现跨进程的事件发布/订阅。
+    
+    频道命名格式：{channel_prefix}{event_name}
+    默认：aury:event:user.created
     """
 
     def __init__(
@@ -28,14 +35,14 @@ class RedisEventBus(IEventBus):
         url: str | None = None,
         *,
         redis_client: RedisClient | None = None,
-        channel_prefix: str = "events:",
+        channel_prefix: str = DEFAULT_CHANNEL_PREFIX,
     ) -> None:
         """初始化 Redis 事件总线。
 
         Args:
             url: Redis 连接 URL（当 redis_client 为 None 时必须提供）
             redis_client: RedisClient 实例（可选，优先使用）
-            channel_prefix: 频道名称前缀
+            channel_prefix: 频道名称前缀，默认 "aury:event:"
         
         Raises:
             ValueError: 当 url 和 redis_client 都为 None 时

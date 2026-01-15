@@ -162,6 +162,28 @@ async def sse_endpoint(user_id: str):
         yield f"data: {json.dumps(message)}\n\n"
 ```
 
+### 模式订阅（psubscribe）
+
+使用通配符订阅多个通道，适合一个 SSE 连接接收多种事件。
+
+```python
+# 订阅空间下所有事件
+async for msg in sse_channel.psubscribe(f"space:{space_id}:*"):
+    yield msg.to_sse()  # 自动转换为 SSE 格式
+
+# 后端发布不同类型的事件
+await sse_channel.publish(f"space:{space_id}:file_analyzed", {...}, event="file_analyzed")
+await sse_channel.publish(f"space:{space_id}:comment_added", {...}, event="comment_added")
+```
+
+**通配符说明**：
+- `*` 匹配任意字符
+- `?` 匹配单个字符
+- `[seq]` 匹配 seq 中的任意字符
+- 示例：`space:123:*` 匹配 `space:123:file_analyzed`、`space:123:comment_added` 等
+
+Redis 后端使用 Redis 原生 `PSUBSCRIBE`，内存后端使用 `fnmatch` 实现。
+
 ### FastAPI SSE 示例
 
 ```python

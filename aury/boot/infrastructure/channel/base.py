@@ -70,6 +70,21 @@ class IChannel(ABC):
         """
         ...
 
+    async def psubscribe(self, pattern: str) -> AsyncIterator[ChannelMessage]:
+        """模式订阅（通配符）。
+
+        Args:
+            pattern: 通道模式，如 "space:123:*" 订阅 space:123 下所有事件
+
+        Yields:
+            ChannelMessage: 接收到的消息
+        
+        注意：内存后端默认回退到普通 subscribe，Redis 后端支持真正的模式匹配。
+        """
+        # 默认实现：回退到普通订阅（子类可覆盖）
+        async for msg in self.subscribe(pattern):
+            yield msg
+
     @abstractmethod
     async def unsubscribe(self, channel: str) -> None:
         """取消订阅通道。
