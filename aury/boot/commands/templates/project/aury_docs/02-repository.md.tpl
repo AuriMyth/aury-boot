@@ -72,6 +72,37 @@ result = await repo.paginate(
 # - result.has_next: bool      # 是否有下一页
 # - result.has_prev: bool      # 是否有上一页
 
+# === Cursor 分页（推荐，性能更优） ===
+from aury.boot.domain.pagination import CursorPaginationParams
+
+# 第一页
+result = await repo.cursor_paginate(
+    CursorPaginationParams(limit=20),
+    is_active=True,
+)
+
+# 下一页（带上 cursor）
+result = await repo.cursor_paginate(
+    CursorPaginationParams(cursor=result.next_cursor, limit=20),
+    is_active=True,
+)
+
+# CursorPaginationResult 结构：
+# - result.items: list[T]          # 数据列表
+# - result.next_cursor: str | None # 下一页游标
+# - result.prev_cursor: str | None # 上一页游标
+# - result.has_next: bool          # 是否有下一页
+# - result.has_prev: bool          # 是否有上一页
+
+# === 流式查询（大数据处理） ===
+# 逐条流式处理，不会一次性加载到内存
+async for user in repo.stream(batch_size=1000, is_active=True):
+    await process(user)
+
+# 批量流式处理
+async for batch in repo.stream_batches(batch_size=1000):
+    await bulk_sync_to_es(batch)
+
 # === 创建 ===
 user = await repo.create({{"name": "Alice", "email": "a@b.com"}})
 users = await repo.batch_create([{{"name": "A"}}, {{"name": "B"}}])  # 返回实体

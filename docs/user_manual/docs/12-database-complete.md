@@ -427,6 +427,80 @@ class UserRepository(BaseRepository):
 
 ## 查询优化
 
+### Cursor 分页（推荐）
+
+对于无限滚动、大数据集等场景，使用 cursor 分页代替传统的 offset 分页，性能更优。
+
+```python
+from aury.boot.domain.pagination import CursorPaginationParams
+
+# 第一页
+result = await repo.cursor_paginate(
+    CursorPaginationParams(limit=20),
+    status="active"
+)
+# result.items - 数据列表
+# result.next_cursor - 下一页游标
+# result.has_next - 是否有下一页
+
+# 下一页（带上 cursor）
+result = await repo.cursor_paginate(
+    CursorPaginationParams(cursor=result.next_cursor, limit=20),
+    status="active"
+)
+
+# 上一页（反向）
+result = await repo.cursor_paginate(
+    CursorPaginationParams(cursor=result.prev_cursor, limit=20, direction="prev"),
+    status="active"
+)
+```
+
+**为什么 cursor 分页更快？**
+
+```sql
+-- offset 分页（慢）：需要扫描跳过 10000 行
+SELECT * FROM users ORDER BY id LIMIT 20 OFFSET 10000
+
+-- cursor 分页（快）：直接用索引定位
+SELECT * FROM users WHERE id > 12345 ORDER BY id LIMIT 20
+```
+
+**API 接口示例**：
+
+```python
+@router.get("/users")
+async def list_users(
+    cursor: str | None = None,
+    limit: int = 20,
+    repo: UserRepository = Depends(get_user_repo)
+):
+    result = await repo.cursor_paginate(
+        CursorPaginationParams(cursor=cursor, limit=limit)
+    )
+    return {
+        "items": result.items,
+        "next_cursor": result.next_cursor,
+        "has_next": result.has_next,
+    }
+```
+
+### 流式查询（大数据处理）
+
+处理百万级数据时，使用 server-side cursor 避免内存溢出：
+
+```python
+# 逐条流式处理
+async for user in repo.stream(batch_size=1000, status="active"):
+    await send_email(user)
+
+# 批量流式处理
+async for batch in repo.stream_batches(batch_size=1000):
+    await bulk_sync_to_elasticsearch(batch)
+```
+
+**注意**：stream 适合后台任务，不适合 HTTP API（需要保持数据库连接）。
+
 ### 避免 N+1 查询
 
 ❌ **错误**：
@@ -665,12 +739,15 @@ DATABASE__URL=sqlite+aiosqlite:///./test.db
 
 ### Q: 如何处理大批量数据？
 
-A: 分批处理：
+A: 使用流式查询（server-side cursor），避免一次性加载到内存：
 ```python
-batch_size = 1000
-for offset in range(0, total_count, batch_size):
-    batch = await repo.list(offset=offset, limit=batch_size)
-    await process_batch(batch)
+# 逐条处理
+async for user in repo.stream(batch_size=1000, status="active"):
+    await process(user)
+
+# 批量处理
+async for batch in repo.stream_batches(batch_size=1000):
+    await bulk_sync_to_es(batch)
 ```
 
 ### Q: 如何处理并发更新冲突？

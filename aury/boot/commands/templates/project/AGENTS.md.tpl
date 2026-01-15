@@ -75,6 +75,8 @@ mypy {package_name}/
 2. **[aury_docs/02-repository.md](./aury_docs/02-repository.md)** - Repository 使用
    - BaseRepository API
    - Filters 语法（__gt, __like 等）
+   - Cursor 分页（推荐，性能更优）
+   - 流式查询（大数据处理）
    - 自动提交机制
 
 3. **[aury_docs/03-service.md](./aury_docs/03-service.md)** - Service 编写与事务

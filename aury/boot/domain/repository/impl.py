@@ -18,6 +18,8 @@ from aury.boot.common.logging import logger
 from aury.boot.domain.exceptions import VersionConflictError
 from aury.boot.domain.models import GUID, Base
 from aury.boot.domain.pagination import (
+    CursorPaginationParams,
+    CursorPaginationResult,
     PaginationParams,
     PaginationResult,
     SortParams,
@@ -262,6 +264,168 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
             total=total_count,
             pagination_params=pagination_params,
         )
+    
+    async def cursor_paginate(
+        self,
+        params: CursorPaginationParams,
+        cursor_field: str = "id",
+        **filters
+    ) -> CursorPaginationResult[ModelType]:
+        """基于游标的分页查询。
+        
+        适用于无限滚动、大数据集等场景，性能优于 offset 分页。
+        
+        Args:
+            params: 游标分页参数（cursor, limit, direction）
+            cursor_field: 游标字段名，默认 "id"，必须是有序且唯一的字段
+            **filters: 过滤条件
+            
+        Returns:
+            CursorPaginationResult: 包含 items, next_cursor, prev_cursor, has_next, has_prev
+            
+        示例:
+            # 第一页
+            result = await repo.cursor_paginate(
+                CursorPaginationParams(limit=20),
+                status="active"
+            )
+            
+            # 下一页
+            result = await repo.cursor_paginate(
+                CursorPaginationParams(cursor=result.next_cursor, limit=20),
+                status="active"
+            )
+        """
+        import base64
+        import json
+        
+        query = self._build_base_query()
+        query = self._apply_filters(query, **filters)
+        
+        cursor_attr = _get_model_attr(self._model_class, cursor_field)
+        if cursor_attr is None:
+            raise AttributeError(f"模型 {self._model_class.__name__} 没有 '{cursor_field}' 字段")
+        
+        # 解码 cursor
+        cursor_value = None
+        if params.cursor:
+            try:
+                decoded = base64.urlsafe_b64decode(params.cursor.encode()).decode()
+                cursor_value = json.loads(decoded)
+            except Exception:
+                raise ValueError("无效的游标") from None
+        
+        # 根据方向决定查询条件和排序
+        is_next = params.direction == "next"
+        if cursor_value is not None:
+            if is_next:
+                query = query.where(cursor_attr > cursor_value)
+            else:
+                query = query.where(cursor_attr < cursor_value)
+        
+        # 排序
+        if is_next:
+            query = query.order_by(cursor_attr)
+        else:
+            query = query.order_by(cursor_attr.desc())
+        
+        # 多取一条判断是否有更多
+        query = query.limit(params.limit + 1)
+        result = await self._session.execute(query)
+        items = list(result.scalars().all())
+        
+        has_more = len(items) > params.limit
+        if has_more:
+            items = items[:params.limit]
+        
+        # 反向查询时反转结果
+        if not is_next:
+            items = list(reversed(items))
+        
+        # 生成游标
+        def encode_cursor(value) -> str:
+            return base64.urlsafe_b64encode(json.dumps(value).encode()).decode()
+        
+        next_cursor = None
+        prev_cursor = None
+        
+        if items:
+            last_value = getattr(items[-1], cursor_field)
+            first_value = getattr(items[0], cursor_field)
+            
+            if is_next:
+                if has_more:
+                    next_cursor = encode_cursor(last_value)
+                if cursor_value is not None:
+                    prev_cursor = encode_cursor(first_value)
+            else:
+                if cursor_value is not None:
+                    next_cursor = encode_cursor(last_value)
+                if has_more:
+                    prev_cursor = encode_cursor(first_value)
+        
+        return CursorPaginationResult.create(
+            items=items,
+            next_cursor=next_cursor,
+            prev_cursor=prev_cursor,
+            limit=params.limit,
+        )
+    
+    async def stream(
+        self,
+        batch_size: int = 1000,
+        **filters
+    ):
+        """流式查询，使用数据库原生 server-side cursor。
+        
+        适用于大数据集处理，避免一次性加载所有数据到内存。
+        
+        Args:
+            batch_size: 每批次获取的记录数，默认 1000
+            **filters: 过滤条件
+            
+        Yields:
+            ModelType: 模型实例
+            
+        示例:
+            async for user in repo.stream(batch_size=500, status="active"):
+                process(user)
+        """
+        query = self._build_base_query()
+        query = self._apply_filters(query, **filters)
+        
+        async with self._session.stream_scalars(
+            query.execution_options(yield_per=batch_size)
+        ) as result:
+            async for item in result:
+                yield item
+    
+    async def stream_batches(
+        self,
+        batch_size: int = 1000,
+        **filters
+    ):
+        """批量流式查询，每次返回一批数据。
+        
+        Args:
+            batch_size: 每批次的记录数，默认 1000
+            **filters: 过滤条件
+            
+        Yields:
+            list[ModelType]: 一批模型实例
+            
+        示例:
+            async for batch in repo.stream_batches(batch_size=500):
+                bulk_process(batch)
+        """
+        query = self._build_base_query()
+        query = self._apply_filters(query, **filters)
+        
+        async with self._session.stream_scalars(
+            query.execution_options(yield_per=batch_size)
+        ) as result:
+            async for partition in result.partitions():
+                yield list(partition)
     
     async def count(self, **filters) -> int:
         query = select(func.count()).select_from(self._model_class)
