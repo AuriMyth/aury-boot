@@ -390,11 +390,68 @@ def requires_transaction(func: Callable) -> Callable:
     return wrapper
 
 
+def isolated_task[T](func: Callable[..., T]) -> Callable[..., T]:
+    """后台任务隔离装饰器。
+    
+    重置事务上下文，避免从父协程继承 _transaction_depth 导致 auto_commit 失效。
+    
+    问题背景：
+        asyncio.create_task() 会继承父协程的 contextvars。如果父协程在 @transactional 中，
+        _transaction_depth > 0，子任务的 auto_commit 和 transactional_context 都会认为
+        "在事务中" 而跳过 commit，导致 session 关闭时 rollback。
+    
+    用法：
+        @isolated_task
+        async def upload_cover(space_id: int, cover_url: str):
+            async with db.session() as session:
+                async with transactional_context(session):
+                    repo = SpaceRepository(session, Space)
+                    space = await repo.get(space_id)
+                    await repo.update(space, {"cover": cover_url})
+                # 现在会正常 commit
+        
+        # 在 Service 中 spawn
+        asyncio.create_task(upload_cover(space.id, url))
+    """
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        # 重置事务深度，让当前任务成为独立的事务上下文
+        token = _transaction_depth.set(0)
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            _transaction_depth.reset(token)
+    
+    return wrapper
+
+
+@asynccontextmanager
+async def isolated_context() -> AsyncGenerator[None]:
+    """后台任务隔离上下文管理器。
+    
+    与 @isolated_task 作用相同，但用于上下文管理器形式。
+    
+    用法：
+        async def background_job():
+            async with isolated_context():
+                async with db.session() as session:
+                    async with transactional_context(session):
+                        ...
+    """
+    token = _transaction_depth.set(0)
+    try:
+        yield
+    finally:
+        _transaction_depth.reset(token)
+
+
 __all__ = [
     "TransactionManager",
     "TransactionRequiredError",
     "_transaction_depth",  # 内部使用，不对外文档化
     "ensure_transaction",
+    "isolated_context",
+    "isolated_task",
     "on_commit",
     "requires_transaction",
     "transactional",

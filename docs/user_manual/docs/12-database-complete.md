@@ -779,6 +779,23 @@ class Entity(Base):
     created_at: Mapped[datetime] = mapped_column(default=now)
 ```
 
+### Q: 后台任务的数据库操作没有提交？
+
+A: 在 `@transactional` 中 spawn 的后台任务会继承事务上下文，导致 auto_commit 失效。必须使用 `@isolated_task`：
+
+```python
+from aury.boot.domain.transaction import isolated_task, transactional_context
+
+@isolated_task  # 必须加这个装饰器
+async def background_upload(space_id: int, url: str):
+    async with db.session() as session:
+        async with transactional_context(session):
+            repo = SpaceRepository(session, Space)
+            space = await repo.get(space_id)
+            await repo.update(space, {"cover": url})
+        # 现在会正常 commit
+```
+
 ## 下一步
 
 - 查看 [18-migration-guide.md](./18-migration-guide.md) 学习数据库迁移

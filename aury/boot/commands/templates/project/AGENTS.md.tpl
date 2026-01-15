@@ -164,15 +164,25 @@ class User(Base): ...
 - 写操作**必须**使用 `@transactional` 装饰器
 - 只读操作可以不加事务装饰器
 - 跨 Service 调用通过共享 session 实现事务共享
+- **后台任务必须**使用 `@isolated_task` 装饰器
 
 ```python
-from aury.boot.domain.transaction import transactional
+from aury.boot.domain.transaction import transactional, isolated_task
 
 class UserService(BaseService):
     @transactional
     async def create(self, data: UserCreate) -> User:
         # 自动事务管理
         return await self.repo.create(data.model_dump())
+
+
+# 后台任务必须加 @isolated_task，否则事务不会提交
+@isolated_task
+async def background_upload(space_id: int, url: str):
+    async with db.session() as session:
+        async with transactional_context(session):
+            repo = SpaceRepository(session, Space)
+            await repo.update(...)
 ```
 
 ### Manager API 规范

@@ -396,3 +396,63 @@ DATABASE_ISOLATION_LEVEL=REPEATABLE READ
 - 大多数场景：`READ COMMITTED`（平衡性能和一致性）
 - 报表/统计查询：`REPEATABLE READ`（保证读取一致性）
 - 金融交易：`SERIALIZABLE`（最强一致性，性能较低）
+
+### 3.12 后台任务事务隔离（重要）
+
+在 `@transactional` 装饰的 Service 方法中 spawn 后台任务时，**必须**使用 `@isolated_task` 或 `isolated_context`，否则事务不会提交。
+
+**问题背景**：
+`asyncio.create_task()` 会继承父协程的 `contextvars`。如果父协程在 `@transactional` 中，子任务会继承事务深度标记，导致：
+- `auto_commit` 失效
+- `transactional_context` 也不会提交
+- session 关闭时数据被 rollback
+
+**解决方案 1：装饰器（推荐）**
+
+```python
+import asyncio
+from aury.boot.domain.transaction import isolated_task, transactional_context
+from aury.boot.infrastructure.database import DatabaseManager
+
+db = DatabaseManager.get_instance()
+
+
+@isolated_task
+async def upload_cover(space_id: int, cover_url: str):
+    """后台任务：上传封面。"""
+    async with db.session() as session:
+        async with transactional_context(session):
+            repo = SpaceRepository(session, Space)
+            space = await repo.get(space_id)
+            if space:
+                await repo.update(space, {{"cover": cover_url}})
+        # 现在会正常 commit
+
+
+class SpaceService(BaseService):
+    @transactional
+    async def create(self, data: SpaceCreate) -> Space:
+        space = await self.repo.create(data.model_dump())
+        
+        # spawn 后台任务
+        asyncio.create_task(upload_cover(space.id, data.cover_url))
+        
+        return space
+```
+
+**解决方案 2：上下文管理器**
+
+```python
+from aury.boot.domain.transaction import isolated_context
+
+async def background_job():
+    async with isolated_context():
+        async with db.session() as session:
+            async with transactional_context(session):
+                # 正常的事务处理
+                ...
+```
+
+**注意事项**：
+- 后台任务必须新开 session（`db.session()`），不能复用主请求的 `self.session`
+- 后台任务的事务与主请求独立，主请求回滚不影响后台任务

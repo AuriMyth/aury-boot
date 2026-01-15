@@ -618,6 +618,56 @@ async def background_job(user_id: str):
             await repo.update(user_id, {"processed": True})
 ```
 
+### Q: 在 @transactional 中 spawn 的后台任务事务不提交？
+
+A: 这是因为 `asyncio.create_task()` 会继承父协程的 `contextvars`，导致子任务继承了事务深度标记。**必须**使用 `@isolated_task` 装饰器：
+
+```python
+import asyncio
+from aury.boot.domain.transaction import (
+    isolated_task,
+    transactional,
+    transactional_context,
+)
+from aury.boot.infrastructure.database import DatabaseManager
+
+db = DatabaseManager.get_instance()
+
+
+@isolated_task  # 必须加这个装饰器
+async def upload_cover(space_id: int, cover_url: str):
+    """后台任务：上传封面。"""
+    async with db.session() as session:
+        async with transactional_context(session):
+            repo = SpaceRepository(session, Space)
+            space = await repo.get(space_id)
+            if space:
+                await repo.update(space, {"cover": cover_url})
+        # 现在会正常 commit
+
+
+class SpaceService(BaseService):
+    @transactional
+    async def create(self, data: SpaceCreate) -> Space:
+        space = await self.repo.create(data.model_dump())
+        
+        # spawn 后台任务
+        asyncio.create_task(upload_cover(space.id, data.cover_url))
+        
+        return space
+```
+
+**也可以用上下文管理器**：
+```python
+from aury.boot.domain.transaction import isolated_context
+
+async def background_job():
+    async with isolated_context():
+        async with db.session() as session:
+            async with transactional_context(session):
+                ...
+```
+
 ## 下一步
 
 - 查看 [09-database-complete.md](./09-database-complete.md) 了解数据库操作
