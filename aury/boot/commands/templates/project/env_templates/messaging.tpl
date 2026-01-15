@@ -2,12 +2,15 @@
 # =============================================================================
 # 流式通道配置 (CHANNEL__) - SSE/实时通信
 # =============================================================================
+# 单实例配置:
+# CHANNEL__BACKEND=memory
+# CHANNEL__BACKEND=redis
+# CHANNEL__URL=redis://localhost:6379/3
+#
 # 多实例配置 (格式: CHANNEL__{{INSTANCE}}__{{FIELD}}):
-# CHANNEL__DEFAULT__BACKEND=memory
-# CHANNEL__SHARED__BACKEND=redis
-# CHANNEL__SHARED__URL=redis://localhost:6379/3
-# CHANNEL__SHARED__KEY_PREFIX=channel:
-# CHANNEL__SHARED__TTL=86400
+# CHANNEL__SSE__BACKEND=memory
+# CHANNEL__NOTIFICATION__BACKEND=redis
+# CHANNEL__NOTIFICATION__URL=redis://localhost:6379/3
 
 # =============================================================================
 # 消息队列配置 (MQ__)

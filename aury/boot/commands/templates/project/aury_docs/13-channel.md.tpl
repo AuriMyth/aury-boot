@@ -139,12 +139,14 @@ Redis 后端使用 Redis 原生 `PSUBSCRIBE`，内存后端使用 `fnmatch` 实�
 ## 13.5 环境变量
 
 ```bash
-# 默认实例
+# 单实例配置
 CHANNEL__BACKEND=memory
+# 或 Redis 后端
+CHANNEL__BACKEND=redis
+CHANNEL__URL=redis://localhost:6379/3
 
-# 多实例（格式：CHANNEL__{{INSTANCE}}__{{FIELD}}）
-CHANNEL__DEFAULT__BACKEND=redis
-CHANNEL__DEFAULT__URL=redis://localhost:6379/3
-CHANNEL__NOTIFICATIONS__BACKEND=redis
-CHANNEL__NOTIFICATIONS__URL=redis://localhost:6379/4
+# 多实例配置（格式：CHANNEL__{{INSTANCE}}__{{FIELD}}）
+CHANNEL__SSE__BACKEND=memory
+CHANNEL__NOTIFICATION__BACKEND=redis
+CHANNEL__NOTIFICATION__URL=redis://localhost:6379/4
 ```

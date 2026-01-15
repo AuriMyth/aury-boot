@@ -1083,16 +1083,18 @@ REDIS__SESSION__URL=redis://localhost:6379/2
 
 用于 Pub/Sub、SSE 和进程间通信：
 
+```bash
+# .env - 配置环境变量后自动初始化
+CHANNEL__SSE__BACKEND=memory
+CHANNEL__NOTIFY__BACKEND=redis
+CHANNEL__NOTIFY__URL=redis://localhost:6379/3
+```
+
 ```python
 from aury.boot.infrastructure.channel import ChannelManager
 
-# 命名多实例（推荐）
+# 获取已初始化的实例
 sse_channel = ChannelManager.get_instance("sse")
-await sse_channel.initialize(backend="memory")  # 单进程
-
-# Redis 后端（多进程/分布式）
-notify_channel = ChannelManager.get_instance("notify")
-await notify_channel.initialize(backend="redis", url="redis://localhost:6379/0")
 
 # 发布到指定 Topic
 await sse_channel.publish("user:123", {"event": "message"})

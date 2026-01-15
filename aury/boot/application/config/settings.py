@@ -246,6 +246,27 @@ class CacheSettings(BaseModel):
     )
 
 
+class ChannelSettings(BaseModel):
+    """流式通道配置（单实例）。
+    
+    环境变量格式: CHANNEL__{FIELD}
+    示例: CHANNEL__BACKEND, CHANNEL__URL
+    
+    支持的后端类型：
+    - memory: 内存后端（默认，单进程）
+    - redis: Redis Pub/Sub（多进程/分布式）
+    """
+    
+    backend: str = Field(
+        default="",
+        description="通道后端 (memory/redis)，空字符串表示不启用"
+    )
+    url: str | None = Field(
+        default=None,
+        description="Redis URL（当 backend=redis 时需要）"
+    )
+
+
 class StorageSettings(BaseModel):
     """对象存储组件接入配置（Application 层）。
 
@@ -779,6 +800,7 @@ class BaseConfig(BaseSettings):
     # ========== 数据与缓存 ==========
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
+    channel: ChannelSettings = Field(default_factory=ChannelSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     
     # 迁移配置
@@ -879,10 +901,18 @@ class BaseConfig(BaseSettings):
         """获取所有通道实例配置。
         
         从环境变量解析 CHANNEL__{INSTANCE}__{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._channels is None:
             loader = MultiInstanceConfigLoader("CHANNEL", ChannelInstanceConfig)
             self._channels = loader.load()
+            if not self._channels and self.channel.backend:
+                self._channels = {
+                    "default": ChannelInstanceConfig(
+                        backend=self.channel.backend,
+                        url=self.channel.url,
+                    )
+                }
         return self._channels
     
     def get_mqs(self) -> dict[str, MQInstanceConfig]:
@@ -929,6 +959,7 @@ __all__ = [
     "CacheInstanceConfig",
     "CacheSettings",
     "ChannelInstanceConfig",
+    "ChannelSettings",
     "DatabaseInstanceConfig",
     "DatabaseSettings",
     "EventInstanceConfig",
