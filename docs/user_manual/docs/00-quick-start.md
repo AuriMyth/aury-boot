@@ -1088,7 +1088,11 @@ from aury.boot.infrastructure.channel import ChannelManager
 
 # 命名多实例（推荐）
 sse_channel = ChannelManager.get_instance("sse")
-await sse_channel.initialize(backend="memory")
+await sse_channel.initialize(backend="memory")  # 单进程
+
+# Redis 后端（多进程/分布式）
+notify_channel = ChannelManager.get_instance("notify")
+await notify_channel.initialize(backend="redis", url="redis://localhost:6379/0")
 
 # 发布到指定 Topic
 await sse_channel.publish("user:123", {"event": "message"})

@@ -20,10 +20,7 @@ notification_channel = ChannelManager.get_instance("notification")
 await sse_channel.initialize(backend="memory")
 
 # Redis 后端（多进程/分布式）
-from aury.boot.infrastructure.clients.redis import RedisClient
-redis_client = RedisClient.get_instance()
-await redis_client.initialize(url="redis://localhost:6379/0")
-await notification_channel.initialize(backend="redis", redis_client=redis_client)
+await notification_channel.initialize(backend="redis", url="redis://localhost:6379/0")
 ```
 
 ## 13.2 发布和订阅（Topic 管理）
@@ -125,8 +122,8 @@ notify_channel = ChannelManager.get_instance("notify")     # 系统通知
 
 # 分别初始化（可使用不同后端）
 await sse_channel.initialize(backend="memory")  # 单进程即可
-await chat_channel.initialize(backend="redis", redis_client=redis_client)  # 需要跨进程
-await notify_channel.initialize(backend="redis", redis_client=redis_client)
+await chat_channel.initialize(backend="redis", url="redis://localhost:6379/3")  # 需要跨进程
+await notify_channel.initialize(backend="redis", url="redis://localhost:6379/4")
 ```
 
 ## 13.6 环境变量

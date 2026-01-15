@@ -6,16 +6,12 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING
 
 from aury.boot.common.logging import logger
 
 from .backends.memory import MemoryChannel
 from .backends.redis import RedisChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
-
-if TYPE_CHECKING:
-    from aury.boot.infrastructure.clients.redis import RedisClient
 
 
 class ChannelManager:
@@ -55,6 +51,8 @@ class ChannelManager:
         self._backend: IChannel | None = None
         self._backend_type: ChannelBackend | None = None
         self._initialized: bool = False
+        self._redis_client = None
+        self._url: str | None = None
 
     @classmethod
     def get_instance(cls, name: str = "default") -> ChannelManager:
@@ -88,14 +86,14 @@ class ChannelManager:
         self,
         backend: ChannelBackend | str = ChannelBackend.MEMORY,
         *,
-        redis_client: RedisClient | None = None,
+        url: str | None = None,
         max_subscribers: int = 1000,
     ) -> ChannelManager:
         """初始化通道（链式调用）。
 
         Args:
             backend: 后端类型
-            redis_client: Redis 客户端（当 backend=redis 时需要）
+            url: Redis 连接 URL（当 backend=redis 时需要）
             max_subscribers: 内存后端的最大订阅者数量
 
         Returns:
@@ -110,13 +108,19 @@ class ChannelManager:
             backend = ChannelBackend(backend.lower())
 
         self._backend_type = backend
+        self._url = url
 
         if backend == ChannelBackend.MEMORY:
             self._backend = MemoryChannel(max_subscribers=max_subscribers)
         elif backend == ChannelBackend.REDIS:
-            if redis_client is None:
-                raise ValueError("Redis 通道需要提供 redis_client 参数")
-            self._backend = RedisChannel(redis_client)
+            if url is None:
+                raise ValueError("Redis 通道需要提供 url 参数")
+            # 内部创建 RedisClient
+            from aury.boot.infrastructure.clients.redis import RedisClient
+
+            self._redis_client = RedisClient()
+            await self._redis_client.configure(url=url).initialize()
+            self._backend = RedisChannel(self._redis_client)
         else:
             raise ValueError(f"不支持的通道后端: {backend}")
 
@@ -214,8 +218,11 @@ class ChannelManager:
         if self._backend:
             await self._backend.close()
             self._backend = None
-            self._initialized = False
-            logger.info(f"通道管理器 [{self.name}] 已关闭")
+        if self._redis_client:
+            await self._redis_client.cleanup()
+            self._redis_client = None
+        self._initialized = False
+        logger.info(f"通道管理器 [{self.name}] 已关闭")
 
     def __repr__(self) -> str:
         """字符串表示。"""

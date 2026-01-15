@@ -138,14 +138,10 @@ notification_channel = ChannelManager.get_instance("notification")
 # Memory 后端（单进程）
 await sse_channel.initialize(backend="memory")
 
-# Redis 后端（多进程/分布式）- 需要提供 RedisClient
-from aury.boot.infrastructure.clients.redis import RedisClient
-redis_client = RedisClient.get_instance()
-await redis_client.initialize(url="redis://localhost:6379/0")
-
+# Redis 后端（多进程/分布式）
 await notification_channel.initialize(
     backend="redis",
-    redis_client=redis_client
+    url="redis://localhost:6379/0"
 )
 ```
 
