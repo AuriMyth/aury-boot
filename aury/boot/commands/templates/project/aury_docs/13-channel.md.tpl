@@ -9,10 +9,34 @@
 
 ## 13.1 基本用法
 
+### 通过环境变量自动初始化（推荐）
+
+配置环境变量后，`ChannelComponent` 会在应用启动时自动初始化：
+
+```bash
+# .env
+CHANNEL__SSE__BACKEND=memory
+CHANNEL__NOTIFICATION__BACKEND=redis
+CHANNEL__NOTIFICATION__URL=redis://localhost:6379/3
+```
+
 ```python
 from aury.boot.infrastructure.channel import ChannelManager
 
-# 命名多实例（推荐）- 不同业务场景使用不同实例
+# 直接获取已初始化的实例
+sse_channel = ChannelManager.get_instance("sse")
+notification_channel = ChannelManager.get_instance("notification")
+
+# 直接使用
+await sse_channel.publish("user:123", {{"event": "hello"}})
+```
+
+### 手动初始化
+
+```python
+from aury.boot.infrastructure.channel import ChannelManager
+
+# 命名多实例 - 不同业务场景使用不同实例
 sse_channel = ChannelManager.get_instance("sse")
 notification_channel = ChannelManager.get_instance("notification")
 
@@ -112,21 +136,7 @@ await sse_channel.publish(f"space:{{space_id}}:comment_added", {{
 
 Redis 后端使用 Redis 原生 `PSUBSCRIBE`，内存后端使用 `fnmatch` 实现。
 
-## 13.5 应用场景示例
-
-```python
-# 不同业务场景使用不同的命名实例
-sse_channel = ChannelManager.get_instance("sse")           # 前端 SSE 推送
-chat_channel = ChannelManager.get_instance("chat")         # 聊天消息
-notify_channel = ChannelManager.get_instance("notify")     # 系统通知
-
-# 分别初始化（可使用不同后端）
-await sse_channel.initialize(backend="memory")  # 单进程即可
-await chat_channel.initialize(backend="redis", url="redis://localhost:6379/3")  # 需要跨进程
-await notify_channel.initialize(backend="redis", url="redis://localhost:6379/4")
-```
-
-## 13.6 环境变量
+## 13.5 环境变量
 
 ```bash
 # 默认实例
