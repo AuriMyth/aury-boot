@@ -57,3 +57,6 @@ CLI 命令参考请查看 [99-cli.md](./99-cli.md)。
 - [13-channel.md](./13-channel.md) - 流式通道（SSE）
 - [14-mq.md](./14-mq.md) - 消息队列
 - [15-events.md](./15-events.md) - 事件总线
+
+### 监控与告警
+- [17-alerting.md](./17-alerting.md) - 告警系统（慢请求/慢SQL/异常 → 飞书）

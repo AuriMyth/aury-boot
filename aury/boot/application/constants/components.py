@@ -50,6 +50,9 @@ class ComponentName(str, Enum):
     # 管理后台（可选扩展）
     ADMIN_CONSOLE = "admin_console"
 
+    # 遍测组件 (OpenTelemetry)
+    TELEMETRY = "telemetry"
+
 
 __all__ = [
     "ComponentName",

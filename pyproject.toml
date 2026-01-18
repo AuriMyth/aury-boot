@@ -62,6 +62,18 @@ rabbitmq = ["amqp>=5.3.1"]  # 需要配合 tasks 使用
 # ============ 定时调度 ============
 scheduler = ["apscheduler>=3.11.1"]
 
+# ============ OpenTelemetry ============
+otel = [
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
+    "opentelemetry-instrumentation-fastapi>=0.46b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
+    "opentelemetry-instrumentation-httpx>=0.46b0",
+]
+otel-exporter = [
+    "opentelemetry-exporter-otlp>=1.25.0",
+]
+
 # ============ 管理后台（SQLAdmin） ============
 admin = [
     "sqladmin>=0.16.0",
@@ -69,7 +81,7 @@ admin = [
 ]
 
 # ============ 组合包 ============
-# 推荐：PostgreSQL + Redis + 任务队列 + 调度器
+# 推荐：PostgreSQL + Redis + 任务队列 + 调度器 + OpenTelemetry
 recommended = [
     "asyncpg>=0.31.0",
     "redis>=7.1.0",
@@ -77,6 +89,12 @@ recommended = [
     "apscheduler>=3.11.1",
     "aury-sdk-storage[aws]>=0.0.1",
     "aiosqlite>=0.21.0",
+    # OpenTelemetry
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
+    "opentelemetry-instrumentation-fastapi>=0.46b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
+    "opentelemetry-instrumentation-httpx>=0.46b0",
 ]
 # 完整：所有可选依赖
 all = [

@@ -12,8 +12,8 @@ import time
 
 from aury.boot.common.logging import logger
 
-# 查询性能监控配置
-QUERY_SLOW_THRESHOLD = 1.0  # 慢查询阈值（秒）
+# 默认慢查询阈值（秒）
+DEFAULT_SLOW_QUERY_THRESHOLD = 1.0
 
 
 def cache_query(
@@ -86,7 +86,7 @@ def cache_query(
 
 
 def monitor_query(
-    slow_threshold: float = QUERY_SLOW_THRESHOLD,
+    slow_threshold: float = DEFAULT_SLOW_QUERY_THRESHOLD,
     enable_explain: bool = False,
 ) -> Callable:
     """查询性能监控装饰器。
@@ -104,7 +104,6 @@ def monitor_query(
             async def list(self, **filters):
                 return await super().list(**filters)
     """
-    
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):
@@ -153,7 +152,6 @@ def monitor_query(
         return wrapper
     
     return decorator
-
 
 __all__ = [
     "cache_query",

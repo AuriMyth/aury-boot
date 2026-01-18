@@ -349,6 +349,45 @@ def generate_env_example(
         raise typer.Exit(1)
 
 
+@app.command(name="alert-rules")
+def generate_alert_rules(
+    project_dir: Path = typer.Argument(
+        Path("."),
+        help="项目目录路径",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True,
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="强制覆盖已存在的文件",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        "-n",
+        help="预览模式，不实际写入文件",
+    ),
+) -> None:
+    """生成/更新 alert_rules.yaml 告警规则模板。"""
+    context = _detect_project_info(project_dir)
+    
+    console.print(f"[cyan]📢 检测到项目: {context['project_name']}[/cyan]")
+    
+    try:
+        # 使用模板文件
+        template_path = TEMPLATES_DIR / "alert_rules.example.yaml.tpl"
+        content = template_path.read_text(encoding="utf-8")
+        output_path = project_dir / "alert_rules.example.yaml"
+        _write_file(output_path, content, force=force, dry_run=dry_run)
+    except Exception as e:
+        console.print(f"[red]❌ 生成失败: {e}[/red]")
+        raise typer.Exit(1)
+
+
 @app.command(name="all")
 def generate_all_docs(
     project_dir: Path = typer.Argument(
@@ -382,6 +421,7 @@ def generate_all_docs(
     root_docs: list[tuple[str, str, str]] = [
         ("AGENTS.md.tpl", "AGENTS.md", "AI 编程助手上下文"),
         ("env.example.tpl", ".env.example", "环境变量示例"),
+        ("alert_rules.example.yaml.tpl", "alert_rules.example.yaml", "告警规则示例"),
     ]
     
     # aury_docs/ 开发文档

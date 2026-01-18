@@ -16,8 +16,33 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from aury.boot.application.errors import global_exception_handler
-from aury.boot.common.logging import logger, set_trace_id
+from aury.boot.application.errors.chain import global_exception_handler
+from aury.boot.common.logging import get_trace_id, logger, set_trace_id
+
+
+def _record_exception_to_span(exc: Exception) -> None:
+    """将异常记录到当前 OTEL span（使用与 loguru 一致的格式）。"""
+    try:
+        from opentelemetry import trace
+        
+        from aury.boot.common.logging.format import format_exception_compact
+        
+        span = trace.get_current_span()
+        if span and span.is_recording():
+            # 使用与 loguru 一致的堆栈格式（包含代码行和局部变量）
+            formatted_tb = format_exception_compact(
+                type(exc), exc, exc.__traceback__
+            )
+            
+            # 记录异常，并将格式化堆栈放入 attributes
+            span.record_exception(exc, attributes={
+                "exception.stacktrace": formatted_tb,
+            })
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(exc)))
+    except ImportError:
+        pass  # OTEL 未安装
+    except Exception:
+        pass  # 忽略记录错误
 
 
 def log_request[T](func: Callable[..., T]) -> Callable[..., T]:
@@ -112,21 +137,32 @@ def _should_log_body(content_type: str | None) -> bool:
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """请求日志中间件（支持链路追踪）。
+    """请求日志中间件（支持链路追踪和告警）。
     
     自动记录所有HTTP请求的详细信息，包括：
     - 请求方法、路径、查询参数、请求体
     - 客户端IP、User-Agent
     - 响应状态码、耗时、响应体
     - 链路追踪 ID（X-Trace-ID / X-Request-ID）
+    - 慢请求和异常告警（如果启用告警系统）
     
     注意：文件上传、二进制数据等不会记录 body 内容。
     
     使用示例:
         from aury.boot.application.middleware.logging import RequestLoggingMiddleware
         
-        app.add_middleware(RequestLoggingMiddleware)
+        app.add_middleware(RequestLoggingMiddleware, slow_request_threshold=1.0)
     """
+    
+    def __init__(self, app, slow_request_threshold: float = 1.0) -> None:
+        """初始化中间件。
+        
+        Args:
+            app: ASGI 应用
+            slow_request_threshold: 慢请求阈值（秒），默认 1.0
+        """
+        super().__init__(app)
+        self.slow_request_threshold = slow_request_threshold
     
     async def dispatch(self, request: Request, call_next) -> Response:
         """处理请求并记录日志。"""
@@ -193,10 +229,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
             
             # 慢请求警告
-            if duration > 1.0:
+            if duration > self.slow_request_threshold:
                 logger.warning(
                     f"慢请求: {request.method} {request.url.path} | "
-                    f"耗时: {duration:.3f}s (超过1秒) | "
+                    f"耗时: {duration:.3f}s (阈值: {self.slow_request_threshold}s) | "
                     f"Trace-ID: {trace_id}"
                 )
             
@@ -209,6 +245,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 f"请求处理失败: {request.method} {request.url.path} | "
                 f"耗时: {duration:.3f}s | Trace-ID: {trace_id}"
             )
+            
+            # 将异常记录到当前 OTEL span（以便告警系统提取）
+            _record_exception_to_span(exc)
             
             # 使用全局异常处理器生成响应，而不是直接抛出异常
             # BaseHTTPMiddleware 中直接 raise 会绕过 FastAPI 的异常处理器

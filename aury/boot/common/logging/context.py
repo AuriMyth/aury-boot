@@ -58,8 +58,24 @@ def set_service_context(context: ServiceContext | str) -> None:
 def get_trace_id() -> str:
     """获取当前链路追踪ID。
 
-    如果尚未设置，则生成一个新的随机 ID。
+    优先从 OpenTelemetry 获取（如果已启用），否则使用内置 trace_id。
+    如果都没有设置，则生成一个新的随机 ID。
     """
+    # 优先从 OTel 获取
+    try:
+        from opentelemetry import trace
+        
+        span = trace.get_current_span()
+        if span and span.is_recording():
+            otel_trace_id = span.get_span_context().trace_id
+            if otel_trace_id:
+                return format(otel_trace_id, "032x")
+    except ImportError:
+        pass
+    except Exception:
+        pass
+    
+    # 回退到内置实现
     trace_id = _trace_id_var.get()
     if not trace_id:
         trace_id = str(uuid.uuid4())

@@ -15,7 +15,11 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .multi_instance import MultiInstanceConfigLoader, MultiInstanceSettings
+from .multi_instance import (
+    MultiInstanceConfigLoader,
+    MultiInstanceSettings,
+    parse_multi_instance_env,
+)
 
 
 def _load_env_file(env_file: str | Path) -> bool:
@@ -218,6 +222,10 @@ class DatabaseSettings(BaseModel):
         default=True,
         description="是否在获取连接前进行 PING"
     )
+    slow_query_threshold: float = Field(
+        default=1.0,
+        description="慢查询阈值（秒），超过此时间的查询会记录警告日志"
+    )
 
 
 class CacheSettings(BaseModel):
@@ -407,7 +415,7 @@ class ServiceSettings(BaseModel):
     """服务配置。
 
     环境变量格式: SERVICE__{FIELD}
-    示例: SERVICE__NAME, SERVICE__TYPE
+    示例: SERVICE__NAME, SERVICE__TYPE, SERVICE__ENVIRONMENT
 
     服务类型说明：
     - api: 运行 API 服务（SCHEDULER__ENABLED 决定是否同时运行调度器）
@@ -418,7 +426,15 @@ class ServiceSettings(BaseModel):
 
     name: str = Field(
         default="app",
-        description="服务名称，用于日志目录区分"
+        description="服务名称，用于日志目录区分、链路追踪标识"
+    )
+    version: str = Field(
+        default="",
+        description="服务版本（用于链路追踪和监控）"
+    )
+    environment: str = Field(
+        default="development",
+        description="部署环境 (development/staging/production)"
     )
     service_type: str = Field(
         default="api",
@@ -553,6 +569,177 @@ class MessageQueueSettings(BaseModel):
         default=1,
         description="预取消息数量"
     )
+
+
+class TelemetrySettings(BaseModel):
+    """OpenTelemetry 配置。
+    
+    环境变量格式: TELEMETRY__{FIELD}
+    示例: TELEMETRY__ENABLED, TELEMETRY__SLOW_THRESHOLD
+    
+    功能说明：
+    - 启用后自动 instrument FastAPI、SQLAlchemy、httpx
+    - get_trace_id() 会优先使用 OTel trace_id
+    - 可配置 AlertingSpanProcessor 自动检测慢请求/异常并触发告警
+    - 可选配置 OTLP 导出到 Jaeger/Tempo/Collector
+    
+    注意：service_name/version/environment 从 ServiceSettings 获取。
+    """
+    
+    enabled: bool = Field(
+        default=False,
+        description="是否启用 OpenTelemetry"
+    )
+    
+    # Instrumentation 开关
+    instrument_fastapi: bool = Field(
+        default=True,
+        description="是否自动 instrument FastAPI"
+    )
+    instrument_sqlalchemy: bool = Field(
+        default=True,
+        description="是否自动 instrument SQLAlchemy"
+    )
+    instrument_httpx: bool = Field(
+        default=True,
+        description="是否自动 instrument httpx"
+    )
+    
+    
+    # OTLP Traces 导出配置
+    traces_endpoint: str | None = Field(
+        default=None,
+        description="Traces 导出端点（如 http://jaeger:4317）"
+    )
+    traces_headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Traces 导出请求头"
+    )
+    
+    # OTLP Logs 导出配置
+    logs_endpoint: str | None = Field(
+        default=None,
+        description="Logs 导出端点（如 http://loki:3100）"
+    )
+    logs_headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Logs 导出请求头"
+    )
+    
+    # OTLP Metrics 导出配置
+    metrics_endpoint: str | None = Field(
+        default=None,
+        description="Metrics 导出端点（如 http://prometheus:9090）"
+    )
+    metrics_headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Metrics 导出请求头"
+    )
+    
+    # 采样配置
+    sampling_rate: float = Field(
+        default=1.0,
+        description="采样率 (0.0-1.0)，1.0 表示 100%"
+    )
+
+
+class AlertSettings(BaseModel):
+    """告警系统配置。
+    
+    环境变量格式: ALERT__{FIELD}
+    示例: ALERT__ENABLED, ALERT__RULES_FILE
+    
+    通知器配置（作为子配置，动态字段）：
+        ALERT__NOTIFIERS__FEISHU__TYPE=feishu
+        ALERT__NOTIFIERS__FEISHU__WEBHOOK=https://open.feishu.cn/...
+        ALERT__NOTIFIERS__FEISHU__SECRET=xxx
+        
+        ALERT__NOTIFIERS__OPS__TYPE=webhook
+        ALERT__NOTIFIERS__OPS__URL=https://my-system.com/alert
+    
+    自定义通知器通过 AlertManager.register_notifier() 注册。
+    """
+    
+    # 通知器配置缓存（动态字段）
+    _notifiers: dict[str, dict[str, Any]] | None = None
+    
+    enabled: bool = Field(
+        default=False,
+        description="是否启用告警系统"
+    )
+    rules_file: str | None = Field(
+        default=None,
+        description="告警规则文件路径（YAML 格式），如 alert_rules.yaml"
+    )
+    
+    # 慢操作阈值
+    slow_request_threshold: float = Field(
+        default=1.0,
+        description="慢请求阈值（秒）"
+    )
+    slow_sql_threshold: float = Field(
+        default=0.5,
+        description="慢 SQL 阈值（秒）"
+    )
+    
+    # 告警开关
+    alert_on_slow_request: bool = Field(
+        default=True,
+        description="是否对慢 HTTP 请求发送告警"
+    )
+    alert_on_slow_sql: bool = Field(
+        default=True,
+        description="是否对慢 SQL 发送告警"
+    )
+    alert_on_error: bool = Field(
+        default=True,
+        description="是否对异常发送告警（默认只对 5xx 告警，4xx 业务异常不告警）"
+    )
+    
+    # 默认累计触发配置
+    aggregate_window: int = Field(
+        default=10,
+        description="聚合窗口（秒）"
+    )
+    slow_request_aggregate: int = Field(
+        default=5,
+        description="慢请求触发阈值（窗口内次数）"
+    )
+    slow_sql_aggregate: int = Field(
+        default=10,
+        description="慢 SQL 触发阈值（窗口内次数）"
+    )
+    exception_aggregate: int = Field(
+        default=1,
+        description="异常触发阈值（通常为 1，立即告警）"
+    )
+    
+    # 抑制配置
+    suppress_seconds: int = Field(
+        default=10,
+        description="告警抑制时间（秒），相同告警在此时间内不重复发送"
+    )
+    
+    def get_notifiers(self) -> dict[str, dict[str, Any]]:
+        """获取所有告警通知器实例配置。
+        
+        从环境变量解析 ALERT__NOTIFIERS__{INSTANCE}__{FIELD} 格式的配置。
+        支持动态字段，不同类型通知器可有不同字段。
+        
+        Returns:
+            dict[str, dict[str, Any]]: 实例名 -> 配置字典
+            
+        示例:
+            ALERT__NOTIFIERS__FEISHU__TYPE=feishu
+            ALERT__NOTIFIERS__FEISHU__WEBHOOK=https://...
+            
+            返回: {"feishu": {"type": "feishu", "webhook": "https://..."}}
+        
+        自定义通知器通过 AlertManager.register_notifier() 注册。
+        """
+        if self._notifiers is None:
+            self._notifiers = parse_multi_instance_env("ALERT__NOTIFIERS")
+        return self._notifiers
 
 
 class MigrationSettings(BaseModel):
@@ -824,6 +1011,10 @@ class BaseConfig(BaseSettings):
     # RPC 服务配置（当前服务注册）
     rpc_service: RPCServiceSettings = Field(default_factory=RPCServiceSettings)
     
+    # ========== 监控告警 ==========
+    telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
+    alert: AlertSettings = Field(default_factory=AlertSettings)
+    
     model_config = SettingsConfigDict(
         case_sensitive=False,
         extra="ignore",
@@ -953,6 +1144,7 @@ __all__ = [
     # 配置类
     "AdminAuthSettings",
     "AdminConsoleSettings",
+    "AlertSettings",
     "BaseConfig",
     "CORSSettings",
     # 多实例配置类

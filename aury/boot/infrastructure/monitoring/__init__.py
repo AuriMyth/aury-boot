@@ -98,15 +98,18 @@ class SlowMethodDetectorComponent(MonitorComponent):
     """慢方法检测组件。
     
     检测执行时间超过阈值的方法并记录警告。
+    支持可选的告警通知（飞书/Webhook）。
     """
     
-    def __init__(self, threshold: float) -> None:
+    def __init__(self, threshold: float, *, alert: bool = False) -> None:
         """初始化慢方法检测组件。
         
         Args:
             threshold: 慢方法阈值（秒）
+            alert: 是否发送告警通知
         """
         self._threshold = threshold
+        self._alert = alert
     
     async def process(self, context: MonitorContext) -> None:
         """检测慢方法。
@@ -119,6 +122,156 @@ class SlowMethodDetectorComponent(MonitorComponent):
                 f"慢方法检测: {context.func_name} 执行时间 {context.duration:.3f}s "
                 f"(阈值: {self._threshold}s)"
             )
+            
+            # 发送告警通知
+            if self._alert:
+                await self._emit_alert(context)
+
+
+    async def _emit_alert(self, context: MonitorContext) -> None:
+        """发送慢方法告警。"""
+        try:
+            from aury.boot.infrastructure.monitoring.alerting import (
+                AlertEventType,
+                AlertSeverity,
+                emit_alert,
+            )
+            
+            await emit_alert(
+                AlertEventType.CUSTOM,
+                f"慢方法: {context.func_name}",
+                severity=AlertSeverity.WARNING,
+                source="service",
+                duration=context.duration,
+                threshold=self._threshold,
+                service=context.service_name,
+            )
+        except ImportError:
+            pass  # alerting 模块未加载
+        except Exception as e:
+            logger.debug(f"发送慢方法告警失败: {e}")
+
+
+# =============================================================================
+# HTTP 请求监控
+# =============================================================================
+
+
+async def monitor_http_request(
+    *,
+    method: str,
+    path: str,
+    duration: float,
+    status_code: int,
+    threshold: float = 1.0,
+    alert: bool = False,
+    trace_id: str = "",
+    exception: Exception | None = None,
+) -> None:
+    """监控 HTTP 请求。
+    
+    由 middleware 调用，统一处理 HTTP 请求的慢请求检测和告警。
+    
+    Args:
+        method: HTTP 方法
+        path: 请求路径
+        duration: 执行时间（秒）
+        status_code: 响应状态码
+        threshold: 慢请求阈值（秒）
+        alert: 是否发送告警
+        trace_id: 追踪 ID
+        exception: 异常对象（如果有）
+    """
+    # 慢请求检测和告警
+    if duration >= threshold:
+        if alert:
+            await _emit_http_slow_alert(
+                method=method,
+                path=path,
+                duration=duration,
+                threshold=threshold,
+                trace_id=trace_id,
+            )
+    
+    # 异常告警
+    if exception is not None and alert:
+        await _emit_http_exception_alert(
+            method=method,
+            path=path,
+            duration=duration,
+            exception=exception,
+            trace_id=trace_id,
+        )
+
+
+async def _emit_http_slow_alert(
+    method: str,
+    path: str,
+    duration: float,
+    threshold: float,
+    trace_id: str,
+) -> None:
+    """发送 HTTP 慢请求告警。"""
+    try:
+        from aury.boot.infrastructure.monitoring.alerting import (
+            AlertEventType,
+            AlertSeverity,
+            emit_alert,
+        )
+        
+        await emit_alert(
+            AlertEventType.SLOW_REQUEST,
+            f"慢请求: {method} {path}",
+            severity=AlertSeverity.WARNING,
+            trace_id=trace_id,
+            source="api",
+            duration=duration,
+            threshold=threshold,
+            endpoint=path,
+            method=method,
+        )
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.debug(f"发送慢请求告警失败: {e}")
+
+
+async def _emit_http_exception_alert(
+    method: str,
+    path: str,
+    duration: float,
+    exception: Exception,
+    trace_id: str,
+) -> None:
+    """发送 HTTP 异常告警。"""
+    try:
+        from aury.boot.infrastructure.monitoring.alerting import (
+            AlertEventType,
+            AlertSeverity,
+            emit_alert,
+        )
+        
+        await emit_alert(
+            AlertEventType.EXCEPTION,
+            f"请求异常: {method} {path} - {type(exception).__name__}: {exception}",
+            severity=AlertSeverity.ERROR,
+            trace_id=trace_id,
+            source="api",
+            duration=duration,
+            endpoint=path,
+            method=method,
+            error_type=type(exception).__name__,
+            error_message=str(exception),
+        )
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.debug(f"发送异常告警失败: {e}")
+
+
+# =============================================================================
+# Service 方法监控组件
+# =============================================================================
 
 
 class StandardMetricsReporterComponent(MonitorComponent):
@@ -172,7 +325,16 @@ class ErrorReporterComponent(MonitorComponent):
     """错误报告组件。
     
     报告方法执行失败的错误信息。
+    支持可选的告警通知（飞书/Webhook）。
     """
+    
+    def __init__(self, *, alert: bool = False) -> None:
+        """初始化错误报告组件。
+        
+        Args:
+            alert: 是否发送告警通知
+        """
+        self._alert = alert
     
     async def process(self, context: MonitorContext) -> None:
         """报告错误信息。
@@ -186,6 +348,34 @@ class ErrorReporterComponent(MonitorComponent):
                 f"执行时间: {context.duration:.3f}s | "
                 f"异常: {type(context.exception).__name__}: {context.exception}"
             )
+            
+            # 发送告警通知
+            if self._alert:
+                await self._emit_alert(context)
+    
+    async def _emit_alert(self, context: MonitorContext) -> None:
+        """发送异常告警。"""
+        try:
+            from aury.boot.infrastructure.monitoring.alerting import (
+                AlertEventType,
+                AlertSeverity,
+                emit_alert,
+            )
+            
+            await emit_alert(
+                AlertEventType.EXCEPTION,
+                f"方法异常: {context.func_name}",
+                severity=AlertSeverity.ERROR,
+                source="service",
+                duration=context.duration,
+                service=context.service_name,
+                exception_type=type(context.exception).__name__,
+                exception_message=str(context.exception),
+            )
+        except ImportError:
+            pass  # alerting 模块未加载
+        except Exception as e:
+            logger.debug(f"发送异常告警失败: {e}")
 
 
 class MonitorPipeline:
@@ -278,19 +468,22 @@ class MonitorPipelineBuilder:
     def with_slow_detector(
         self,
         threshold: float = 1.0,
+        *,
+        alert: bool = False,
         detector: SlowMethodDetectorComponent | None = None,
     ) -> MonitorPipelineBuilder:
         """添加慢方法检测组件。
         
         Args:
             threshold: 慢方法阈值（秒）
+            alert: 是否发送告警通知
             detector: 慢方法检测组件，如果为 None 则创建新实例
         
         Returns:
             MonitorPipelineBuilder: 构建器实例（支持链式调用）
         """
         if detector is None:
-            detector = SlowMethodDetectorComponent(threshold)
+            detector = SlowMethodDetectorComponent(threshold, alert=alert)
         self._components.append(detector)
         return self
     
@@ -318,18 +511,21 @@ class MonitorPipelineBuilder:
     
     def with_error_reporter(
         self,
+        *,
+        alert: bool = False,
         reporter: ErrorReporterComponent | None = None,
     ) -> MonitorPipelineBuilder:
         """添加错误报告组件。
         
         Args:
+            alert: 是否发送告警通知
             reporter: 错误报告组件，如果为 None 则创建新实例
         
         Returns:
             MonitorPipelineBuilder: 构建器实例（支持链式调用）
         """
         if reporter is None:
-            reporter = ErrorReporterComponent()
+            reporter = ErrorReporterComponent(alert=alert)
         self._components.append(reporter)
         return self
     
@@ -370,6 +566,7 @@ def monitor(
     slow_threshold: float = 1.0,
     metrics: bool = True,
     prometheus_format: bool = False,
+    alert: bool = False,
     pipeline: MonitorPipeline | None = None,
     components: list[MonitorComponent] | None = None,
     pipeline_builder: Callable[[], MonitorPipeline] | None = None,
@@ -377,13 +574,14 @@ def monitor(
     """服务层性能监控装饰器。
     
     监控服务方法的执行时间和调用次数。
-    支持慢方法警告和 Prometheus 格式导出。
+    支持慢方法警告、Prometheus 格式导出和告警通知。
     支持自定义监控管道和组件。
     
     Args:
         slow_threshold: 慢方法阈值（秒），默认 1.0 秒
         metrics: 是否记录指标（执行时间、调用次数），默认 True
         prometheus_format: 是否使用 Prometheus 格式记录指标，默认 False
+        alert: 是否发送告警通知（飞书/Webhook），默认 False
         pipeline: 自定义监控管道，如果提供则忽略其他参数
         components: 自定义组件列表，如果提供则使用这些组件构建管道
         pipeline_builder: 自定义管道构建函数，如果提供则使用此函数构建管道
@@ -394,6 +592,12 @@ def monitor(
             @monitor(slow_threshold=0.5, metrics=True)
             async def create_user(self, data: dict):
                 return await self.user_repo.create(data)
+        
+        # 启用告警通知
+        class PaymentService(BaseService):
+            @monitor(slow_threshold=0.5, alert=True)
+            async def process_payment(self, order_id: str):
+                ...
         
         # 使用自定义组件
         custom_component = MyCustomMonitorComponent()
@@ -441,12 +645,12 @@ def monitor(
         if metrics:
             builder.with_call_counter()
         
-        builder.with_slow_detector(threshold=slow_threshold)
+        builder.with_slow_detector(threshold=slow_threshold, alert=alert)
         
         if metrics:
             builder.with_metrics_reporter(prometheus_format=prometheus_format)
         
-        builder.with_error_reporter()
+        builder.with_error_reporter(alert=alert)
         
         monitor_pipeline = builder.build()
     

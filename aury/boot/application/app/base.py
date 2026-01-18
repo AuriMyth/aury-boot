@@ -83,6 +83,78 @@ class Middleware(ABC):
         pass
 
 
+# TODO: 未来考虑合并 Middleware/Plugin/Component 为统一的 Extension 概念：
+# class Extension:
+#     def build_middleware(self, config) -> StarletteMiddleware | None  # 可选：app 创建前
+#     def install(self, app, config) -> None                           # 可选：app 创建后
+#     async def setup(self, app, config) -> None                       # 可选：lifespan 启动
+#     async def teardown(self, app) -> None                            # 可选：lifespan 关闭
+# 这样一个扩展可以同时实现多个 hook，适用于 OTEL、认证等复杂场景。
+
+
+class Plugin(ABC):
+    """应用插件基类。
+
+    用于需要 app 实例的扩展，如 OpenTelemetry instrument、Admin Console 挂载等。
+    插件在 app 创建后、lifespan 之前同步执行。
+
+    生命周期：
+    1. ``install()`` - 在 app 创建后同步调用，可以访问 app 实例。
+
+    与 Middleware 的区别：
+    - Middleware: 在 app 创建前构建，返回 Starlette Middleware
+    - Plugin: 在 app 创建后执行，可以操作 app 实例
+
+    与 Component 的区别：
+    - Component: 在 lifespan 里异步执行，用于基础设施初始化
+    - Plugin: 在 lifespan 前同步执行，用于 app 扩展
+
+    使用示例:
+        class TelemetryPlugin(Plugin):
+            name = "telemetry"
+            enabled = True
+
+            def install(self, app: FoundationApp, config: BaseConfig) -> None:
+                FastAPIInstrumentor.instrument_app(app)
+    """
+
+    name: str = "plugin"
+    enabled: bool = True
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """是否可以启用此插件。
+
+        子类可以重写此方法以实现条件化启用。
+
+        Args:
+            config: 应用配置
+
+        Returns:
+            是否启用
+        """
+        return self.enabled
+
+    @abstractmethod
+    def install(self, app: FoundationApp, config: BaseConfig) -> None:
+        """安装插件（同步，在 app 创建后、lifespan 之前调用）。
+
+        Args:
+            app: 应用实例
+            config: 应用配置
+        """
+        pass
+
+    def uninstall(self, app: FoundationApp) -> None:
+        """卸载插件（可选，在 lifespan 关闭时调用）。
+
+        用于清理资源。默认不做任何操作。
+
+        Args:
+            app: 应用实例
+        """
+        pass
+
+
 class Component(ABC):
     """基础设施组件基类。
 
@@ -195,6 +267,9 @@ class FoundationApp(FastAPI):
     # 默认中间件列表（子类可以覆盖）
     middlewares: ClassVar[list[type[Middleware] | Middleware]] = []
 
+    # 默认插件列表（子类可以覆盖）
+    plugins: ClassVar[list[type[Plugin] | Plugin]] = []
+
     # 默认组件列表（子类可以覆盖）
     components: ClassVar[list[type[Component] | Component]] = []
 
@@ -249,8 +324,9 @@ class FoundationApp(FastAPI):
         # 注册 access 日志（HTTP 请求日志）
         register_log_sink("access", filter_key="access")
 
-        # 初始化中间件和组件管理
+        # 初始化中间件、插件和组件管理
         self._middlewares: dict[str, Middleware] = {}
+        self._plugins: dict[str, Plugin] = {}
         self._components: dict[str, Component] = {}
         self._lifecycle_listeners: dict[str, list[Callable]] = {}
 
@@ -263,9 +339,12 @@ class FoundationApp(FastAPI):
             yield
             # 关闭
             await self._on_shutdown()
+            # 卸载插件
+            self._uninstall_plugins()
 
-        # 收集中间件和组件实例并过滤
+        # 收集中间件、插件和组件实例并过滤
         self._collect_middlewares()
+        self._collect_plugins()
         self._collect_components()
 
         # 构建中间件实例列表，传给 FastAPI
@@ -280,6 +359,9 @@ class FoundationApp(FastAPI):
             middleware=middleware_instances,
             **kwargs,
         )
+
+        # 安装插件（app 创建后、lifespan 之前）
+        self._install_plugins()
 
         # 异常处理：显式注册以覆盖 FastAPI/Starlette 默认处理器，确保统一响应格式
         self.add_exception_handler(RequestValidationError, global_exception_handler)  # 422 参数校验
@@ -306,6 +388,22 @@ class FoundationApp(FastAPI):
                 self._middlewares[middleware.name] = middleware
                 logger.debug(f"中间件已收集: {middleware.name}")
 
+    def _collect_plugins(self) -> None:
+        """收集并实例化所有插件。
+
+        这一步在 super().__init__() 之前执行，只做实例化和过滤。
+        """
+        for item in self.plugins:
+            # 支持类或实例
+            if isinstance(item, type):
+                plugin = item()
+            else:
+                plugin = item
+
+            if plugin.can_enable(self._config):
+                self._plugins[plugin.name] = plugin
+                logger.debug(f"插件已收集: {plugin.name}")
+
     def _collect_components(self) -> None:
         """收集并实例化所有组件。
 
@@ -322,6 +420,32 @@ class FoundationApp(FastAPI):
             if component.can_enable(self._config):
                 self._components[component.name] = component
                 logger.debug(f"组件已收集: {component.name}")
+
+    def _install_plugins(self) -> None:
+        """安装所有插件。
+
+        在 super().__init__() 之后、lifespan 之前同步调用。
+        此时 app 已创建，插件可以访问 app 实例。
+        """
+        for plugin in self._plugins.values():
+            try:
+                plugin.install(self, self._config)
+                logger.info(f"插件已安装: {plugin.name}")
+            except Exception as e:
+                logger.warning(f"插件安装失败 ({plugin.name}): {e}")
+
+    def _uninstall_plugins(self) -> None:
+        """卸载所有插件。
+
+        在 lifespan 关闭后同步调用。
+        """
+        # 反序卸载
+        for plugin in reversed(list(self._plugins.values())):
+            try:
+                plugin.uninstall(self)
+                logger.debug(f"插件已卸载: {plugin.name}")
+            except Exception as e:
+                logger.warning(f"插件卸载失败 ({plugin.name}): {e}")
 
     def _build_middlewares(self) -> list[StarletteMiddleware]:
         """构建所有中间件实例。

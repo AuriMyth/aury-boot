@@ -309,7 +309,11 @@ def log_exception(
 
 __all__ = [
     "create_console_sink",
+    "format_exception_compact",
     "format_exception_java_style",
     "format_message",
     "log_exception",
 ]
+
+# 别名导出（保持内部使用 _ 前缀）
+format_exception_compact = _format_exception_compact

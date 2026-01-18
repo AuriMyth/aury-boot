@@ -31,7 +31,10 @@ class ChannelMessage:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_sse(self) -> str:
-        """转换为 SSE 格式。"""
+        """转换为 SSE 格式。
+        
+        SSE 规范要求每个消息以双换行符结束。
+        """
         lines = []
         if self.id:
             lines.append(f"id: {self.id}")
@@ -42,7 +45,8 @@ class ChannelMessage:
         for line in data_str.split("\n"):
             lines.append(f"data: {line}")
         lines.append("")  # 空行结束
-        return "\n".join(lines)
+        # SSE 规范要求消息以双换行符结束
+        return "\n".join(lines) + "\n"
 
 
 class IChannel(ABC):

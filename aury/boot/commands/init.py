@@ -159,6 +159,7 @@ TEMPLATE_FILE_MAP = {
     "AGENTS.md": "AGENTS.md.tpl",
     "conftest.py": "conftest.py.tpl",
     "admin_console/__init__.py": "admin_console_init.py.tpl",
+    "alert_rules.example.yaml": "alert_rules.example.yaml.tpl",
 }
 
 # env 模板拼接顺序
@@ -172,6 +173,7 @@ ENV_TEMPLATE_ORDER = [
     "scheduler.tpl",
     "messaging.tpl",
     "storage.tpl",
+    "monitoring.tpl",
     "third_party.tpl",
     "rpc.tpl",
 ]

@@ -112,6 +112,11 @@ mypy {package_name}/
 - **[aury_docs/14-mq.md](./aury_docs/14-mq.md)** - 消息队列
 - **[aury_docs/15-events.md](./aury_docs/15-events.md)** - 事件总线
 
+### 监控与告警
+
+- **[aury_docs/17-alerting.md](./aury_docs/17-alerting.md)** - 告警系统（慢请求/慢SQL/异常 → 飞书）
+- **[alert_rules.example.yaml](./alert_rules.example.yaml)** - 告警规则示例（复制为 alert_rules.yaml 使用）
+
 ### 第三方集成
 
 - **[aury_docs/16-adapter.md](./aury_docs/16-adapter.md)** - 第三方接口适配器（Mock/真实切换）

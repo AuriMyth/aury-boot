@@ -9,7 +9,7 @@ import importlib
 import pkgutil
 from typing import ClassVar
 
-from aury.boot.application.app.base import Component, FoundationApp
+from aury.boot.application.app.base import Component, FoundationApp, Plugin
 from aury.boot.application.config import BaseConfig
 from aury.boot.application.constants import ComponentName, ServiceType
 from aury.boot.application.migrations import MigrationManager
@@ -18,6 +18,17 @@ from aury.boot.infrastructure.cache import CacheManager
 from aury.boot.infrastructure.channel import ChannelManager
 from aury.boot.infrastructure.database import DatabaseManager
 from aury.boot.infrastructure.events import EventBusManager
+from aury.boot.infrastructure.monitoring.alerting import (
+    AlertEventType,
+    AlertManager,
+    AlertSeverity,
+    emit_alert,
+)
+from aury.boot.infrastructure.monitoring.tracing import (
+    TelemetryConfig,
+    TelemetryProvider,
+    setup_otel_logging,
+)
 from aury.boot.infrastructure.mq import MQManager
 from aury.boot.infrastructure.scheduler import SchedulerManager
 from aury.boot.infrastructure.storage import StorageManager
@@ -48,9 +59,26 @@ class DatabaseComponent(Component):
                     pool_timeout=config.database.pool_timeout,
                     pool_recycle=config.database.pool_recycle,
                 )
+                # 在 engine 创建后进行 OTEL instrumentation
+                self._instrument_engine(db_manager, config)
         except Exception as e:
             logger.error(f"数据库初始化失败: {e}")
             raise
+    
+    def _instrument_engine(self, db_manager: DatabaseManager, config: BaseConfig) -> None:
+        """对数据库引擎进行 OTEL instrumentation。"""
+        if not config.telemetry.enabled:
+            return
+        
+        try:
+            from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+            # async engine 需要使用 sync_engine
+            SQLAlchemyInstrumentor().instrument(engine=db_manager.engine.sync_engine)
+            logger.debug("SQLAlchemy engine instrumentation 已启用")
+        except ImportError:
+            logger.debug("SQLAlchemy instrumentation 未安装，跳过")
+        except Exception as e:
+            logger.warning(f"SQLAlchemy engine instrumentation 失败: {e}")
 
     async def teardown(self, app: FoundationApp) -> None:
         """关闭数据库。"""
@@ -549,6 +577,193 @@ class ChannelComponent(Component):
                 logger.warning(f"通道 [{name}] 关闭失败: {e}")
 
 
+class TelemetryPlugin(Plugin):
+    """OpenTelemetry 插件。
+    
+    在 app 创建后同步执行，负责：
+    - 初始化 TracerProvider
+    - 对 FastAPI app 进行 instrumentation
+    - 配置 AlertingSpanProcessor 检测慢请求/异常（告警配置从 ALERT__ 读取）
+    
+    配置方式（环境变量）：
+        TELEMETRY__ENABLED=true
+        TELEMETRY__TRACES_ENDPOINT=http://jaeger:4317  # 可选
+        TELEMETRY__LOGS_ENDPOINT=http://loki:3100      # 可选
+        TELEMETRY__METRICS_ENDPOINT=http://prometheus:9090  # 可选
+        
+        # 告警相关配置从 ALERT__ 读取
+        ALERT__ENABLED=true
+        ALERT__SLOW_REQUEST_THRESHOLD=1.0
+        ALERT__SLOW_SQL_THRESHOLD=0.5
+        ALERT__ALERT_ON_SLOW_REQUEST=true
+        ALERT__ALERT_ON_SLOW_SQL=true
+        ALERT__ALERT_ON_ERROR=true
+    """
+
+    name = "telemetry"
+    enabled = True
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """仅当 TELEMETRY__ENABLED=true 时启用。"""
+        return self.enabled and config.telemetry.enabled
+
+    def install(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化 OpenTelemetry 并对 app 进行 instrumentation。"""
+        try:
+            # 创建告警回调（调用 alerting 模块，自动应用定制化规则）
+            alert_callback = self._create_alert_callback() if config.alert.enabled else None
+            
+            telemetry_config = TelemetryConfig(
+                service_name=config.service.name,
+                service_version=config.service.version,
+                environment=config.service.environment,
+                instrument_fastapi=config.telemetry.instrument_fastapi,
+                instrument_sqlalchemy=config.telemetry.instrument_sqlalchemy,
+                instrument_httpx=config.telemetry.instrument_httpx,
+                # 告警配置全部从 AlertSettings 读取
+                alert_enabled=config.alert.enabled,
+                slow_request_threshold=config.alert.slow_request_threshold,
+                slow_sql_threshold=config.alert.slow_sql_threshold,
+                alert_on_slow_request=config.alert.alert_on_slow_request,
+                alert_on_slow_sql=config.alert.alert_on_slow_sql,
+                alert_on_error=config.alert.alert_on_error,
+                alert_callback=alert_callback,
+                traces_endpoint=config.telemetry.traces_endpoint,
+                traces_headers=config.telemetry.traces_headers,
+                logs_endpoint=config.telemetry.logs_endpoint,
+                logs_headers=config.telemetry.logs_headers,
+                metrics_endpoint=config.telemetry.metrics_endpoint,
+                metrics_headers=config.telemetry.metrics_headers,
+                sampling_rate=config.telemetry.sampling_rate,
+            )
+            
+            # 创建并初始化 TelemetryProvider
+            provider = TelemetryProvider(telemetry_config)
+            success = provider.initialize()
+            
+            if success:
+                # 保存到 app.state 以便 shutdown 时使用
+                app.state.telemetry_provider = provider
+                
+                # 对已创建的 FastAPI app 进行 instrumentation
+                provider.instrument_fastapi_app(app)
+                
+                # 配置 OTLP 日志导出（可选）
+                if config.telemetry.logs_endpoint:
+                    self._setup_otlp_logging(
+                        config.telemetry.logs_endpoint,
+                        config.telemetry.logs_headers,
+                    )
+            else:
+                logger.warning("OpenTelemetry 初始化失败（非关键）")
+                
+        except ImportError as e:
+            logger.warning(f"OpenTelemetry 未安装，跳过初始化: {e}")
+        except Exception as e:
+            logger.warning(f"OpenTelemetry 初始化失败（非关键）: {e}")
+
+    def _create_alert_callback(self):
+        """创建告警回调函数。
+        
+        回调会调用 alerting 模块的 emit_alert，自动应用 YAML 定制化规则。
+        """
+        # 事件类型映射
+        type_mapping = {
+            "slow_request": AlertEventType.SLOW_REQUEST,
+            "slow_sql": AlertEventType.SLOW_SQL,
+            "exception": AlertEventType.EXCEPTION,
+            "custom": AlertEventType.CUSTOM,
+        }
+        
+        # 严重级别映射
+        severity_mapping = {
+            "info": AlertSeverity.INFO,
+            "warning": AlertSeverity.WARNING,
+            "error": AlertSeverity.ERROR,
+            "critical": AlertSeverity.CRITICAL,
+        }
+        
+        async def callback(event_type: str, message: str, **metadata):
+            try:
+                alert_event_type = type_mapping.get(event_type, AlertEventType.CUSTOM)
+                severity_str = metadata.pop("severity", "warning")
+                severity = severity_mapping.get(severity_str, AlertSeverity.WARNING)
+                
+                await emit_alert(
+                    alert_event_type,
+                    message,
+                    severity=severity,
+                    **metadata,
+                )
+            except Exception as e:
+                logger.debug(f"发送告警失败: {e}")
+        
+        return callback
+    
+    def _setup_otlp_logging(
+        self,
+        endpoint: str,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """配置 OTLP 日志导出。"""
+        try:
+            setup_otel_logging(endpoint=endpoint, headers=headers)
+        except Exception as e:
+            logger.warning(f"OTLP 日志导出配置失败: {e}")
+
+    def uninstall(self, app: FoundationApp) -> None:
+        """关闭 OpenTelemetry。"""
+        try:
+            provider = getattr(app.state, "telemetry_provider", None)
+            if provider:
+                provider.shutdown()
+                logger.info("OpenTelemetry 已关闭")
+        except Exception as e:
+            logger.warning(f"OpenTelemetry 关闭失败: {e}")
+
+
+class AlertComponent(Component):
+    """告警系统组件。
+    
+    在 lifespan 启动时异步初始化 AlertManager。
+    """
+
+    name = "alert"
+    enabled = True
+    depends_on: ClassVar[list[str]] = []
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """仅当 ALERT__ENABLED=true 时启用。"""
+        return self.enabled and config.alert.enabled
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化告警管理器。"""
+        try:
+            alert_manager = AlertManager.get_instance()
+            if not alert_manager.is_initialized:
+                await alert_manager.initialize(
+                    enabled=config.alert.enabled,
+                    service_name=config.service.name,
+                    rules_file=config.alert.rules_file,
+                    defaults={
+                        "slow_request_threshold": config.alert.slow_request_threshold,
+                        "slow_sql_threshold": config.alert.slow_sql_threshold,
+                        "aggregate_window": config.alert.aggregate_window,
+                        "slow_request_aggregate": config.alert.slow_request_aggregate,
+                        "slow_sql_aggregate": config.alert.slow_sql_aggregate,
+                        "exception_aggregate": config.alert.exception_aggregate,
+                        "suppress_seconds": config.alert.suppress_seconds,
+                    },
+                    notifiers=config.alert.get_notifiers(),
+                )
+        except Exception as e:
+            logger.warning(f"告警管理器初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """无需清理。"""
+        pass
+
+
 class EventBusComponent(Component):
     """事件总线组件。
     
@@ -590,8 +805,14 @@ class EventBusComponent(Component):
                 logger.warning(f"事件总线 [{name}] 关闭失败: {e}")
 
 
+# 设置默认插件
+FoundationApp.plugins = [
+    TelemetryPlugin,  # app 创建后立即 instrument
+]
+
 # 设置默认组件
 FoundationApp.components = [
+    AlertComponent,  # 最先初始化告警管理器
     DatabaseComponent,
     MigrationComponent,
     AdminConsoleComponent,
@@ -607,6 +828,7 @@ FoundationApp.components = [
 
 __all__ = [
     "AdminConsoleComponent",
+    "AlertComponent",
     "CacheComponent",
     "ChannelComponent",
     "DatabaseComponent",
@@ -616,5 +838,6 @@ __all__ = [
     "SchedulerComponent",
     "StorageComponent",
     "TaskComponent",
+    "TelemetryPlugin",
 ]
 
