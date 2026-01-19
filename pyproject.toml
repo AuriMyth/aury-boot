@@ -20,6 +20,7 @@ dependencies = [
     "babel>=2.17.0",
     "faker>=38.2.0",
     "aury-sdk-storage[aws]>=0.0.6",
+    "broadcaster[redis]>=0.3.1",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,9 @@ sqlite = ["aiosqlite>=0.21.0"]
 
 # ============ 缓存 ============
 redis = ["redis>=7.1.0"]
+
+# ============ 实时通信 (Pub/Sub) ============
+broadcaster = ["broadcaster[redis]>=0.3.1"]
 
 # ============ 对象存储 ============
 s3 = ["aury-sdk-storage[aws]>=0.0.1"]
