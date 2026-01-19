@@ -16,8 +16,11 @@ from typing import Any
 class ChannelBackend(Enum):
     """通道后端类型。"""
 
-    MEMORY = "memory"
-    REDIS = "redis"
+    # Broadcaster 统一后端（支持 memory/redis/kafka/postgres，通过 URL scheme 区分）
+    BROADCASTER = "broadcaster"
+    # 未来扩展
+    RABBITMQ = "rabbitmq"
+    ROCKETMQ = "rocketmq"
 
 
 @dataclass

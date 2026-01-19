@@ -1,9 +1,5 @@
 """通道后端实现。"""
 
-from .memory import MemoryChannel
-from .redis import RedisChannel
+from .broadcaster import BroadcasterChannel
 
-__all__ = [
-    "MemoryChannel",
-    "RedisChannel",
-]
+__all__ = ["BroadcasterChannel"]

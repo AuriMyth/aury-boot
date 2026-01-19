@@ -127,6 +127,60 @@ mypy {package_name}/
 - **[aury_docs/99-cli.md](./aury_docs/99-cli.md)** - CLI 命令参考
 - **[.env.example](./.env.example)** - 所有可用环境变量
 
+## 配置结构
+
+框架使用 `BaseConfig` 统一管理配置，环境变量通过 `__` 分隔符映射到嵌套配置：
+
+```python
+# 配置结构（BaseConfig）
+class BaseConfig(BaseSettings):
+    # 基础服务
+    server: ServerSettings      # SERVER__*
+    cors: CORSSettings          # CORS__*
+    log: LogSettings            # LOG__*
+    health_check: HealthCheckSettings  # HEALTH_CHECK__*
+    admin: AdminConsoleSettings # ADMIN__*
+    
+    # 数据与缓存
+    database: DatabaseSettings  # DATABASE__*
+    cache: CacheSettings        # CACHE__*
+    channel: ChannelSettings    # CHANNEL__*
+    storage: StorageSettings    # STORAGE__*
+    migration: MigrationSettings  # MIGRATION__*
+    
+    # 服务编排
+    service: ServiceSettings    # SERVICE__*
+    scheduler: SchedulerSettings  # SCHEDULER__*
+    
+    # 异步与事件
+    task: TaskSettings          # TASK__*
+    event: EventSettings        # EVENT__*
+    
+    # 微服务通信
+    rpc_client: RPCClientSettings   # RPC_CLIENT__*
+    rpc_service: RPCServiceSettings # RPC_SERVICE__*
+    
+    # 监控告警
+    telemetry: TelemetrySettings  # TELEMETRY__*
+    alert: AlertSettings        # ALERT__*
+    
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="__",  # 环境变量分隔符
+    )
+```
+
+**环境变量命名规则**：`{SECTION}__{FIELD}`
+
+```bash
+# 示例
+DATABASE__URL=postgresql://...
+DATABASE__POOL_SIZE=10
+CACHE__CACHE_TYPE=redis
+CACHE__URL=redis://localhost:6379
+ALERT__ENABLED=true
+ALERT__SLOW_REQUEST_THRESHOLD=1.0
+```
+
 ## 代码规范
 
 > 项目所有业务配置请通过应用 `settings`/配置对象获取，**不要**直接使用 `os.environ` 在业务代码中读环境变量。

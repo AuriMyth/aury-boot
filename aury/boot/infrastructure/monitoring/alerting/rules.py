@@ -55,6 +55,7 @@ class AlertRule:
     # 过滤条件
     source_filter: str | None = None        # api / task / scheduler
     path_pattern: str | None = None         # 路径匹配（支持 * 通配符）
+    exclude_paths: list[str] | None = None  # 排除路径列表（支持 * 通配符）
     
     # 聚合配置
     aggregate_window: int = 10              # 滑动窗口（秒）
@@ -66,6 +67,7 @@ class AlertRule:
     
     # 编译后的正则（内部使用）
     _path_regex: re.Pattern | None = field(default=None, repr=False)
+    _exclude_regexes: list[re.Pattern] = field(default_factory=list, repr=False)
     
     def __post_init__(self) -> None:
         """初始化后编译路径正则。"""
@@ -73,6 +75,12 @@ class AlertRule:
             # 将通配符转换为正则
             regex_pattern = fnmatch.translate(self.path_pattern)
             self._path_regex = re.compile(regex_pattern)
+        
+        if self.exclude_paths:
+            # 编译所有排除路径的正则
+            for exclude_pattern in self.exclude_paths:
+                regex_pattern = fnmatch.translate(exclude_pattern)
+                self._exclude_regexes.append(re.compile(regex_pattern))
     
     def matches(self, event: "AlertEvent") -> bool:
         """检查事件是否匹配规则。
@@ -101,6 +109,13 @@ class AlertRule:
             endpoint = event.metadata.get("endpoint", "")
             if not self._path_regex.match(endpoint):
                 return False
+        
+        # 检查排除路径
+        if self._exclude_regexes:
+            endpoint = event.metadata.get("endpoint", "")
+            for exclude_regex in self._exclude_regexes:
+                if exclude_regex.match(endpoint):
+                    return False  # 匹配到排除规则，不触发告警
         
         # 检查阈值（对于 slow_* 类型）
         if self.threshold is not None and event.event_type in (
@@ -147,6 +162,7 @@ def load_rules_from_dict(data: dict) -> tuple[dict, list[AlertRule]]:
             severity_min=severity_min,
             source_filter=rule_data.get("source_filter") or rule_data.get("source"),
             path_pattern=rule_data.get("path_pattern"),
+            exclude_paths=rule_data.get("exclude_paths"),
             aggregate_window=rule_data.get("aggregate_window", defaults.get("aggregate_window", 10)),
             aggregate_threshold=rule_data.get("aggregate_threshold", defaults.get("aggregate_threshold", 1)),
             suppress_seconds=rule_data.get("suppress_seconds", defaults.get("suppress_seconds", 300)),

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+import fnmatch
+import re
 from typing import TYPE_CHECKING, Any
 
 from aury.boot.common.logging import logger
@@ -49,6 +51,7 @@ class AlertingSpanProcessor:
         alert_on_slow_sql: bool = True,
         alert_on_error: bool = True,
         alert_callback: AlertCallback | None = None,
+        slow_request_exclude_paths: list[str] | None = None,
     ) -> None:
         """初始化 AlertingSpanProcessor。
         
@@ -59,6 +62,7 @@ class AlertingSpanProcessor:
             alert_on_slow_sql: 是否对慢 SQL 发送告警
             alert_on_error: 是否对异常 span 发送告警
             alert_callback: 告警回调函数，签名: async (event_type, message, **metadata) -> None
+            slow_request_exclude_paths: 慢请求排除路径列表（支持 * 通配符），如 SSE/WebSocket 长连接
         """
         self._slow_request_threshold = slow_request_threshold
         self._slow_sql_threshold = slow_sql_threshold
@@ -66,6 +70,13 @@ class AlertingSpanProcessor:
         self._alert_on_slow_sql = alert_on_slow_sql
         self._alert_on_error = alert_on_error
         self._alert_callback = alert_callback
+        
+        # 编译排除路径正则
+        self._exclude_regexes: list[re.Pattern] = []
+        if slow_request_exclude_paths:
+            for pattern in slow_request_exclude_paths:
+                regex_pattern = fnmatch.translate(pattern)
+                self._exclude_regexes.append(re.compile(regex_pattern))
     
     def on_start(self, span: "Span", parent_context: object = None) -> None:
         """span 开始时调用（不做处理）。"""
@@ -95,6 +106,10 @@ class AlertingSpanProcessor:
         
         # 检测慢 span
         if should_alert and threshold > 0 and duration_s >= threshold:
+            # 检查是否在排除路径中
+            if self._is_path_excluded(name, attributes):
+                return
+            
             self._emit_slow_alert(
                 name=name,
                 duration=duration_s,
@@ -149,10 +164,24 @@ class AlertingSpanProcessor:
         """根据 span 类型判断是否应该发送慢告警。"""
         if span_kind == "database":
             return self._alert_on_slow_sql
-        elif span_kind in ("http", "http_client"):
+        elif span_kind in ("http", "http_client", "internal"):
             return self._alert_on_slow_request
         # 其他类型默认使用 HTTP 的开关
         return self._alert_on_slow_request
+    
+    def _is_path_excluded(self, name: str, attributes: dict) -> bool:
+        """检查路径是否在排除列表中。"""
+        if not self._exclude_regexes:
+            return False
+        
+        # 从 attributes 或 span name 中提取路径
+        path = (
+            attributes.get("http.route")
+            or attributes.get("http.target")
+            or name
+        )
+        
+        return any(regex.match(path) for regex in self._exclude_regexes)
     
     def _emit_slow_alert(
         self,
@@ -260,6 +289,7 @@ def _get_event_type_for_slow(span_kind: str) -> str:
         "http": "slow_request",
         "database": "slow_sql",
         "http_client": "slow_request",
+        "internal": "slow_request",  # internal span 也用 slow_request 类型
     }
     return mapping.get(span_kind, "custom")
 

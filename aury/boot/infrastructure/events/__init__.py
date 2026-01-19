@@ -3,12 +3,11 @@
 提供发布/订阅模式的事件总线功能，用于模块间解耦通信。
 
 支持的后端:
-- memory: 内存事件总线（单进程）
-- redis: Redis Pub/Sub（多进程/多实例）
-- rabbitmq: RabbitMQ Exchange（分布式）
+- broadcaster: 基于 broadcaster 库（推荐，支持 memory/redis/kafka/postgres）
+- rabbitmq: RabbitMQ Exchange（复杂消息场景）
 """
 
-from .backends import MemoryEventBus, RabbitMQEventBus, RedisEventBus
+from .backends import BroadcasterEventBus, RabbitMQEventBus
 from .base import Event, EventBackend, EventHandler, EventType, IEventBus
 from .manager import EventBusManager
 
@@ -22,9 +21,8 @@ __all__ = [
     "EventType",
     "IEventBus",
     # 后端实现
-    "MemoryEventBus",
+    "BroadcasterEventBus",
     "RabbitMQEventBus",
-    "RedisEventBus",
 ]
 
 

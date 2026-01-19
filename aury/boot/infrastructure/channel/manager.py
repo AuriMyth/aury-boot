@@ -9,8 +9,7 @@ from collections.abc import AsyncIterator
 
 from aury.boot.common.logging import logger
 
-from .backends.memory import MemoryChannel
-from .backends.redis import RedisChannel
+from .backends.broadcaster import BroadcasterChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 
 
@@ -51,7 +50,6 @@ class ChannelManager:
         self._backend: IChannel | None = None
         self._backend_type: ChannelBackend | None = None
         self._initialized: bool = False
-        self._redis_client = None
         self._url: str | None = None
 
     @classmethod
@@ -84,17 +82,19 @@ class ChannelManager:
 
     async def initialize(
         self,
-        backend: ChannelBackend | str = ChannelBackend.MEMORY,
+        backend: ChannelBackend | str = ChannelBackend.BROADCASTER,
         *,
-        url: str | None = None,
-        max_subscribers: int = 1000,
+        url: str = "memory://",
     ) -> ChannelManager:
         """初始化通道（链式调用）。
 
         Args:
-            backend: 后端类型
-            url: Redis 连接 URL（当 backend=redis 时需要）
-            max_subscribers: 内存后端的最大订阅者数量
+            backend: 后端类型，默认 broadcaster
+            url: 连接 URL，支持：
+                - memory:// - 内存后端（单进程，默认）
+                - redis://host:port/db - Redis Pub/Sub
+                - kafka://host:port - Apache Kafka
+                - postgres://user:pass@host/db - PostgreSQL
 
         Returns:
             self: 支持链式调用
@@ -110,23 +110,27 @@ class ChannelManager:
         self._backend_type = backend
         self._url = url
 
-        if backend == ChannelBackend.MEMORY:
-            self._backend = MemoryChannel(max_subscribers=max_subscribers)
-        elif backend == ChannelBackend.REDIS:
-            if url is None:
-                raise ValueError("Redis 通道需要提供 url 参数")
-            # 内部创建 RedisClient
-            from aury.boot.infrastructure.clients.redis import RedisClient
-
-            self._redis_client = RedisClient()
-            await self._redis_client.configure(url=url).initialize()
-            self._backend = RedisChannel(self._redis_client)
+        if backend == ChannelBackend.BROADCASTER:
+            self._backend = BroadcasterChannel(url)
+        elif backend in (ChannelBackend.RABBITMQ, ChannelBackend.ROCKETMQ):
+            raise NotImplementedError(f"{backend.value} 后端暂未实现")
         else:
             raise ValueError(f"不支持的通道后端: {backend}")
 
         self._initialized = True
-        logger.info(f"通道管理器 [{self.name}] 初始化完成: {backend.value}")
+        logger.info(f"通道管理器 [{self.name}] 初始化完成: {backend.value}, url={self._mask_url(url)}")
         return self
+
+    def _mask_url(self, url: str) -> str:
+        """URL 脱敏（隐藏密码）。"""
+        if "@" in url:
+            parts = url.split("@")
+            prefix = parts[0]
+            suffix = parts[1]
+            if ":" in prefix:
+                scheme_and_user = prefix.rsplit(":", 1)[0]
+                return f"{scheme_and_user}:***@{suffix}"
+        return url
 
     @property
     def backend(self) -> IChannel:
@@ -218,9 +222,6 @@ class ChannelManager:
         if self._backend:
             await self._backend.close()
             self._backend = None
-        if self._redis_client:
-            await self._redis_client.cleanup()
-            self._redis_client = None
         self._initialized = False
         logger.info(f"通道管理器 [{self.name}] 已关闭")
 

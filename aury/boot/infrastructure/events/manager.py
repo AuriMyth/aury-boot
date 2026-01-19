@@ -10,14 +10,12 @@ from typing import TYPE_CHECKING, Any
 
 from aury.boot.common.logging import logger
 
-from .backends.memory import MemoryEventBus
+from .backends.broadcaster import BroadcasterEventBus
 from .backends.rabbitmq import RabbitMQEventBus
-from .backends.redis import RedisEventBus
 from .base import Event, EventBackend, EventHandler, IEventBus
 
 if TYPE_CHECKING:
     from aury.boot.application.config import EventInstanceConfig
-    from aury.boot.infrastructure.clients.redis import RedisClient
 
 
 class EventBusManager:
@@ -25,19 +23,19 @@ class EventBusManager:
 
     提供统一的事件总线管理接口，支持：
     - 多实例管理（如 local、distributed 各自独立）
-    - 多后端支持（memory、redis、rabbitmq）
+    - 多后端支持（broadcaster、rabbitmq）
     - 发布/订阅模式
 
     使用示例:
         # 默认实例（内存）
         events = EventBusManager.get_instance()
-        await events.initialize(backend="memory")
+        await events.initialize(backend="broadcaster", url="memory://")
 
-        # 分布式实例
+        # 分布式实例（Redis）
         distributed = EventBusManager.get_instance("distributed")
         await distributed.initialize(
-            backend="redis",
-            redis_client=redis_client,
+            backend="broadcaster",
+            url="redis://localhost:6379/2",
         )
 
         # 订阅事件
@@ -92,10 +90,9 @@ class EventBusManager:
 
     async def initialize(
         self,
-        backend: EventBackend | str = EventBackend.MEMORY,
+        backend: EventBackend | str = EventBackend.BROADCASTER,
         *,
         config: EventInstanceConfig | None = None,
-        redis_client: RedisClient | None = None,
         url: str | None = None,
         channel_prefix: str | None = None,
         exchange_name: str = "aury.events",
@@ -105,9 +102,13 @@ class EventBusManager:
         Args:
             backend: 后端类型（当 config 不为 None 时忽略）
             config: Event 实例配置（推荐，自动根据 backend 初始化）
-            redis_client: Redis 客户端（当 backend=redis 且 config=None 时需要）
-            url: 连接 URL（当 config=None 时需要）
-            channel_prefix: Redis 频道前缀，默认 "aury:event:"
+            url: 连接 URL，格式：
+                - memory://           内存（单进程，默认）
+                - redis://host:port   Redis Pub/Sub
+                - kafka://host:port   Apache Kafka
+                - postgres://...      PostgreSQL
+                - amqp://...          RabbitMQ（需 backend=rabbitmq）
+            channel_prefix: 事件频道前缀，默认 "aury:event:"
             exchange_name: RabbitMQ 交换机名称，默认 "aury.events"
 
         Returns:
@@ -132,17 +133,20 @@ class EventBusManager:
 
         self._backend_type = backend
 
-        # 根据后端类型创建实例，参数校验由后端自己处理
-        if backend == EventBackend.MEMORY:
-            self._backend = MemoryEventBus()
-        elif backend == EventBackend.REDIS:
-            # channel_prefix 为 None 时使用 RedisEventBus 的默认值
-            kwargs = {"url": url, "redis_client": redis_client}
+        # 根据后端类型创建实例
+        if backend == EventBackend.BROADCASTER:
+            # 默认使用内存
+            effective_url = url or "memory://"
+            kwargs: dict[str, Any] = {"url": effective_url}
             if channel_prefix is not None:
                 kwargs["channel_prefix"] = channel_prefix
-            self._backend = RedisEventBus(**kwargs)
+            self._backend = BroadcasterEventBus(**kwargs)
         elif backend == EventBackend.RABBITMQ:
+            if not url:
+                raise ValueError("RabbitMQ 后端需要提供 url 参数")
             self._backend = RabbitMQEventBus(url=url, exchange_name=exchange_name)
+        elif backend == EventBackend.ROCKETMQ:
+            raise NotImplementedError("RocketMQ 后端尚未实现")
         else:
             supported = ", ".join(b.value for b in EventBackend)
             raise ValueError(f"不支持的事件总线后端: {backend}。支持: {supported}")

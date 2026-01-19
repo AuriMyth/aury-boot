@@ -24,6 +24,7 @@ from aury.boot.domain.transaction import (
 # 依赖注入容器（从 infrastructure 导入）
 from aury.boot.infrastructure.di import Container, Lifetime, Scope, ServiceDescriptor
 from aury.boot.infrastructure.events import (
+    BroadcasterEventBus,
     Event,
     EventBackend,
     EventBusManager,
@@ -31,9 +32,7 @@ from aury.boot.infrastructure.events import (
     EventType,
     IEventBus,
     # 后端实现
-    MemoryEventBus,
     RabbitMQEventBus,
-    RedisEventBus,
 )
 
 from . import interfaces, rpc
@@ -108,14 +107,13 @@ __all__ = [
     "IEventBus",
     "Lifetime",
     "LogSettings",
-    "MemoryEventBus",
+    "BroadcasterEventBus",
     "Middleware",
     "MiddlewareName",
     "MigrationComponent",
     # 迁移
     "MigrationManager",
     "RabbitMQEventBus",
-    "RedisEventBus",
     "RequestLoggingMiddleware",
     "SchedulerComponent",
     "SchedulerMode",

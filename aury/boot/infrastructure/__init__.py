@@ -27,12 +27,11 @@ from .cache import (
 
 # 通道 (SSE/PubSub)
 from .channel import (
+    BroadcasterChannel,
     ChannelBackend,
     ChannelManager,
     ChannelMessage,
     IChannel,
-    MemoryChannel,
-    RedisChannel,
 )
 
 # RabbitMQ 客户端
@@ -47,15 +46,14 @@ from .di import Container, Lifetime, Scope, ServiceDescriptor
 
 # 事件总线
 from .events import (
+    BroadcasterEventBus,
     Event,
     EventBackend,
     EventBusManager,
     EventHandler,
     EventType,
     IEventBus,
-    MemoryEventBus,
     RabbitMQEventBus,
-    RedisEventBus,
 )
 
 # 消息队列
@@ -103,6 +101,7 @@ __all__ = [
     "CacheFactory",
     "CacheManager",
     # 通道
+    "BroadcasterChannel",
     "ChannelBackend",
     "ChannelManager",
     "ChannelMessage",
@@ -128,19 +127,16 @@ __all__ = [
     "MQMessage",
     "MemcachedCache",
     "MemoryCache",
-    "MemoryChannel",
-    "MemoryEventBus",
     "RabbitMQ",
     # RabbitMQ 客户端
     "RabbitMQClient",
     "RabbitMQConfig",
     "RabbitMQEventBus",
+    "BroadcasterEventBus",
     "RedisCache",
-    "RedisChannel",
     # Redis 客户端
     "RedisClient",
     "RedisConfig",
-    "RedisEventBus",
     "RedisMQ",
     "S3Storage",
     # 调度器

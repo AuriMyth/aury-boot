@@ -188,6 +188,7 @@ class AlertManager:
         """创建默认规则。"""
         slow_request_threshold = self._defaults.get("slow_request_threshold", 1.0)
         slow_sql_threshold = self._defaults.get("slow_sql_threshold", 0.5)
+        slow_request_exclude_paths = self._defaults.get("slow_request_exclude_paths") or None
         
         default_rules = [
             # 慢请求
@@ -198,6 +199,7 @@ class AlertManager:
                 aggregate_window=self._defaults.get("aggregate_window", 10),
                 aggregate_threshold=self._defaults.get("slow_request_aggregate", 5),
                 suppress_seconds=self._defaults.get("suppress_seconds", 300),
+                exclude_paths=slow_request_exclude_paths,
             ),
             # 慢 SQL
             AlertRule(

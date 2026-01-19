@@ -628,6 +628,7 @@ class TelemetryPlugin(Plugin):
                 alert_on_slow_sql=config.alert.alert_on_slow_sql,
                 alert_on_error=config.alert.alert_on_error,
                 alert_callback=alert_callback,
+                slow_request_exclude_paths=config.alert.slow_request_exclude_paths,
                 traces_endpoint=config.telemetry.traces_endpoint,
                 traces_headers=config.telemetry.traces_headers,
                 logs_endpoint=config.telemetry.logs_endpoint,
@@ -753,6 +754,7 @@ class AlertComponent(Component):
                         "slow_sql_aggregate": config.alert.slow_sql_aggregate,
                         "exception_aggregate": config.alert.exception_aggregate,
                         "suppress_seconds": config.alert.suppress_seconds,
+                        "slow_request_exclude_paths": config.alert.slow_request_exclude_paths,
                     },
                     notifiers=config.alert.get_notifiers(),
                 )

@@ -81,6 +81,7 @@ class TelemetryConfig:
     alert_on_slow_sql: bool = True  # 是否对慢 SQL 发送告警
     alert_on_error: bool = True
     alert_callback: Any = None  # 告警回调函数
+    slow_request_exclude_paths: list[str] = field(default_factory=list)  # 慢请求排除路径
     
     # OTLP Traces 导出配置
     traces_endpoint: str | None = None
@@ -181,6 +182,7 @@ class TelemetryProvider:
                 alert_on_slow_sql=self._config.alert_on_slow_sql,
                 alert_on_error=self._config.alert_on_error,
                 alert_callback=self._config.alert_callback,
+                slow_request_exclude_paths=self._config.slow_request_exclude_paths or None,
             )
             self._provider.add_span_processor(alerting_processor)
             logger.debug("已添加 AlertingSpanProcessor")

@@ -15,11 +15,16 @@ import uuid
 
 
 class EventBackend(Enum):
-    """事件总线后端类型。"""
+    """事件总线后端类型。
+    
+    - BROADCASTER: 基于 broadcaster 库，支持 memory/redis/kafka/postgres
+    - RABBITMQ: 专用 RabbitMQ 实现（复杂消息场景）
+    - ROCKETMQ: 专用 RocketMQ 实现（预留）
+    """
 
-    MEMORY = "memory"
-    REDIS = "redis"
+    BROADCASTER = "broadcaster"
     RABBITMQ = "rabbitmq"
+    ROCKETMQ = "rocketmq"
 
 
 @dataclass

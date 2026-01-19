@@ -696,6 +696,12 @@ class AlertSettings(BaseModel):
         description="是否对异常发送告警（默认只对 5xx 告警，4xx 业务异常不告警）"
     )
     
+    # 慢请求路径排除配置
+    slow_request_exclude_paths: list[str] = Field(
+        default_factory=list,
+        description="排除慢请求告警的路径列表（支持 * 通配符），如 SSE/WebSocket 长连接接口"
+    )
+    
     # 默认累计触发配置
     aggregate_window: int = Field(
         default=10,
