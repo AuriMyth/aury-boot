@@ -27,7 +27,7 @@
 
 from .aggregator import AlertAggregator
 from .events import AlertEvent, AlertEventType, AlertNotification, AlertSeverity
-from .manager import AlertManager, emit_alert
+from .manager import AlertManager, emit_alert, emit_exception_alert
 from .notifiers import AlertNotifier, FeishuNotifier, WebhookNotifier
 from .rules import AlertRule, load_rules_from_dict
 
@@ -46,5 +46,6 @@ __all__ = [
     "WebhookNotifier",
     # 便捷函数
     "emit_alert",
+    "emit_exception_alert",
     "load_rules_from_dict",
 ]

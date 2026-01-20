@@ -424,7 +424,61 @@ def _detect_source() -> str:
     return "unknown"
 
 
+async def emit_exception_alert(
+    exc: Exception,
+    message: str | None = None,
+    *,
+    severity: AlertSeverity = AlertSeverity.ERROR,
+    source: str | None = None,
+    **metadata: Any,
+) -> None:
+    """发送异常告警的便捷函数（带完整堆栈）。
+    
+    用于在 try/except 中捕获异常后手动发送告警。
+    框架只会自动告警未被捕获的异常，被 catch 的异常需要手动调用此函数。
+    
+    Args:
+        exc: 异常对象
+        message: 告警消息（默认使用异常信息）
+        severity: 严重级别（默认 ERROR）
+        source: 来源（可选，自动检测）
+        **metadata: 额外元数据（如 session_id, user_id 等）
+        
+    Example:
+        try:
+            await some_operation()
+        except Exception as e:
+            await emit_exception_alert(
+                e, 
+                source="task_stream",
+                session_id=session_id,
+            )
+            # 继续处理...
+    """
+    import traceback
+    
+    exc_type = type(exc).__name__
+    exc_msg = str(exc)
+    tb = traceback.format_exc()
+    
+    alert_message = message or f"{exc_type}: {exc_msg}"
+    
+    # 合并异常信息到 metadata
+    metadata["error_type"] = exc_type
+    metadata["error_message"] = exc_msg
+    metadata["stacktrace"] = tb
+    
+    await emit_alert(
+        AlertEventType.EXCEPTION,
+        alert_message,
+        severity=severity,
+        source=source,
+        **metadata,
+    )
+
+
 __all__ = [
     "AlertManager",
     "emit_alert",
+    "emit_exception_alert",
 ]
