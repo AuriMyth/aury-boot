@@ -35,22 +35,41 @@ class IRepository[ModelType: Base](ABC):
         pass
     
     @abstractmethod
-    async def list(self, skip: int = 0, limit: int | None = 100, **filters) -> list[ModelType]:
-        """获取实体列表。limit=None 时返回全部记录（谨慎使用）。"""
+    async def list(
+        self,
+        skip: int = 0,
+        limit: int | None = None,
+        sort: str | SortParams | list[str] | None = None,
+        **filters
+    ) -> list[ModelType]:
+        """获取实体列表。
+        
+        Args:
+            skip: 跳过记录数
+            limit: 返回记录数限制，None 表示不限制（默认）
+            sort: 排序参数，支持多种格式：
+                - 字符串: "-created_at" 或 "created_at:desc" 或 "-created_at,name"
+                - SortParams 对象
+                - 字符串列表: ["-created_at", "name"]
+            **filters: 过滤条件
+            
+        Returns:
+            list[ModelType]: 实体列表
+        """
         pass
     
     @abstractmethod
     async def paginate(
         self,
-        pagination_params: PaginationParams,
-        sort_params: SortParams | None = None,
+        pagination: PaginationParams,
+        sort: str | SortParams | list[str] | None = None,
         **filters
     ) -> PaginationResult[ModelType]:
-        """分页获取实体列表。
+        """分页查询（list 的语法糖）。
         
         Args:
-            pagination_params: 分页参数
-            sort_params: 排序参数
+            pagination: 分页参数
+            sort: 排序参数，支持多种格式（同 list）
             **filters: 过滤条件
             
         Returns:

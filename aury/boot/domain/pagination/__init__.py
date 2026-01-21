@@ -14,61 +14,49 @@ from pydantic import BaseModel, Field, field_validator
 class PaginationParams(BaseModel):
     """分页参数。
     
-    定义分页查询的参数，包括页码和每页记录数。
+    使用 offset/limit 模式，与 SQL 语义一致。
+    提供 `of()` 方法支持 page/size 风格的输入。
+    
+    示例:
+        # 方式1: offset/limit（底层/API风格）
+        params = PaginationParams(offset=20, limit=10)
+        
+        # 方式2: page/size（UI风格）
+        params = PaginationParams.of(page=3, size=10)
     """
     
-    page: int = Field(default=1, ge=1, description="页码，从1开始")
-    page_size: int = Field(default=20, ge=1, le=100, description="每页记录数，最大100")
+    offset: int = Field(default=0, ge=0, description="偏移量")
+    limit: int = Field(default=20, ge=1, le=100, description="每页记录数，最大100")
     
-    @property
-    def offset(self) -> int:
-        """计算偏移量。
-        
-        Returns:
-            int: 偏移量
-        """
-        return (self.page - 1) * self.page_size
-    
-    @property
-    def limit(self) -> int:
-        """获取限制数量。
-        
-        Returns:
-            int: 限制数量
-        """
-        return self.page_size
-    
-    @field_validator("page")
     @classmethod
-    def validate_page(cls, v: int) -> int:
-        """验证页码。
+    def of(cls, page: int = 1, size: int = 20) -> "PaginationParams":
+        """从 page/size 构造分页参数。
         
         Args:
-            v: 页码值
+            page: 页码，从 1 开始
+            size: 每页记录数
             
         Returns:
-            int: 验证后的页码
+            PaginationParams: 分页参数对象
+            
+        Raises:
+            ValueError: 当 page < 1 或 size 无效时
         """
-        if v < 1:
-            raise ValueError("页码必须大于0")
-        return v
+        if page < 1:
+            raise ValueError("页码必须大于 0")
+        return cls(offset=(page - 1) * size, limit=size)
     
-    @field_validator("page_size")
-    @classmethod
-    def validate_page_size(cls, v: int) -> int:
-        """验证每页记录数。
-        
-        Args:
-            v: 每页记录数
-            
-        Returns:
-            int: 验证后的每页记录数
-        """
-        if v < 1:
-            raise ValueError("每页记录数必须大于0")
-        if v > 100:
-            raise ValueError("每页记录数不能超过100")
-        return v
+    @property
+    def page(self) -> int:
+        """当前页码（从 1 开始）。"""
+        if self.limit == 0:
+            return 1
+        return self.offset // self.limit + 1
+    
+    @property
+    def size(self) -> int:
+        """每页记录数（limit 的别名）。"""
+        return self.limit
 
 
 class SortParams(BaseModel):
@@ -103,7 +91,7 @@ class SortParams(BaseModel):
         sort_str: str | None,
         *,
         allowed_fields: set[str] | None = None,
-        default_direction: str = "desc",
+        default_direction: str = "asc",
     ) -> SortParams:
         """从字符串解析排序参数。
         
@@ -124,7 +112,7 @@ class SortParams(BaseModel):
             
         示例:
             >>> SortParams.from_string("-created_at,priority")
-            SortParams(sorts=[('created_at', 'desc'), ('priority', 'desc')])
+            SortParams(sorts=[('created_at', 'desc'), ('priority', 'asc')])
             
             >>> SortParams.from_string("created_at:desc,priority:asc")
             SortParams(sorts=[('created_at', 'desc'), ('priority', 'asc')])
@@ -233,66 +221,76 @@ class PaginationResult[ModelType](BaseModel):
     """分页结果。
     
     封装分页查询的结果，包括数据列表和分页信息。
+    同时提供 offset/limit 和 page/size 两种风格的字段。
     """
     
     items: list[ModelType] = Field(description="数据列表")
     total: int = Field(ge=0, description="总记录数")
-    page: int = Field(ge=1, description="当前页码")
-    page_size: int = Field(ge=1, description="每页记录数")
-    total_pages: int = Field(ge=0, description="总页数")
+    offset: int = Field(ge=0, description="当前偏移量")
+    limit: int = Field(ge=1, description="每页记录数")
     has_next: bool = Field(description="是否有下一页")
     has_prev: bool = Field(description="是否有上一页")
+    
+    @property
+    def page(self) -> int:
+        """当前页码（从 1 开始）。"""
+        if self.limit == 0:
+            return 1
+        return self.offset // self.limit + 1
+    
+    @property
+    def size(self) -> int:
+        """每页记录数（limit 的别名）。"""
+        return self.limit
+    
+    @property
+    def total_pages(self) -> int:
+        """总页数。"""
+        if self.limit == 0:
+            return 0
+        return (self.total + self.limit - 1) // self.limit
     
     @classmethod
     def create(
         cls,
         items: list[ModelType],
         total: int,
-        pagination_params: PaginationParams
-    ) -> PaginationResult[ModelType]:
+        pagination: PaginationParams,
+    ) -> "PaginationResult[ModelType]":
         """创建分页结果。
         
         Args:
             items: 数据列表
             total: 总记录数
-            pagination_params: 分页参数
+            pagination: 分页参数
             
         Returns:
             PaginationResult[ModelType]: 分页结果
         """
-        total_pages = (total + pagination_params.page_size - 1) // pagination_params.page_size
-        has_next = pagination_params.page < total_pages
-        has_prev = pagination_params.page > 1
+        has_next = pagination.offset + pagination.limit < total
+        has_prev = pagination.offset > 0
         
         return cls(
             items=items,
             total=total,
-            page=pagination_params.page,
-            page_size=pagination_params.page_size,
-            total_pages=total_pages,
+            offset=pagination.offset,
+            limit=pagination.limit,
             has_next=has_next,
             has_prev=has_prev,
         )
     
     def get_next_params(self) -> PaginationParams | None:
-        """获取下一页的分页参数。
-        
-        Returns:
-            PaginationParams | None: 下一页的分页参数，如果没有下一页则返回None
-        """
+        """获取下一页的分页参数。"""
         if not self.has_next:
             return None
-        return PaginationParams(page=self.page + 1, page_size=self.page_size)
+        return PaginationParams(offset=self.offset + self.limit, limit=self.limit)
     
     def get_prev_params(self) -> PaginationParams | None:
-        """获取上一页的分页参数。
-        
-        Returns:
-            PaginationParams | None: 上一页的分页参数，如果没有上一页则返回None
-        """
+        """获取上一页的分页参数。"""
         if not self.has_prev:
             return None
-        return PaginationParams(page=self.page - 1, page_size=self.page_size)
+        new_offset = max(0, self.offset - self.limit)
+        return PaginationParams(offset=new_offset, limit=self.limit)
 
 
 class CursorPaginationParams(BaseModel):

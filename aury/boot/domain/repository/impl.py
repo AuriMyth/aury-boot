@@ -224,45 +224,113 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
     
-    async def list(self, skip: int = 0, limit: int | None = 100, **filters) -> list[ModelType]:
+    async def list(
+        self,
+        skip: int = 0,
+        limit: int | None = None,
+        sort: str | SortParams | list[str] | None = None,
+        **filters
+    ) -> list[ModelType]:
+        """获取实体列表。
+        
+        Args:
+            skip: 跳过记录数
+            limit: 返回记录数限制，None 表示不限制（默认）
+            sort: 排序参数，支持多种格式：
+                - 字符串: "-created_at" 或 "created_at:desc" 或 "-created_at,name"
+                - SortParams 对象
+                - 字符串列表: ["-created_at", "name"]
+            **filters: 过滤条件
+            
+        Returns:
+            list[ModelType]: 实体列表
+        """
         query = self._build_base_query()
         query = self._apply_filters(query, **filters)
+        query = self._apply_sort(query, sort)
         query = query.offset(skip)
         if limit is not None:
             query = query.limit(limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
     
+    def _apply_sort(
+        self,
+        query: Select,
+        sort: str | SortParams | list[str] | None,
+    ) -> Select:
+        """应用排序参数到查询。
+        
+        Args:
+            query: SQLAlchemy 查询对象
+            sort: 排序参数，支持：
+                - 字符串: "-created_at" 或 "created_at:desc" 或 "-created_at,name"
+                - SortParams 对象
+                - 字符串列表: ["-created_at", "name"]
+                
+        Returns:
+            Select: 应用排序后的查询对象
+        """
+        if sort is None:
+            return query
+        
+        # 统一转换为 SortParams
+        sort_params: SortParams
+        if isinstance(sort, SortParams):
+            sort_params = sort
+        elif isinstance(sort, str):
+            sort_params = SortParams.from_string(sort)
+        elif isinstance(sort, list):
+            # 列表格式: ["-created_at", "name"]
+            sort_params = SortParams.from_string(",".join(sort))
+        else:
+            return query
+        
+        order_by_list = []
+        for field, direction in sort_params.sorts:
+            field_attr = getattr(self._model_class, field, None)
+            if field_attr is not None:
+                if direction == "desc":
+                    order_by_list.append(field_attr.desc())
+                else:
+                    order_by_list.append(field_attr)
+        
+        if order_by_list:
+            query = query.order_by(*order_by_list)
+        
+        return query
+    
     async def paginate(
         self,
-        pagination_params: PaginationParams,
-        sort_params: SortParams | None = None,
+        pagination: PaginationParams,
+        sort: str | SortParams | list[str] | None = None,
         **filters
     ) -> PaginationResult[ModelType]:
-        query = self._build_base_query()
-        query = self._apply_filters(query, **filters)
+        """分页查询（list 的语法糖）。
         
-        if sort_params:
-            order_by_list = []
-            for field, direction in sort_params.sorts:
-                field_attr = getattr(self._model_class, field, None)
-                if field_attr is not None:
-                    if direction == "desc":
-                        order_by_list.append(field_attr.desc())
-                    else:
-                        order_by_list.append(field_attr)
-            if order_by_list:
-                query = query.order_by(*order_by_list)
-        
-        query = query.offset(pagination_params.offset).limit(pagination_params.limit)
-        result = await self._session.execute(query)
-        items = list(result.scalars().all())
-        total_count = await self.count(**filters)
+        Args:
+            pagination: 分页参数
+            sort: 排序参数，支持多种格式：
+                - 字符串: "-created_at" 或 "created_at:desc" 或 "-created_at,name"
+                - SortParams 对象
+                - 字符串列表: ["-created_at", "name"]
+            **filters: 过滤条件
+            
+        Returns:
+            PaginationResult[ModelType]: 分页结果
+        """
+        items = await self.list(
+            skip=pagination.offset,
+            limit=pagination.limit,
+            sort=sort,
+            **filters
+        )
+        total = await self.count(**filters)
         
         return PaginationResult.create(
             items=items,
-            total=total_count,
-            pagination_params=pagination_params,
+            total=total,
+            pagination=pagination,
         )
     
     async def cursor_paginate(
@@ -374,6 +442,7 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     async def stream(
         self,
         batch_size: int = 1000,
+        sort: str | SortParams | list[str] | None = None,
         **filters
     ):
         """流式查询，使用数据库原生 server-side cursor。
@@ -382,17 +451,19 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         
         Args:
             batch_size: 每批次获取的记录数，默认 1000
+            sort: 排序参数（同 list）
             **filters: 过滤条件
             
         Yields:
             ModelType: 模型实例
             
         示例:
-            async for user in repo.stream(batch_size=500, status="active"):
+            async for user in repo.stream(batch_size=500, sort="-created_at", status="active"):
                 process(user)
         """
         query = self._build_base_query()
         query = self._apply_filters(query, **filters)
+        query = self._apply_sort(query, sort)
         
         async with self._session.stream_scalars(
             query.execution_options(yield_per=batch_size)
@@ -403,23 +474,26 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
     async def stream_batches(
         self,
         batch_size: int = 1000,
+        sort: str | SortParams | list[str] | None = None,
         **filters
     ):
         """批量流式查询，每次返回一批数据。
         
         Args:
             batch_size: 每批次的记录数，默认 1000
+            sort: 排序参数（同 list）
             **filters: 过滤条件
             
         Yields:
             list[ModelType]: 一批模型实例
             
         示例:
-            async for batch in repo.stream_batches(batch_size=500):
+            async for batch in repo.stream_batches(batch_size=500, sort="id"):
                 bulk_process(batch)
         """
         query = self._build_base_query()
         query = self._apply_filters(query, **filters)
+        query = self._apply_sort(query, sort)
         
         async with self._session.stream_scalars(
             query.execution_options(yield_per=batch_size)
@@ -437,7 +511,10 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         return result.scalar_one()
     
     async def exists(self, **filters) -> bool:
-        return await self.count(**filters) > 0
+        """检查是否存在匹配的记录（比 count > 0 更高效）。"""
+        query = self._apply_filters(self._build_base_query(), **filters).limit(1)
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none() is not None
     
     async def add(self, entity: ModelType) -> ModelType:
         self._session.add(entity)
