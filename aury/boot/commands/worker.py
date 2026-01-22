@@ -100,9 +100,12 @@ def run_worker(
         module = __import__(module_path, fromlist=[app_name])
         application = getattr(module, app_name)
 
-        # 设置日志上下文
-        from aury.boot.common.logging import set_service_context
-        set_service_context("worker")
+        # 设置日志（必须在其他操作之前）
+        from aury.boot.common.logging import setup_logging
+        setup_logging(
+            log_level=getattr(application, "_config", None) and application._config.log.level or "INFO",
+            service_type="worker",
+        )
 
         # 尝试导入 dramatiq
         try:

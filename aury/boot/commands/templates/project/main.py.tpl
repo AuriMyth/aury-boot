@@ -25,15 +25,17 @@ config = AppConfig()
 #   - HEALTH_CHECK_PATH: 健康检查路径（默认 /api/health）
 #   - HEALTH_CHECK_ENABLED: 是否启用（默认 true）
 #
-# 日志拦截：
-#   框架默认拦截 uvicorn/sqlalchemy.engine，可通过 intercept_loggers 追加额外的 logger
+# 日志：
+#   框架自动全局接管所有 logging，无需配置
+#   要查看 TRACE 级别日志，设置 LOG__LEVEL=TRACE
+#   要屏蔽某些库的 DEBUG 日志，使用 logger_levels 参数
 #
 app = FoundationApp(
     title="{project_name}",
     version="0.1.0",
     description="{project_name} - 基于 Aury Boot",
     config=config,
-    intercept_loggers=[],
+    # logger_levels=[("sse_starlette", "WARNING")],  # 可选：设置特定库的日志级别
 )
 
 # 注册 API 路由

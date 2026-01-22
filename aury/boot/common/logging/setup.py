@@ -11,6 +11,25 @@ from typing import Any
 
 from loguru import logger
 
+# =============================================================================
+# TRACE Level 支持
+# =============================================================================
+# 标准 logging 没有 TRACE，需要手动添加
+# TRACE (5) < DEBUG (10)，用于超细粒度调试（如每个 streaming chunk）
+TRACE = 5
+logging.addLevelName(TRACE, "TRACE")
+
+
+def _add_trace_method() -> None:
+    """为标准 logging.Logger 添加 trace() 方法。"""
+    def trace(self: logging.Logger, msg: str, *args: Any, **kwargs: Any) -> None:
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, msg, args, **kwargs)
+    
+    logging.Logger.trace = trace  # type: ignore[attr-defined]
+
+_add_trace_method()
+
 from aury.boot.common.logging.context import (
     ServiceContext,
     _to_service_context,
@@ -89,31 +108,27 @@ def register_log_sink(
     logger.debug(f"注册日志 sink: {name} (filter_key={filter_key})")
 
 
-# 默认拦截的标准 logging 日志记录器
-# - uvicorn: Uvicorn 服务器日志
-# - uvicorn.error: Uvicorn 错误日志
-# - sqlalchemy.engine: SQLAlchemy SQL 语句日志
-# 注意：uvicorn.access 不拦截，因为框架有自己的 RequestLoggingMiddleware
-DEFAULT_INTERCEPT_LOGGERS = [
-    "uvicorn",
-    "uvicorn.error",
-    "sqlalchemy.engine",
-]
-
 
 class _InterceptHandler(logging.Handler):
     """将标准 logging 日志转发到 loguru 的处理器。"""
 
     def emit(self, record: logging.LogRecord) -> None:
         # 获取对应的 loguru 级别
+        # loguru 原生支持 TRACE，标准 logging 的 TRACE(5) 会自动映射
         try:
             level = logger.level(record.levelname).name
         except ValueError:
             level = record.levelno
 
         # 查找调用者的帧深度
-        frame, depth = logging.currentframe(), 2
-        while frame and frame.f_code.co_filename == logging.__file__:
+        # 跳过 logging 模块和本文件的所有帧
+        frame = logging.currentframe()
+        depth = 0
+        while frame is not None:
+            filename = frame.f_code.co_filename
+            # 跳过 logging 模块、本文件、loguru 内部
+            if "logging" not in filename and "loguru" not in filename:
+                break
             frame = frame.f_back
             depth += 1
 
@@ -122,35 +137,22 @@ class _InterceptHandler(logging.Handler):
         )
 
 
-def _setup_intercept(logger_names: list[str]) -> None:
-    """让 loguru 接管指定的标准 logging 日志记录器。"""
-    handler = _InterceptHandler()
-    for name in logger_names:
-        std_logger = logging.getLogger(name)
-        std_logger.handlers = [handler]
-        std_logger.setLevel(logging.DEBUG)
-        std_logger.propagate = False
-
-
-def setup_intercept(logger_names: list[str] | None = None) -> None:
-    """拦截标准 logging 日志记录器并转发到 loguru。
-
-    用于独立脚本/CLI 入口点（不使用 FoundationApp 时）。
-    FoundationApp 会自动调用此函数，无需手动调用。
-
+def _setup_global_intercept(logger_levels: list[tuple[str, str]] | None = None) -> None:
+    """全局接管所有标准 logging，转发到 loguru。
+    
+    这样任何使用 logging.getLogger() 的库都会自动被接管。
+    
     Args:
-        logger_names: 额外需要拦截的 logger 名称列表，
-            会追加到默认列表 (uvicorn, sqlalchemy.engine 等)。
-
-    使用示例::
-
-        from aury.boot.common.logging import setup_logging, setup_intercept
-
-        setup_logging(log_level="DEBUG")
-        setup_intercept(["my_package", "third_party_lib"])
+        logger_levels: 需要设置特定级别的 logger 列表，格式: [("name", "LEVEL"), ...]
+            例如: [("sse_starlette", "WARNING"), ("httpx", "INFO")]
     """
-    to_intercept = DEFAULT_INTERCEPT_LOGGERS + (logger_names or [])
-    _setup_intercept(to_intercept)
+    logging.root.handlers = [_InterceptHandler()]
+    logging.root.setLevel(TRACE)  # 接收所有级别，包括 TRACE
+    
+    # 对指定的 logger 设置特定级别
+    if logger_levels:
+        for name, level in logger_levels:
+            logging.getLogger(name).setLevel(level.upper())
 
 
 def setup_logging(
@@ -162,7 +164,7 @@ def setup_logging(
     retention_days: int = 7,
     rotation_size: str = "50 MB",
     enable_console: bool = True,
-    intercept_loggers: list[str] | None = None,
+    logger_levels: list[tuple[str, str]] | None = None,
 ) -> None:
     """设置日志配置。
 
@@ -177,7 +179,7 @@ def setup_logging(
     可通过 register_log_sink() 注册额外的日志文件（如 access.log）。
 
     Args:
-        log_level: 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL）
+        log_level: 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL/TRACE）
         log_dir: 日志目录（默认：./logs）
         service_type: 服务类型（app/scheduler/worker）
         enable_file_rotation: 是否启用日志轮转
@@ -185,8 +187,8 @@ def setup_logging(
         retention_days: 日志保留天数（默认：7 天）
         rotation_size: 单文件大小上限（默认：50 MB）
         enable_console: 是否输出到控制台
-        intercept_loggers: 额外需要拦截的标准 logging logger 名称列表，
-            会追加到默认列表 (uvicorn, sqlalchemy.engine 等)。
+        logger_levels: 需要设置特定级别的 logger 列表，格式: [("name", "LEVEL"), ...]
+            例如: [("sse_starlette", "WARNING"), ("httpx", "INFO")]
     """
     log_level = log_level.upper()
     log_dir = log_dir or "logs"
@@ -273,16 +275,15 @@ def setup_logging(
             filter=lambda record, c=ctx: record["extra"].get("service") == c,
         )
 
-    # 拦截标准 logging 日志并转发到 loguru
-    to_intercept = DEFAULT_INTERCEPT_LOGGERS + (intercept_loggers or [])
-    _setup_intercept(to_intercept)
+    # 全局拦截标准 logging 日志并转发到 loguru
+    # 所有使用 logging.getLogger() 的库自动被接管
+    _setup_global_intercept(logger_levels=logger_levels)
 
-    logger.info(f"日志系统初始化完成 | 服务: {service_type} | 级别: {log_level} | 目录: {log_dir}")
+    logger.info
 
 
 __all__ = [
-    "DEFAULT_INTERCEPT_LOGGERS",
+    "TRACE",
     "register_log_sink",
-    "setup_intercept",
     "setup_logging",
 ]
