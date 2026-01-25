@@ -12,6 +12,7 @@ from aury.boot.common.logging import logger
 
 from .backends.rabbitmq import RabbitMQ
 from .backends.redis import RedisMQ
+from .backends.redis_stream import RedisStreamMQ
 from .base import IMQ, MQBackend, MQMessage
 
 if TYPE_CHECKING:
@@ -127,6 +128,8 @@ class MQManager:
         # 根据后端类型创建实例，参数校验由后端自己处理
         if backend == MQBackend.REDIS:
             self._backend = RedisMQ(url=url, redis_client=redis_client, prefix=prefix)
+        elif backend == MQBackend.REDIS_STREAM:
+            self._backend = RedisStreamMQ(url=url, redis_client=redis_client, prefix=prefix)
         elif backend == MQBackend.RABBITMQ:
             self._backend = RabbitMQ(url=url)
         else:

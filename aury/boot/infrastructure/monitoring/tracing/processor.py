@@ -181,7 +181,23 @@ class AlertingSpanProcessor:
             or name
         )
         
-        return any(regex.match(path) for regex in self._exclude_regexes)
+        # 检查所有可能的路径来源
+        paths_to_check = [path]
+        
+        # 也检查 span name 中的路径（可能包含 HTTP 方法和后缀）
+        # 例如 "GET /api/v1/spaces/{space_id}/subscribe http receive"
+        if name and name != path:
+            # 尝试提取 span name 中的路径部分
+            parts = name.split()
+            for part in parts:
+                if part.startswith("/"):
+                    paths_to_check.append(part)
+        
+        for p in paths_to_check:
+            if any(regex.fullmatch(p) for regex in self._exclude_regexes):
+                return True
+        
+        return False
     
     def _emit_slow_alert(
         self,

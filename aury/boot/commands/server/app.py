@@ -9,6 +9,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import typer
+import uvicorn
 
 if TYPE_CHECKING:
     from aury.boot.application.app.base import FoundationApp
@@ -416,7 +417,6 @@ def dev(
         os_module.environ["AURIMYTH_RELOAD"] = "1"
         
         # 热重载模式下，直接使用 uvicorn，传递 app 字符串路径
-        import uvicorn
         uvicorn.run(
             app=app_module_path,
             host=server_host,
@@ -500,19 +500,22 @@ def prod(
     typer.echo("   热重载: ❌")
     typer.echo("   调试模式: ❌")
     
+    # 获取 app 模块路径（多进程模式需要字符串格式）
+    app_module_path = app_path or _detect_app_module()
+    typer.echo(f"   应用模块: {app_module_path}")
+    
     try:
-        server = ApplicationServer(
-            app=app_instance,
+        # 多进程模式必须使用字符串路径，否则子进程无法重新加载应用
+        uvicorn.run(
+            app=app_module_path,
             host=server_host,
             port=server_port,
             workers=server_workers,
             reload=False,
             loop="auto",
             http="auto",
-            debug=False,
             access_log=True,
         )
-        server.run()
     except KeyboardInterrupt:
         typer.echo("\n👋 服务器已停止")
     except Exception as e:

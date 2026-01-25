@@ -530,24 +530,25 @@ class MessageQueueSettings(BaseModel):
     """消息队列配置。
     
     环境变量格式: MQ__{FIELD}
-    示例: MQ__BROKER_URL, MQ__DEFAULT_QUEUE, MQ__SERIALIZER
+    示例: MQ__BACKEND, MQ__URL, MQ__BROKER_URL
     
     与 Task（任务队列）的区别：
     - Task: 基于 Dramatiq，用于异步任务处理（API + Worker 模式）
     - MQ: 通用消息队列，用于服务间通信、事件驱动架构
     
     支持的后端：
-    - Redis: redis://localhost:6379/0
-    - RabbitMQ: amqp://guest:guest@localhost:5672//
+    - redis: redis://localhost:6379/0
+    - redis_stream: redis://localhost:6379/0
+    - rabbitmq: amqp://guest:guest@localhost:5672//
     """
     
-    enabled: bool = Field(
-        default=False,
-        description="是否启用消息队列组件"
+    backend: str = Field(
+        default="",
+        description="消息队列后端 (redis/redis_stream/rabbitmq)，空字符串表示不启用"
     )
-    broker_url: str | None = Field(
+    url: str | None = Field(
         default=None,
-        description="消息队列代理 URL"
+        description="连接 URL"
     )
     default_queue: str = Field(
         default="default",
@@ -1001,6 +1002,7 @@ class BaseConfig(BaseSettings):
     # ========== 异步与事件 ==========
     task: TaskSettings = Field(default_factory=TaskSettings)
     event: EventSettings = Field(default_factory=EventSettings)
+    mq: MessageQueueSettings = Field(default_factory=MessageQueueSettings)
     
     # ========== 微服务通信 ==========
     # RPC 客户端配置（调用其他服务）
@@ -1108,10 +1110,18 @@ class BaseConfig(BaseSettings):
         """获取所有消息队列实例配置。
         
         从环境变量解析 MQ__{INSTANCE}__{FIELD} 格式的配置。
+        如果没有配置多实例，返回从单实例配置转换的 default 实例。
         """
         if self._mqs is None:
             loader = MultiInstanceConfigLoader("MQ", MQInstanceConfig)
             self._mqs = loader.load()
+            if not self._mqs and self.mq.backend:
+                self._mqs = {
+                    "default": MQInstanceConfig(
+                        backend=self.mq.backend,
+                        url=self.mq.url,
+                    )
+                }
         return self._mqs
     
     def get_events(self) -> dict[str, EventInstanceConfig]:

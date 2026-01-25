@@ -107,14 +107,14 @@ class AlertRule:
         # 检查路径
         if self._path_regex:
             endpoint = event.metadata.get("endpoint", "")
-            if not self._path_regex.match(endpoint):
+            if not self._path_regex.fullmatch(endpoint):
                 return False
         
         # 检查排除路径
         if self._exclude_regexes:
             endpoint = event.metadata.get("endpoint", "")
             for exclude_regex in self._exclude_regexes:
-                if exclude_regex.match(endpoint):
+                if exclude_regex.fullmatch(endpoint):
                     return False  # 匹配到排除规则，不触发告警
         
         # 检查阈值（对于 slow_* 类型）

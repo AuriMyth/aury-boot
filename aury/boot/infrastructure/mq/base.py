@@ -18,6 +18,7 @@ class MQBackend(Enum):
     """消息队列后端类型。"""
 
     REDIS = "redis"
+    REDIS_STREAM = "redis_stream"
     RABBITMQ = "rabbitmq"
 
 
