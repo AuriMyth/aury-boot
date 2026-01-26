@@ -169,7 +169,7 @@ class BaseConfig(BaseSettings):
     )
 ```
 
-**环境变量命名规则**：`{SECTION}__{FIELD}`
+**环境变量命名规则**：`{{SECTION}}__{{FIELD}}`
 
 ```bash
 # 示例

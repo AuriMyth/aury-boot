@@ -147,13 +147,13 @@ class MQInstanceConfig(MultiInstanceSettings):
     
     环境变量格式: MQ__{INSTANCE}__{FIELD}
     示例:
-        MQ__DEFAULT__BACKEND=redis
+        MQ__DEFAULT__BACKEND=redis_stream
         MQ__DEFAULT__URL=redis://localhost:6379/4
     """
     
     backend: str = Field(
-        default="redis",
-        description="消息队列后端 (redis/rabbitmq)"
+        default="redis_stream",
+        description="消息队列后端 (redis/redis_stream/rabbitmq)"
     )
     url: str | None = Field(
         default=None,
@@ -715,7 +715,7 @@ class AlertSettings(BaseModel):
     
     # 抑制配置
     suppress_seconds: int = Field(
-        default=10,
+        default=300,
         description="告警抑制时间（秒），相同告警在此时间内不重复发送"
     )
     

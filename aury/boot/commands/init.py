@@ -707,8 +707,8 @@ def init(
         console.print(f"  [cyan]uv add \"{deps[0]}\"[/cyan]")
         console.print()
     else:
-        # 非交互模式：默认启用 Admin Console
-        with_admin_console = True
+        # 非交互模式：默认禁用 Admin Console
+        with_admin_console = False
         if package_name == ".":
             package_name_snake = None
         elif package_name:

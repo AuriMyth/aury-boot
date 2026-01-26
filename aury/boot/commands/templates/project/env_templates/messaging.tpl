@@ -19,19 +19,27 @@
 # =============================================================================
 # 消息队列配置 (MQ__)
 # =============================================================================
-# 单实例配置:
-# MQ__ENABLED=false
-# MQ__BROKER_URL=redis://localhost:6379/4
-
-# 多实例配置 (格式: MQ__{{INSTANCE}}__{{FIELD}}):
-# MQ__DEFAULT__BACKEND=redis
-# MQ__DEFAULT__URL=redis://localhost:6379/4
-# MQ__DEFAULT__MAX_CONNECTIONS=10
+# 支持后端: redis | redis_stream (推荐) | rabbitmq
 #
-# RabbitMQ 后端:
+# 单实例配置:
+# MQ__BACKEND=redis_stream
+# MQ__URL=redis://localhost:6379/4
+#
+# 多实例配置 (格式: MQ__{{INSTANCE}}__{{FIELD}}):
+# MQ__DEFAULT__BACKEND=redis_stream
+# MQ__DEFAULT__URL=redis://localhost:6379/4
+#
+# Redis List 后端 (简单 FIFO 队列):
+# MQ__SIMPLE__BACKEND=redis
+# MQ__SIMPLE__URL=redis://localhost:6379/4
+#
+# Redis Stream 后端 (推荐，支持消费者组/多实例消费):
+# MQ__TASKS__BACKEND=redis_stream
+# MQ__TASKS__URL=redis://localhost:6379/4
+#
+# RabbitMQ 后端 (复杂消息路由):
 # MQ__ORDERS__BACKEND=rabbitmq
 # MQ__ORDERS__URL=amqp://guest:guest@localhost:5672/orders
-# MQ__ORDERS__PREFETCH_COUNT=10
 
 # =============================================================================
 # 事件总线配置 (EVENT__)
