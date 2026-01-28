@@ -420,7 +420,7 @@ class RedisStreamMQ(IMQ):
         """关闭连接。"""
         self._consuming = False
         if self._owns_client and self._client:
-            await self._client.close()
+            await self._client.cleanup()
             self._client = None
         logger.debug("Redis Stream 消息队列已关闭")
 

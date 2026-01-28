@@ -5,11 +5,15 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from functools import wraps
 import hashlib
-from typing import Any, TypeVar
+import time
+from typing import Any, AsyncIterator, TypeVar
+import uuid
 
 from aury.boot.common.logging import logger
 
@@ -327,6 +331,152 @@ class CacheManager:
             await self._backend.close()
             self._backend = None
             logger.info("缓存管理器已清理")
+    
+    # ==================== 分布式锁 ====================
+    
+    async def acquire_lock(
+        self,
+        key: str,
+        *,
+        timeout: int = 30,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> str | None:
+        """获取分布式锁。
+        
+        Args:
+            key: 锁的键名
+            timeout: 锁的超时时间（秒），防止死锁
+            blocking: 是否阻塞等待
+            blocking_timeout: 阻塞等待的最大时间（秒）
+            
+        Returns:
+            str | None: 锁的 token（用于释放），获取失败返回 None
+        """
+        lock_key = f"lock:{key}"
+        token = str(uuid.uuid4())
+        
+        acquired = await self.backend.acquire_lock(
+            lock_key, token, timeout, blocking, blocking_timeout
+        )
+        return token if acquired else None
+    
+    async def release_lock(self, key: str, token: str) -> bool:
+        """释放分布式锁。
+        
+        Args:
+            key: 锁的键名
+            token: acquire_lock 返回的 token
+            
+        Returns:
+            bool: 是否成功释放
+        """
+        lock_key = f"lock:{key}"
+        return await self.backend.release_lock(lock_key, token)
+    
+    @asynccontextmanager
+    async def lock(
+        self,
+        key: str,
+        *,
+        timeout: int = 30,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> AsyncIterator[bool]:
+        """分布式锁上下文管理器。
+        
+        Args:
+            key: 锁的键名
+            timeout: 锁的超时时间（秒）
+            blocking: 是否阻塞等待
+            blocking_timeout: 阻塞等待的最大时间（秒）
+            
+        Yields:
+            bool: 是否成功获取锁
+            
+        示例:
+            async with cache.lock("my_resource") as acquired:
+                if acquired:
+                    # 执行需要互斥的操作
+                    pass
+        """
+        token = await self.acquire_lock(
+            key,
+            timeout=timeout,
+            blocking=blocking,
+            blocking_timeout=blocking_timeout,
+        )
+        try:
+            yield token is not None
+        finally:
+            if token:
+                await self.release_lock(key, token)
+    
+    @asynccontextmanager
+    async def semaphore(
+        self,
+        key: str,
+        max_concurrency: int,
+        *,
+        timeout: int = 300,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> AsyncIterator[bool]:
+        """分布式信号量（限制并发数）。
+        
+        Args:
+            key: 信号量的键名
+            max_concurrency: 最大并发数
+            timeout: 单个槽位的超时时间（秒）
+            blocking: 是否阻塞等待
+            blocking_timeout: 阻塞等待的最大时间（秒）
+            
+        Yields:
+            bool: 是否成功获取槽位
+            
+        示例:
+            async with cache.semaphore("pdf_ocr", max_concurrency=2) as acquired:
+                if acquired:
+                    # 执行受并发限制的操作
+                    pass
+        """
+        slot_token: str | None = None
+        acquired_slot: int | None = None
+        start_time = time.monotonic()
+        
+        try:
+            while True:
+                # 尝试获取任意一个槽位
+                for slot in range(max_concurrency):
+                    slot_key = f"{key}:slot:{slot}"
+                    token = await self.acquire_lock(
+                        slot_key,
+                        timeout=timeout,
+                        blocking=False,
+                    )
+                    if token:
+                        slot_token = token
+                        acquired_slot = slot
+                        yield True
+                        return
+                
+                if not blocking:
+                    yield False
+                    return
+                
+                # 检查是否超时
+                if blocking_timeout is not None:
+                    elapsed = time.monotonic() - start_time
+                    if elapsed >= blocking_timeout:
+                        yield False
+                        return
+                
+                # 等待后重试
+                await asyncio.sleep(0.1)
+        finally:
+            if slot_token and acquired_slot is not None:
+                slot_key = f"{key}:slot:{acquired_slot}"
+                await self.release_lock(slot_key, slot_token)
     
     def __repr__(self) -> str:
         """字符串表示。"""

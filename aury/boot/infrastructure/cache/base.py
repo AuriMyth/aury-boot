@@ -71,6 +71,44 @@ class ICache(ABC):
     async def close(self) -> None:
         """关闭连接。"""
         pass
+    
+    # ==================== 分布式锁 ====================
+    
+    @abstractmethod
+    async def acquire_lock(
+        self,
+        key: str,
+        token: str,
+        timeout: int,
+        blocking: bool,
+        blocking_timeout: float | None,
+    ) -> bool:
+        """获取分布式锁。
+        
+        Args:
+            key: 锁的键名（已加 lock: 前缀）
+            token: 锁的 token
+            timeout: 锁的超时时间（秒）
+            blocking: 是否阻塞等待
+            blocking_timeout: 阻塞等待的最大时间（秒）
+            
+        Returns:
+            bool: 是否获取成功
+        """
+        pass
+    
+    @abstractmethod
+    async def release_lock(self, key: str, token: str) -> bool:
+        """释放分布式锁。
+        
+        Args:
+            key: 锁的键名（已加 lock: 前缀）
+            token: 获取锁时的 token
+            
+        Returns:
+            bool: 是否成功释放
+        """
+        pass
 
 
 __all__ = [
