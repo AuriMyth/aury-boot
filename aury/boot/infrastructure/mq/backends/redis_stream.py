@@ -65,6 +65,10 @@ class RedisStreamMQ(IMQ):
         self._max_len = max_len
         self._consuming = False
         self._owns_client = False
+        self._log_sample_counter = 0  # 日志采样计数器
+    
+    # 日志采样率：每 N 个 send 打印 1 次
+    LOG_SAMPLE_RATE = 100
     
     async def _ensure_client(self) -> None:
         """确保 Redis 客户端已初始化。"""
@@ -122,7 +126,10 @@ class RedisStreamMQ(IMQ):
         else:
             msg_id = await self._client.connection.xadd(stream_key, data)
         
-        logger.debug(f"发送消息到 Stream: {stream_key}, id={msg_id}")
+        # 采样日志：每 N 个消息打印 1 次
+        self._log_sample_counter += 1
+        if self._log_sample_counter % self.LOG_SAMPLE_RATE == 1:
+            logger.debug(f"发送消息到 Stream: {stream_key}, id={msg_id}, count={self._log_sample_counter}")
         return message.id
 
     async def receive(

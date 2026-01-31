@@ -102,6 +102,18 @@ load_all_models(_model_modules)
 target_metadata = Base.metadata
 
 
+# === 兼容性处理 ===
+# 过滤 PostgreSQL 15+ 特有的约束参数，确保生成的 migration 兼容旧版本 PG
+_PG15_CONSTRAINT_KWARGS = {{"postgresql_nulls_not_distinct", "postgresql_include"}}
+
+def _render_item(type_, obj, autogen_context):
+    """自定义渲染，过滤不兼容的约束参数。"""
+    if type_ == "unique_constraint" and hasattr(obj, "kwargs"):
+        for key in _PG15_CONSTRAINT_KWARGS:
+            obj.kwargs.pop(key, None)
+    return False  # 使用默认渲染
+
+
 def get_url() -> str:
     """获取数据库 URL（优先环境变量，其次 alembic.ini）。"""
     return os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url", "")
@@ -117,8 +129,8 @@ def run_migrations_offline() -> None:
         dialect_opts={{"paramstyle": "named"}},
         compare_type=True,
         compare_server_default=True,
-        # 启用 batch 模式以更好地支持 SQLite 等不完整 DDL 的后端
         render_as_batch=True,
+        render_item=_render_item,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -131,8 +143,8 @@ def _do_run_migrations(connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
-        # 启用 batch 模式以更好地支持 SQLite 等不完整 DDL 的后端
         render_as_batch=True,
+        render_item=_render_item,
     )
     with context.begin_transaction():
         context.run_migrations()
