@@ -318,7 +318,18 @@ class SchedulerComponent(Component):
         # jobstores: 根据 URL 自动选择存储后端
         if scheduler_config.jobstore_url:
             url = scheduler_config.jobstore_url
-            if url.startswith("redis://"):
+            if url.startswith("redis-cluster://"):
+                # Redis Cluster 模式
+                try:
+                    from aury.boot.infrastructure.scheduler.jobstores import RedisClusterJobStore
+                    
+                    scheduler_kwargs["jobstores"] = {
+                        "default": RedisClusterJobStore(url=url)
+                    }
+                    logger.info(f"调度器使用 Redis Cluster 存储: {url.split('@')[-1].split('/')[0]}")
+                except ImportError:
+                    logger.warning("Redis Cluster jobstore 需要安装 redis[cluster]: pip install 'redis[cluster]'")
+            elif url.startswith("redis://"):
                 try:
                     from urllib.parse import urlparse
                     from apscheduler.jobstores.redis import RedisJobStore

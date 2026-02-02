@@ -9,7 +9,7 @@
 - postgres:// - PostgreSQL LISTEN/NOTIFY
 """
 
-from .backends import BroadcasterChannel
+from .backends import BroadcasterChannel, RedisClusterChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 from .manager import ChannelManager
 
@@ -22,4 +22,5 @@ __all__ = [
     "ChannelManager",
     # 后端实现
     "BroadcasterChannel",
+    "RedisClusterChannel",
 ]

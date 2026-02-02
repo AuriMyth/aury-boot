@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 import traceback
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -71,6 +72,9 @@ class ProfilingConfig:
     blocking_alert_enabled: bool = True
     blocking_alert_cooldown_seconds: float = 60
     blocking_max_history: int = 50
+    
+    # 滑动窗口统计（秒）
+    blocking_stats_window_seconds: float = 300  # 5分钟
     
     # 标签
     tags: dict[str, str] = field(default_factory=dict)
@@ -152,7 +156,8 @@ class BlockingEvent:
     
     timestamp: datetime
     blocked_ms: float
-    main_thread_stack: list[dict[str, Any]]
+    main_thread_stack: list[dict[str, Any]]  # 最佳堆栈（用户代码优先）
+    all_sampled_stacks: list[list[dict[str, Any]]] = field(default_factory=list)  # 所有采样堆栈
     process_stats: dict[str, Any] | None = None
 
 
@@ -175,8 +180,8 @@ class EventLoopBlockingDetector:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._blocking_events: list[BlockingEvent] = []
         self._lock = threading.Lock()
-        self._total_checks = 0
-        self._total_blocks = 0
+        # 滑动窗口统计：记录时间戳 (timestamp, is_block)
+        self._check_history: deque[tuple[float, bool]] = deque()
         self._last_alert_time: float = 0
     
     def start(self, loop: asyncio.AbstractEventLoop | None = None) -> None:
@@ -242,7 +247,7 @@ class EventLoopBlockingDetector:
                         # 超时
                         elapsed_ms = (time.perf_counter() - start_time) * 1000
                         self._record_blocking(elapsed_ms, sampled_stacks)
-                        self._total_checks += 1
+                        self._record_check(is_block=True)
                         time.sleep(self._config.blocking_check_interval_ms / 1000)
                         continue
                 
@@ -250,10 +255,12 @@ class EventLoopBlockingDetector:
                     pass
                 
                 elapsed_ms = (time.perf_counter() - start_time) * 1000
-                if elapsed_ms > self._config.blocking_threshold_ms:
+                is_blocked = elapsed_ms > self._config.blocking_threshold_ms
+                if is_blocked:
                     self._record_blocking(elapsed_ms, sampled_stacks)
                 
-                self._total_checks += 1
+                # 记录检查历史（滑动窗口）
+                self._record_check(is_blocked)
             except Exception:
                 pass  # 事件循环可能已关闭
             
@@ -269,14 +276,16 @@ class EventLoopBlockingDetector:
         sampled_stacks: list[list[dict[str, Any]]] | None = None,
     ) -> None:
         """记录阻塞事件。"""
-        self._total_blocks += 1
         
         # 优先使用采样的堆栈（阻塞期间捕获的），否则捕获当前堆栈
         if sampled_stacks:
-            # 合并所有采样的堆栈，去重后取最有价值的
+            # 取用户代码最多的堆栈作为主堆栈
             stack = self._merge_sampled_stacks(sampled_stacks)
+            # 去重保留所有不同的堆栈
+            unique_stacks = self._dedupe_stacks(sampled_stacks)
         else:
             stack = self._capture_main_thread_stack()
+            unique_stacks = [stack] if stack else []
         
         # 获取进程状态
         process_stats = self._capture_process_stats()
@@ -285,6 +294,7 @@ class EventLoopBlockingDetector:
             timestamp=datetime.now(),
             blocked_ms=round(blocked_ms, 2),
             main_thread_stack=stack,
+            all_sampled_stacks=unique_stacks,
             process_stats=process_stats,
         )
         
@@ -323,31 +333,45 @@ class EventLoopBlockingDetector:
         
         return stack[-20:]  # 保留最近 20 帧
     
+    def _is_user_code(self, filename: str) -> bool:
+        """判断是否为用户代码（非标准库/非三方库）。"""
+        if not filename:
+            return False
+        is_stdlib = any(p in filename for p in (
+            "/lib/python", "/Lib/Python", "/opt/homebrew/Cellar/python",
+            "/.pyenv/", "/Python.framework/"
+        ))
+        is_site_packages = "site-packages" in filename or "dist-packages" in filename
+        return not is_stdlib and not is_site_packages
+    
+    def _score_stack(self, stack: list[dict[str, Any]]) -> int:
+        """评分堆栈：用户代码帧越多分数越高。"""
+        return sum(1 for f in stack if self._is_user_code(f.get("file", "")))
+    
+    def _stack_signature(self, stack: list[dict[str, Any]]) -> str:
+        """生成堆栈签名用于去重。"""
+        return "|".join(f"{f.get('file', '')}:{f.get('line', '')}" for f in stack[-5:])
+    
+    def _dedupe_stacks(
+        self, stacks: list[list[dict[str, Any]]]
+    ) -> list[list[dict[str, Any]]]:
+        """去重堆栈，保留唯一的堆栈。"""
+        seen: set[str] = set()
+        unique: list[list[dict[str, Any]]] = []
+        for stack in stacks:
+            sig = self._stack_signature(stack)
+            if sig not in seen:
+                seen.add(sig)
+                unique.append(stack)
+        return unique
+    
     def _merge_sampled_stacks(
         self, sampled_stacks: list[list[dict[str, Any]]]
     ) -> list[dict[str, Any]]:
-        """合并多次采样的堆栈，返回最有价值的帧。
-        
-        优先返回包含用户代码（非标准库/site-packages）的堆栈。
-        """
+        """合并多次采样的堆栈，返回用户代码最多的。"""
         if not sampled_stacks:
             return []
-        
-        # 评分标准：用户代码帧数越多越好
-        def score_stack(stack: list[dict[str, Any]]) -> int:
-            user_frames = 0
-            for frame in stack:
-                filename = frame.get("file", "")
-                is_stdlib = any(p in filename for p in (
-                    "/lib/python", "/Lib/Python", "/opt/homebrew/", "/.pyenv/"
-                ))
-                is_site_packages = "site-packages" in filename or "dist-packages" in filename
-                if not is_stdlib and not is_site_packages:
-                    user_frames += 1
-            return user_frames
-        
-        # 返回用户代码帧最多的堆栈
-        return max(sampled_stacks, key=score_stack)
+        return max(sampled_stacks, key=self._score_stack)
     
     def _capture_process_stats(self) -> dict[str, Any] | None:
         """捕获当前进程状态。"""
@@ -366,22 +390,57 @@ class EventLoopBlockingDetector:
         except Exception:
             return None
     
-    def _format_stack(self, stack: list[dict[str, Any]], limit: int = 5) -> str:
+    def _format_stack(self, stack: list[dict[str, Any]], limit: int = 5, highlight_user: bool = True) -> str:
         """格式化调用栈为字符串。"""
         lines = []
         for frame in stack[-limit:]:
             if frame.get("code"):
-                lines.append(f"  {frame['file']}:{frame['line']} in {frame['function']}")
+                filename = frame['file']
+                is_user = self._is_user_code(filename)
+                # 用户代码加前缀标记
+                prefix = "→ " if (highlight_user and is_user) else "  "
+                lines.append(f"{prefix}{filename}:{frame['line']} in {frame['function']}")
                 lines.append(f"    > {frame['code']}")
         return "\n".join(lines)
+    
+    def _record_check(self, is_block: bool) -> None:
+        """记录一次检查到滑动窗口。"""
+        now = time.time()
+        with self._lock:
+            self._check_history.append((now, is_block))
+            # 清理过期数据
+            cutoff = now - self._config.blocking_stats_window_seconds
+            while self._check_history and self._check_history[0][0] < cutoff:
+                self._check_history.popleft()
+    
+    def _get_window_stats(self) -> tuple[int, int]:
+        """获取时间窗口内的统计。
+        
+        Returns:
+            (total_checks, total_blocks)
+        """
+        now = time.time()
+        cutoff = now - self._config.blocking_stats_window_seconds
+        total_checks = 0
+        total_blocks = 0
+        
+        with self._lock:
+            for ts, is_block in self._check_history:
+                if ts >= cutoff:
+                    total_checks += 1
+                    if is_block:
+                        total_blocks += 1
+        
+        return total_checks, total_blocks
     
     def _log_blocking(self, event: BlockingEvent) -> None:
         """输出阻塞日志。"""
         is_severe = event.blocked_ms >= self._config.blocking_severe_threshold_ms
         log_fn = logger.error if is_severe else logger.warning
         
-        # 格式化调用栈
-        stack_str = self._format_stack(event.main_thread_stack)
+        # 获取时间窗口统计
+        total_checks, total_blocks = self._get_window_stats()
+        window_minutes = int(self._config.blocking_stats_window_seconds / 60)
         
         # 格式化进程状态
         stats_str = ""
@@ -389,12 +448,35 @@ class EventLoopBlockingDetector:
             s = event.process_stats
             stats_str = f" | CPU={s.get('cpu_percent', 'N/A')}% RSS={s.get('memory_rss_mb', 'N/A')}MB threads={s.get('num_threads', 'N/A')}"
         
+        # 检查是否有用户代码
+        has_user_code = self._score_stack(event.main_thread_stack) > 0
+        
+        # 构建堆栈信息
+        stack_lines = []
+        
+        if has_user_code:
+            # 有用户代码，显示主堆栈
+            stack_lines.append("调用栈 (→ 标记用户代码):")
+            stack_lines.append(self._format_stack(event.main_thread_stack, limit=8))
+        else:
+            # 没有用户代码，可能是框架内部阻塞
+            stack_lines.append("调用栈 (无用户代码，可能是三方库/框架内部阻塞):")
+            stack_lines.append(self._format_stack(event.main_thread_stack, limit=5, highlight_user=False))
+            
+            # 显示所有不同的采样堆栈
+            if len(event.all_sampled_stacks) > 1:
+                stack_lines.append(f"\n共采样到 {len(event.all_sampled_stacks)} 个不同堆栈:")
+                for i, stack in enumerate(event.all_sampled_stacks[:3], 1):  # 最多显示3个
+                    if stack != event.main_thread_stack:
+                        stack_lines.append(f"--- 采样 #{i} ---")
+                        stack_lines.append(self._format_stack(stack, limit=3, highlight_user=False))
+        
         log_fn(
-            f"事件循环阻塞{'(严重)' if is_severe else ''}: {event.blocked_ms:.0f}ms "
+            f"事件循环阻塞{'（严重）' if is_severe else ''}: {event.blocked_ms:.0f}ms "
             f"(阈值={self._config.blocking_threshold_ms}ms, "
-            f"累计={self._total_blocks}次, "
-            f"阻塞率={self._total_blocks / max(self._total_checks, 1) * 100:.2f}%){stats_str}\n"
-            f"调用栈:\n{stack_str}"
+            f"近{window_minutes}分钟={total_blocks}次, "
+            f"阻塞率={total_blocks / max(total_checks, 1) * 100:.2f}%){stats_str}\n"
+            + "\n".join(stack_lines)
         )
     
     def _maybe_send_alert(self, event: BlockingEvent) -> None:
@@ -418,15 +500,20 @@ class EventLoopBlockingDetector:
             is_severe = event.blocked_ms >= self._config.blocking_severe_threshold_ms
             severity = AlertSeverity.CRITICAL if is_severe else AlertSeverity.WARNING
             
+            # 获取时间窗口统计
+            total_checks, total_blocks = self._get_window_stats()
+            window_minutes = int(self._config.blocking_stats_window_seconds / 60)
+            
             await emit_alert(
                 AlertEventType.CUSTOM,
-                f"事件循环阻塞{'(严重)' if is_severe else ''}: {event.blocked_ms:.0f}ms",
+                f"事件循环阻塞{'（严重）' if is_severe else ''}: {event.blocked_ms:.0f}ms",
                 severity=severity,
                 source="blocking_detector",
                 blocked_ms=event.blocked_ms,
                 threshold_ms=self._config.blocking_threshold_ms,
-                total_blocks=self._total_blocks,
-                block_rate=f"{self._total_blocks / max(self._total_checks, 1) * 100:.2f}%",
+                window_minutes=window_minutes,
+                total_blocks=total_blocks,
+                block_rate=f"{total_blocks / max(total_checks, 1) * 100:.2f}%",
                 stacktrace=self._format_stack(event.main_thread_stack),
                 process_stats=event.process_stats,
             )
@@ -435,6 +522,9 @@ class EventLoopBlockingDetector:
     
     def get_status(self) -> dict[str, Any]:
         """获取检测状态和历史。"""
+        total_checks, total_blocks = self._get_window_stats()
+        window_minutes = int(self._config.blocking_stats_window_seconds / 60)
+        
         with self._lock:
             events = [
                 {
@@ -453,12 +543,14 @@ class EventLoopBlockingDetector:
                 "threshold_ms": self._config.blocking_threshold_ms,
                 "severe_threshold_ms": self._config.blocking_severe_threshold_ms,
                 "alert_enabled": self._config.blocking_alert_enabled,
+                "stats_window_seconds": self._config.blocking_stats_window_seconds,
             },
             "stats": {
-                "total_checks": self._total_checks,
-                "total_blocks": self._total_blocks,
+                "window_minutes": window_minutes,
+                "total_checks": total_checks,
+                "total_blocks": total_blocks,
                 "block_rate_percent": round(
-                    self._total_blocks / max(self._total_checks, 1) * 100, 2
+                    total_blocks / max(total_checks, 1) * 100, 2
                 ),
             },
             "recent_events": events,
@@ -468,8 +560,7 @@ class EventLoopBlockingDetector:
         """清空阻塞历史。"""
         with self._lock:
             self._blocking_events.clear()
-        self._total_checks = 0
-        self._total_blocks = 0
+            self._check_history.clear()
     
     @property
     def is_running(self) -> bool:

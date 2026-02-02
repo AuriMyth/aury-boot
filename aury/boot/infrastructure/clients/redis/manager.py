@@ -1,15 +1,24 @@
 """Redis 客户端管理器 - 命名多实例模式。
 
 提供统一的 Redis 连接管理，支持多实例。
+支持普通 Redis 和 Redis Cluster：
+- redis://... - 普通 Redis
+- redis-cluster://... - Redis Cluster
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 from redis.asyncio import ConnectionPool, Redis
 
 from aury.boot.common.logging import logger
 
 from .config import RedisConfig
+
+if TYPE_CHECKING:
+    from redis.asyncio.cluster import RedisCluster
 
 
 class RedisClient:
@@ -50,8 +59,9 @@ class RedisClient:
         self.name = name
         self._config: RedisConfig | None = None
         self._pool: ConnectionPool | None = None
-        self._redis: Redis | None = None
+        self._redis: Redis | RedisCluster | None = None
         self._initialized: bool = False
+        self._is_cluster: bool = False
     
     @classmethod
     def get_instance(cls, name: str = "default") -> RedisClient:
@@ -135,6 +145,10 @@ class RedisClient:
     async def initialize(self) -> RedisClient:
         """初始化 Redis 连接。
         
+        自动检测 URL scheme：
+        - redis://... -> 普通 Redis
+        - redis-cluster://... -> Redis Cluster
+        
         Returns:
             self: 支持链式调用
             
@@ -152,32 +166,80 @@ class RedisClient:
             )
         
         try:
-            # 创建连接池
-            self._pool = ConnectionPool.from_url(
-                self._config.url,
-                max_connections=self._config.max_connections,
-                socket_timeout=self._config.socket_timeout,
-                socket_connect_timeout=self._config.socket_connect_timeout,
-                retry_on_timeout=self._config.retry_on_timeout,
-                health_check_interval=self._config.health_check_interval,
-                decode_responses=self._config.decode_responses,
-            )
+            url = self._config.url
             
-            # 创建 Redis 客户端
-            self._redis = Redis(connection_pool=self._pool)
+            # 自动检测是否为集群模式
+            if url.startswith("redis-cluster://"):
+                await self._initialize_cluster(url)
+            else:
+                await self._initialize_standalone(url)
             
             # 验证连接
             await self._redis.ping()
             
             self._initialized = True
-            # 脱敏日志
-            masked_url = self._mask_url(self._config.url)
-            logger.info(f"Redis 客户端 [{self.name}] 初始化完成: {masked_url}")
+            masked_url = self._mask_url(url)
+            mode = "Cluster" if self._is_cluster else "Standalone"
+            logger.info(f"Redis 客户端 [{self.name}] 初始化完成 ({mode}): {masked_url}")
             
             return self
         except Exception as e:
             logger.error(f"Redis 客户端 [{self.name}] 初始化失败: {e}")
             raise
+    
+    async def _initialize_standalone(self, url: str) -> None:
+        """初始化普通 Redis 连接。"""
+        self._pool = ConnectionPool.from_url(
+            url,
+            max_connections=self._config.max_connections,
+            socket_timeout=self._config.socket_timeout,
+            socket_connect_timeout=self._config.socket_connect_timeout,
+            retry_on_timeout=self._config.retry_on_timeout,
+            health_check_interval=self._config.health_check_interval,
+            decode_responses=self._config.decode_responses,
+        )
+        self._redis = Redis(connection_pool=self._pool)
+        self._is_cluster = False
+    
+    async def _initialize_cluster(self, url: str) -> None:
+        """初始化 Redis Cluster 连接。
+        
+        支持 URL 格式:
+        - redis-cluster://password@host:port （密码在用户名位置）
+        - redis-cluster://:password@host:port （标准格式）
+        - redis-cluster://username:password@host:port （ACL 模式）
+        """
+        from redis.asyncio.cluster import RedisCluster
+        
+        parsed_url = url.replace("redis-cluster://", "redis://")
+        parsed = urlparse(parsed_url)
+        
+        # 提取认证信息
+        username = parsed.username
+        password = parsed.password
+        
+        # 处理 password@host 格式（密码在用户名位置）
+        if username and not password:
+            password = username
+            username = None
+        
+        # 构建连接参数
+        cluster_kwargs: dict = {
+            "host": parsed.hostname or "localhost",
+            "port": parsed.port or 6379,
+            "decode_responses": self._config.decode_responses,
+            "socket_timeout": self._config.socket_timeout,
+            "socket_connect_timeout": self._config.socket_connect_timeout,
+            "retry_on_timeout": self._config.retry_on_timeout,
+        }
+        
+        if username:
+            cluster_kwargs["username"] = username
+        if password:
+            cluster_kwargs["password"] = password
+        
+        self._redis = RedisCluster(**cluster_kwargs)
+        self._is_cluster = True
     
     def _mask_url(self, url: str) -> str:
         """URL 脱敏（隐藏密码）。"""
@@ -198,11 +260,16 @@ class RedisClient:
         return self._initialized
     
     @property
-    def connection(self) -> Redis:
+    def is_cluster(self) -> bool:
+        """检查是否为集群模式。"""
+        return self._is_cluster
+    
+    @property
+    def connection(self) -> Redis | RedisCluster:
         """获取 Redis 连接。
         
         Returns:
-            Redis: Redis 客户端实例
+            Redis 或 RedisCluster 客户端实例
             
         Raises:
             RuntimeError: 未初始化时调用
@@ -245,7 +312,10 @@ class RedisClient:
     async def cleanup(self) -> None:
         """清理资源，关闭连接。"""
         if self._redis:
-            await self._redis.close()
+            if self._is_cluster:
+                await self._redis.aclose()
+            else:
+                await self._redis.close()
             logger.info(f"Redis 客户端 [{self.name}] 已关闭")
         
         if self._pool:
@@ -254,6 +324,7 @@ class RedisClient:
         self._redis = None
         self._pool = None
         self._initialized = False
+        self._is_cluster = False
     
     def __repr__(self) -> str:
         """字符串表示。"""

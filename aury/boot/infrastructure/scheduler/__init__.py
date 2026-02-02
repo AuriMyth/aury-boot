@@ -8,9 +8,11 @@ from .exceptions import (
     SchedulerError,
     SchedulerJobError,
 )
+from .jobstores import RedisClusterJobStore
 from .manager import SchedulerManager
 
 __all__ = [
+    "RedisClusterJobStore",
     "SchedulerBackendError",
     "SchedulerError",
     "SchedulerJobError",

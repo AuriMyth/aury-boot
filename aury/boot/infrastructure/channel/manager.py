@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 from aury.boot.common.logging import logger
 
 from .backends.broadcaster import BroadcasterChannel
+from .backends.redis_cluster_channel import RedisClusterChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 
 
@@ -93,6 +94,7 @@ class ChannelManager:
             url: 连接 URL，支持：
                 - memory:// - 内存后端（单进程，默认）
                 - redis://host:port/db - Redis Pub/Sub
+                - redis-cluster://[password@]host:port - Redis Cluster (Sharded Pub/Sub)
                 - kafka://host:port - Apache Kafka
                 - postgres://user:pass@host/db - PostgreSQL
 
@@ -103,15 +105,21 @@ class ChannelManager:
             logger.warning(f"通道管理器 [{self.name}] 已初始化，跳过")
             return self
 
-        # 处理字符串类型的 backend
+        # 根据 URL scheme 自动选择后端
         if isinstance(backend, str):
             backend = ChannelBackend(backend.lower())
+        
+        # 自动检测 redis-cluster:// scheme
+        if url.startswith("redis-cluster://"):
+            backend = ChannelBackend.REDIS_CLUSTER
 
         self._backend_type = backend
         self._url = url
 
         if backend == ChannelBackend.BROADCASTER:
             self._backend = BroadcasterChannel(url)
+        elif backend == ChannelBackend.REDIS_CLUSTER:
+            self._backend = RedisClusterChannel(url)
         elif backend in (ChannelBackend.RABBITMQ, ChannelBackend.ROCKETMQ):
             raise NotImplementedError(f"{backend.value} 后端暂未实现")
         else:

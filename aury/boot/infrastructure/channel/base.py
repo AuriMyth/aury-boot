@@ -18,6 +18,8 @@ class ChannelBackend(Enum):
 
     # Broadcaster 统一后端（支持 memory/redis/kafka/postgres，通过 URL scheme 区分）
     BROADCASTER = "broadcaster"
+    # Redis Cluster + Sharded Pub/Sub (Redis 7.0+)，使用 coredis 库
+    REDIS_CLUSTER = "redis_cluster"
     # 未来扩展
     RABBITMQ = "rabbitmq"
     ROCKETMQ = "rocketmq"

@@ -125,7 +125,8 @@ class FeishuNotifier(AlertNotifier):
             if "threshold_ms" in notification.metadata:
                 details.append(f"**阈值**: {notification.metadata['threshold_ms']:.0f}ms")
             if "total_blocks" in notification.metadata:
-                details.append(f"**累计阻塞**: {notification.metadata['total_blocks']} 次")
+                window_minutes = notification.metadata.get("window_minutes", 5)
+                details.append(f"**近{window_minutes}分钟**: {notification.metadata['total_blocks']} 次")
             if "block_rate" in notification.metadata:
                 details.append(f"**阻塞率**: {notification.metadata['block_rate']}")
             if "process_stats" in notification.metadata:

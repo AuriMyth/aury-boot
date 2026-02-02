@@ -263,15 +263,19 @@ class ChannelSettings(BaseModel):
     支持的后端类型：
     - memory: 内存后端（默认，单进程）
     - redis: Redis Pub/Sub（多进程/分布式）
+    - redis_cluster: Redis Cluster Sharded Pub/Sub（Redis 7.0+）
+    
+    注意：URL 的 scheme 会自动决定后端类型：
+    - redis-cluster://... 自动使用 redis_cluster 后端
     """
     
     backend: str = Field(
         default="",
-        description="通道后端 (memory/redis)，空字符串表示不启用"
+        description="通道后端 (memory/redis/redis_cluster)，空字符串表示不启用"
     )
     url: str | None = Field(
         default=None,
-        description="Redis URL（当 backend=redis 时需要）"
+        description="连接 URL（redis://... 或 redis-cluster://...）"
     )
 
 
@@ -472,6 +476,7 @@ class SchedulerSettings(BaseModel):
         default=None,
         description=(
             "任务存储 URL。支持：\n"
+            "- redis-cluster://password@host:port（Redis Cluster 存储）\n"
             "- redis://localhost:6379/0（Redis 存储）\n"
             "- sqlite:///jobs.db（SQLite 存储）\n"
             "- postgresql://user:pass@host/db（PostgreSQL 存储）\n"
