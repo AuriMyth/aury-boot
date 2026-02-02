@@ -18,6 +18,8 @@ from aury.boot.common.logging import logger
 
 try:
     from coredis import RedisCluster
+    from coredis.retry import ConstantRetryPolicy
+    from coredis.exceptions import ConnectionError as CoredisConnectionError
 except ImportError as exc:
     raise ImportError(
         "Redis Cluster Channel 需要安装 coredis: pip install coredis"
@@ -41,11 +43,21 @@ class RedisClusterBackend:
     def __init__(self, url: str) -> None:
         host, port, password = self._parse_url(url)
         
+        # 配置更快的重试策略
+        retry_policy = ConstantRetryPolicy(
+            retries=3,
+            delay=1,
+            retryable_exceptions=(CoredisConnectionError, TimeoutError, OSError),
+        )
+        
         self._client: RedisCluster = RedisCluster(
             host=host,
             port=port,
             password=password,
             decode_responses=True,
+            connect_timeout=5,
+            stream_timeout=5,
+            retry_policy=retry_policy,
         )
         self._pubsub: Any = None
         self._queue: asyncio.Queue[Event] = asyncio.Queue()

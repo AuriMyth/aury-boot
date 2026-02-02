@@ -211,6 +211,8 @@ class RedisClient:
         """
         try:
             from coredis import RedisCluster
+            from coredis.retry import ConstantRetryPolicy
+            from coredis.exceptions import ConnectionError as CoredisConnectionError
         except ImportError as exc:
             raise ImportError(
                 "Redis Cluster 需要安装 coredis: pip install coredis"
@@ -229,11 +231,21 @@ class RedisClient:
             password = username
             username = None
         
+        # 配置更快的重试策略（默认间隔太长）
+        retry_policy = ConstantRetryPolicy(
+            retries=3,
+            delay=1,  # 1 秒重试间隔
+            retryable_exceptions=(CoredisConnectionError, TimeoutError, OSError),
+        )
+        
         # 构建连接参数
         cluster_kwargs: dict = {
             "host": parsed.hostname or "localhost",
             "port": parsed.port or 6379,
             "decode_responses": self._config.decode_responses,
+            "connect_timeout": self._config.socket_connect_timeout or 5,
+            "stream_timeout": self._config.socket_timeout or 5,
+            "retry_policy": retry_policy,
         }
         
         if username:
