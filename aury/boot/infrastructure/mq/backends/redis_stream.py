@@ -309,23 +309,12 @@ class RedisStreamMQ(IMQ):
         await self._ensure_client()
         stream_key = self._stream_key(queue)
         
-        # coredis 使用 start/end，redis-py 使用 min/max
-        if hasattr(self._client, 'is_cluster') and self._client.is_cluster:
-            # coredis API
-            result = await self._client.connection.xrange(
-                stream_key,
-                start=start,
-                end=end,
-                count=count,
-            )
-        else:
-            # redis-py API
-            result = await self._client.connection.xrange(
-                stream_key,
-                min=start,
-                max=end,
-                count=count,
-            )
+        result = await self._client.connection.xrange(
+            stream_key,
+            min=start,
+            max=end,
+            count=count,
+        )
         
         messages = []
         for msg_id, data in result:

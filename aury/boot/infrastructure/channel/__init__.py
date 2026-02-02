@@ -5,11 +5,12 @@
 支持的后端（通过 Broadcaster 库）:
 - memory:// - 内存通道（单进程，开发/测试用）
 - redis:// - Redis Pub/Sub（多进程/分布式）
+- redis-cluster:// - Redis Cluster（自动转换为普通 Pub/Sub）
 - kafka:// - Apache Kafka
 - postgres:// - PostgreSQL LISTEN/NOTIFY
 """
 
-from .backends import BroadcasterChannel, RedisClusterChannel
+from .backends import BroadcasterChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 from .manager import ChannelManager
 
@@ -22,5 +23,4 @@ __all__ = [
     "ChannelManager",
     # 后端实现
     "BroadcasterChannel",
-    "RedisClusterChannel",
 ]

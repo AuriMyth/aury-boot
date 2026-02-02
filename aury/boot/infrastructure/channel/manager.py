@@ -10,7 +10,6 @@ from collections.abc import AsyncIterator
 from aury.boot.common.logging import logger
 
 from .backends.broadcaster import BroadcasterChannel
-from .backends.redis_cluster_channel import RedisClusterChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 
 
@@ -94,7 +93,7 @@ class ChannelManager:
             url: 连接 URL，支持：
                 - memory:// - 内存后端（单进程，默认）
                 - redis://host:port/db - Redis Pub/Sub
-                - redis-cluster://[password@]host:port - Redis Cluster (Sharded Pub/Sub)
+                - redis-cluster://[password@]host:port - Redis Cluster (普通 Pub/Sub)
                 - kafka://host:port - Apache Kafka
                 - postgres://user:pass@host/db - PostgreSQL
 
@@ -109,17 +108,18 @@ class ChannelManager:
         if isinstance(backend, str):
             backend = ChannelBackend(backend.lower())
         
-        # 自动检测 redis-cluster:// scheme
+        # redis-cluster:// 转换为 redis://，使用 broadcaster 的普通 Pub/Sub
+        # 普通 Pub/Sub 在 Redis Cluster 中会自动广播到所有节点
+        broadcast_url = url
         if url.startswith("redis-cluster://"):
-            backend = ChannelBackend.REDIS_CLUSTER
+            broadcast_url = url.replace("redis-cluster://", "redis://")
+            logger.info(f"通道管理器 [{self.name}] Redis Cluster 使用普通 Pub/Sub 模式")
 
         self._backend_type = backend
         self._url = url
 
-        if backend == ChannelBackend.BROADCASTER:
-            self._backend = BroadcasterChannel(url)
-        elif backend == ChannelBackend.REDIS_CLUSTER:
-            self._backend = RedisClusterChannel(url)
+        if backend == ChannelBackend.BROADCASTER or url.startswith("redis-cluster://"):
+            self._backend = BroadcasterChannel(broadcast_url)
         elif backend in (ChannelBackend.RABBITMQ, ChannelBackend.ROCKETMQ):
             raise NotImplementedError(f"{backend.value} 后端暂未实现")
         else:

@@ -202,58 +202,30 @@ class RedisClient:
         self._is_cluster = False
     
     async def _initialize_cluster(self, url: str) -> None:
-        """初始化 Redis Cluster 连接（使用 coredis）。
+        """初始化 Redis Cluster 连接（使用 redis-py）。
         
         支持 URL 格式:
         - redis-cluster://password@host:port （密码在用户名位置）
         - redis-cluster://:password@host:port （标准格式）
         - redis-cluster://username:password@host:port （ACL 模式）
         """
-        try:
-            from coredis import RedisCluster
-            from coredis.retry import ConstantRetryPolicy
-            from coredis.exceptions import ConnectionError as CoredisConnectionError
-        except ImportError as exc:
-            raise ImportError(
-                "Redis Cluster 需要安装 coredis: pip install coredis"
-            ) from exc
+        from redis.asyncio.cluster import RedisCluster
         
-        # 解析 URL
-        parsed_url = url.replace("redis-cluster://", "redis://")
-        parsed = urlparse(parsed_url)
+        # 转换 URL scheme
+        redis_url = url.replace("redis-cluster://", "redis://")
         
-        # 提取认证信息
-        username = parsed.username
-        password = parsed.password
+        # 处理 password@host 格式（转换为标准 :password@host 格式）
+        parsed = urlparse(redis_url)
+        if parsed.username and not parsed.password:
+            redis_url = redis_url.replace(
+                f"redis://{parsed.username}@",
+                f"redis://:{parsed.username}@"
+            )
         
-        # 处理 password@host 格式
-        if username and not password:
-            password = username
-            username = None
-        
-        # 配置更快的重试策略（默认间隔太长）
-        retry_policy = ConstantRetryPolicy(
-            retries=3,
-            delay=1,  # 1 秒重试间隔
-            retryable_exceptions=(CoredisConnectionError, TimeoutError, OSError),
+        self._redis = RedisCluster.from_url(
+            redis_url,
+            decode_responses=self._config.decode_responses,
         )
-        
-        # 构建连接参数
-        cluster_kwargs: dict = {
-            "host": parsed.hostname or "localhost",
-            "port": parsed.port or 6379,
-            "decode_responses": self._config.decode_responses,
-            "connect_timeout": self._config.socket_connect_timeout or 5,
-            "stream_timeout": self._config.socket_timeout or 5,
-            "retry_policy": retry_policy,
-        }
-        
-        if username:
-            cluster_kwargs["username"] = username
-        if password:
-            cluster_kwargs["password"] = password
-        
-        self._redis = RedisCluster(**cluster_kwargs)
         self._is_cluster = True
     
     def _mask_url(self, url: str) -> str:
@@ -328,8 +300,8 @@ class RedisClient:
         """清理资源，关闭连接。"""
         if self._redis:
             if self._is_cluster:
-                # coredis 使用 close() 方法
-                await self._redis.close()
+                # redis-py cluster 使用 aclose()
+                await self._redis.aclose()
             else:
                 await self._redis.close()
             logger.info(f"Redis 客户端 [{self.name}] 已关闭")
