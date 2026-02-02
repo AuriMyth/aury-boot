@@ -226,6 +226,9 @@ class DatabaseManager:
     async def session(self) -> AsyncGenerator[AsyncSession]:
         """获取数据库会话（上下文管理器）。
         
+        连接校验由 pool_pre_ping=True 在引擎层自动处理，
+        无需手动检查。
+        
         Yields:
             AsyncSession: 数据库会话
             
@@ -235,7 +238,6 @@ class DatabaseManager:
         """
         session = self.session_factory()
         try:
-            await self._check_session_connection(session)
             yield session
         except SQLAlchemyError as exc:
             # 只捕获数据库相关异常
@@ -253,15 +255,15 @@ class DatabaseManager:
     async def create_session(self) -> AsyncSession:
         """创建新的数据库会话（需要手动关闭）。
         
+        连接校验由 pool_pre_ping=True 在引擎层自动处理。
+        
         Returns:
             AsyncSession: 数据库会话
             
         注意：使用后需要手动调用 await session.close()
         建议使用 session() 上下文管理器代替此方法。
         """
-        session = self.session_factory()
-        await self._check_session_connection(session)
-        return session
+        return self.session_factory()
     
     async def get_session(self) -> AsyncGenerator[AsyncSession]:
         """FastAPI 依赖注入专用的会话获取器。

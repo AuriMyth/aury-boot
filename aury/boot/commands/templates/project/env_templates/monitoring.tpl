@@ -12,6 +12,21 @@ TELEMETRY__ENABLED=false
 # TELEMETRY__LOGS_ENDPOINT=http://loki:3100
 # TELEMETRY__METRICS_ENDPOINT=http://prometheus:9090
 
+# ---------- Profiling 性能分析 ----------
+# Pyroscope 持续 Profiling（生成火焰图）
+# 需安装：pip install pyroscope-io
+PROFILING__ENABLED=false
+# PROFILING__PYROSCOPE_ENDPOINT=http://pyroscope:4040
+# PROFILING__PYROSCOPE_SAMPLE_RATE=100
+
+# 事件循环阻塞检测（检测同步代码阻塞协程）
+# 需安装：pip install psutil
+PROFILING__BLOCKING_DETECTOR_ENABLED=false
+# PROFILING__BLOCKING_THRESHOLD_MS=100
+# PROFILING__BLOCKING_SEVERE_THRESHOLD_MS=500
+# PROFILING__BLOCKING_ALERT_ENABLED=true
+# PROFILING__BLOCKING_ALERT_COOLDOWN_SECONDS=60
+
 # ---------- 告警系统 ----------
 ALERT__ENABLED=false
 # 慢操作阈值

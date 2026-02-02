@@ -11,7 +11,7 @@ import hmac
 import time
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import aiohttp
 
 from aury.boot.common.logging import logger
 
@@ -118,6 +118,24 @@ class FeishuNotifier(AlertNotifier):
                 details.append(f"**错误信息**: {notification.metadata['error_message']}")
             if "task_name" in notification.metadata:
                 details.append(f"**任务**: {notification.metadata['task_name']}")
+            
+            # 事件循环阻塞检测专用字段
+            if "blocked_ms" in notification.metadata:
+                details.append(f"**阻塞时间**: {notification.metadata['blocked_ms']:.0f}ms")
+            if "threshold_ms" in notification.metadata:
+                details.append(f"**阈值**: {notification.metadata['threshold_ms']:.0f}ms")
+            if "total_blocks" in notification.metadata:
+                details.append(f"**累计阻塞**: {notification.metadata['total_blocks']} 次")
+            if "block_rate" in notification.metadata:
+                details.append(f"**阻塞率**: {notification.metadata['block_rate']}")
+            if "process_stats" in notification.metadata:
+                stats = notification.metadata["process_stats"]
+                if stats:
+                    stats_str = f"CPU {stats.get('cpu_percent', 'N/A')}%, "
+                    stats_str += f"RSS {stats.get('memory_rss_mb', 'N/A')}MB, "
+                    stats_str += f"线程 {stats.get('num_threads', 'N/A')}"
+                    details.append(f"**进程状态**: {stats_str}")
+            
             # SQL 和堆栈单独处理
             if "sql" in notification.metadata:
                 sql_content = notification.metadata["sql"]
@@ -155,11 +173,10 @@ class FeishuNotifier(AlertNotifier):
                 "content": f"**堆栈**:\n```python\n{stacktrace_content}\n```",
             })
         
-        # 构建 JSON 2.0 卡片消息
+        # 构建卡片消息（飞书自定义机器人格式）
         card = {
             "msg_type": "interactive",
             "card": {
-                "schema": "2.0",
                 "config": {
                     "wide_screen_mode": True,
                 },
@@ -170,9 +187,7 @@ class FeishuNotifier(AlertNotifier):
                         "content": notification.title,
                     },
                 },
-                "body": {
-                    "elements": elements,
-                },
+                "elements": elements,
             },
         }
         
@@ -191,16 +206,17 @@ class FeishuNotifier(AlertNotifier):
                 message["sign"] = self._generate_sign(timestamp)
             
             # 发送请求
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.post(self.webhook, json=message)
-                result = response.json()
-                
-                if result.get("code") == 0 or result.get("StatusCode") == 0:
-                    logger.debug(f"飞书通知发送成功: {notification.title}")
-                    return True
-                else:
-                    logger.error(f"飞书通知发送失败: {result}")
-                    return False
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(self.webhook, json=message) as response:
+                    result = await response.json()
+                    
+                    if result.get("code") == 0 or result.get("StatusCode") == 0:
+                        logger.debug(f"飞书通知发送成功: {notification.title}")
+                        return True
+                    else:
+                        logger.error(f"飞书通知发送失败: {result}")
+                        return False
         except Exception as e:
             logger.error(f"飞书通知发送异常: {e}")
             return False

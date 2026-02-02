@@ -45,6 +45,7 @@ class Category(str, Enum):
     SCHEDULER = "scheduler"
     ADMIN = "admin"
     STORAGE = "storage"
+    MONITORING = "monitoring"
     ECOSYSTEM = "ecosystem"
 
 
@@ -132,6 +133,29 @@ MODULES: dict[str, ModuleInfo] = {
         category=Category.STORAGE,
         deps=["aury-sdk-storage[aws]"],
     ),
+    # 监控
+    "otel": ModuleInfo(
+        name="otel",
+        desc="OpenTelemetry 链路追踪",
+        usage="启用 TELEMETRY__ENABLED 自动 instrument FastAPI/SQLAlchemy/httpx",
+        category=Category.MONITORING,
+        deps=["opentelemetry-api", "opentelemetry-sdk", "opentelemetry-instrumentation-fastapi",
+              "opentelemetry-instrumentation-sqlalchemy", "opentelemetry-instrumentation-httpx"],
+    ),
+    "otel-exporter": ModuleInfo(
+        name="otel-exporter",
+        desc="OpenTelemetry OTLP 导出器",
+        usage="导出 Traces/Metrics/Logs 到 Jaeger/Prometheus/Loki",
+        category=Category.MONITORING,
+        deps=["opentelemetry-exporter-otlp"],
+    ),
+    "profiling": ModuleInfo(
+        name="profiling",
+        desc="Profiling 性能分析",
+        usage="Pyroscope 火焰图 + 事件循环阻塞检测",
+        category=Category.MONITORING,
+        deps=["pyroscope-io", "psutil"],
+    ),
     # 生态包
     "storage-aws": ModuleInfo(
         name="storage-aws",
@@ -182,7 +206,12 @@ PRESETS: dict[str, PresetInfo] = {
     "full": PresetInfo(
         name="full",
         desc="完整功能（所有模块）",
-        modules=["postgres", "redis", "tasks", "rabbitmq", "scheduler", "admin", "storage-cos"],
+        modules=["postgres", "redis", "tasks", "rabbitmq", "scheduler", "admin", "storage-cos", "otel", "profiling"],
+    ),
+    "monitoring": PresetInfo(
+        name="monitoring",
+        desc="完整监控（OTel + Profiling）",
+        modules=["otel", "otel-exporter", "profiling"],
     ),
 }
 
@@ -195,6 +224,7 @@ CATEGORY_NAMES: dict[Category, str] = {
     Category.SCHEDULER: "📦 定时调度",
     Category.ADMIN: "📦 管理后台",
     Category.STORAGE: "📦 对象存储",
+    Category.MONITORING: "📊 监控分析",
     Category.ECOSYSTEM: "🌐 生态包",
 }
 

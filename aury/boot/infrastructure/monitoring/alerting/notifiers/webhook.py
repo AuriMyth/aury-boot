@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import aiohttp
 
 from aury.boot.common.logging import logger
 
@@ -87,21 +87,22 @@ class WebhookNotifier(AlertNotifier):
         try:
             payload = self._build_payload(notification)
             
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
                     self.url,
                     json=payload,
                     headers=self.headers,
-                )
-                
-                if response.is_success:
-                    logger.debug(f"Webhook 通知发送成功: {notification.title}")
-                    return True
-                else:
-                    logger.error(
-                        f"Webhook 通知发送失败: {response.status_code} - {response.text}"
-                    )
-                    return False
+                ) as response:
+                    if response.status < 400:
+                        logger.debug(f"Webhook 通知发送成功: {notification.title}")
+                        return True
+                    else:
+                        text = await response.text()
+                        logger.error(
+                            f"Webhook 通知发送失败: {response.status} - {text}"
+                        )
+                        return False
         except Exception as e:
             logger.error(f"Webhook 通知发送异常: {e}")
             return False

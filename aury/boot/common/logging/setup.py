@@ -100,7 +100,7 @@ def register_log_sink(
         level=level,
         format=sink_format or default_format,
         encoding="utf-8",
-        enqueue=True,
+        enqueue=_log_config.get("enqueue", False),
         delay=True,
         filter=sink_filter,
     )
@@ -165,6 +165,7 @@ def setup_logging(
     rotation_size: str = "50 MB",
     enable_console: bool = True,
     logger_levels: list[tuple[str, str]] | None = None,
+    enqueue: bool = False,
 ) -> None:
     """设置日志配置。
 
@@ -189,6 +190,9 @@ def setup_logging(
         enable_console: 是否输出到控制台
         logger_levels: 需要设置特定级别的 logger 列表，格式: [("name", "LEVEL"), ...]
             例如: [("sse_starlette", "WARNING"), ("httpx", "INFO")]
+        enqueue: 是否启用多进程安全队列（默认 False）。
+            启用后日志通过 multiprocessing.Queue 传输，
+            可能导致事件循环阻塞。建议在 asyncio 应用中保持 False。
     """
     log_level = log_level.upper()
     log_dir = log_dir or "logs"
@@ -208,6 +212,7 @@ def setup_logging(
         "log_dir": log_dir,
         "rotation": rotation,
         "retention_days": retention_days,
+        "enqueue": enqueue,
         "initialized": True,
     })
 
@@ -252,7 +257,7 @@ def setup_logging(
             retention=f"{retention_days} days",
             level=log_level,  # >= INFO 都写入（包含 WARNING/ERROR/CRITICAL）
             encoding="utf-8",
-            enqueue=True,
+            enqueue=enqueue,
             filter=lambda record, c=ctx: (
                 record["extra"].get("service") == c
                 and not record["extra"].get("access", False)
@@ -271,7 +276,7 @@ def setup_logging(
             retention=f"{retention_days} days",
             level="ERROR",
             encoding="utf-8",
-            enqueue=True,
+            enqueue=enqueue,
             filter=lambda record, c=ctx: record["extra"].get("service") == c,
         )
 

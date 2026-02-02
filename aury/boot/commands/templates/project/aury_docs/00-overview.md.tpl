@@ -60,3 +60,4 @@ CLI 命令参考请查看 [99-cli.md](./99-cli.md)。
 
 ### 监控与告警
 - [17-alerting.md](./17-alerting.md) - 告警系统（慢请求/慢SQL/异常 → 飞书）
+- [18-monitoring-profiling.md](./18-monitoring-profiling.md) - 监控与 Profiling（火焰图/阻塞检测）

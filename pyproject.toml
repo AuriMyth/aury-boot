@@ -11,7 +11,7 @@ dependencies = [
     "greenlet>=3.2.4",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
-    "httpx>=0.28.1",
+    "aiohttp>=3.11.0",
     "loguru>=0.7.3",
     "tenacity>=9.1.2",
     "typer>=0.20.0",
@@ -31,6 +31,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.7",
     "mypy>=1.19.0",
+    "httpx>=0.28.1",  # FastAPI TestClient 依赖
 ]
 
 # ============ 文档生成 ============
@@ -72,10 +73,16 @@ otel = [
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-instrumentation-fastapi>=0.46b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
-    "opentelemetry-instrumentation-httpx>=0.46b0",
+    "opentelemetry-instrumentation-aiohttp-client>=0.46b0",
 ]
 otel-exporter = [
     "opentelemetry-exporter-otlp>=1.25.0",
+]
+
+# ============ Profiling ============
+profiling = [
+    "pyroscope-io>=0.8.7",  # 持续 Profiling / 火焰图
+    "psutil>=7.0.0",        # 事件循环阻塞检测 + 进程资源监控
 ]
 
 # ============ 管理后台（SQLAdmin） ============
@@ -98,7 +105,7 @@ recommended = [
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-instrumentation-fastapi>=0.46b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
-    "opentelemetry-instrumentation-httpx>=0.46b0",
+    "opentelemetry-instrumentation-aiohttp-client>=0.46b0",
 ]
 # 完整：所有可选依赖
 all = [
@@ -110,6 +117,9 @@ all = [
     "dramatiq>=1.18.0",
     "pika>=1.3.2",  # RabbitMQ
     "apscheduler>=3.11.1",
+    # Profiling
+    "pyroscope-io>=0.8.7",
+    "psutil>=7.0.0",
 ]
 
 [project.scripts]
@@ -219,6 +229,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.7",
     "mypy>=1.19.0",
+    "httpx>=0.28.1",  # FastAPI TestClient 依赖
 ]
 docs = [
     "mkdocs>=1.6.1",

@@ -313,6 +313,7 @@ class FoundationApp(FastAPI):
             enable_file_rotation=config.log.enable_file_rotation,
             enable_console=config.log.enable_console,
             logger_levels=logger_levels,
+            enqueue=config.log.enqueue,
         )
         
         # 注册 access 日志（HTTP 请求日志）

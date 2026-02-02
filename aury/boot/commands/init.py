@@ -542,6 +542,18 @@ def _collect_interactive_config() -> dict:
 
     config["features"] = features
 
+    # 5.5 监控配置
+    console.print()
+    console.print("[bold]📊 监控配置[/bold]")
+    config["with_otel"] = Confirm.ask(
+        "  启用 OpenTelemetry 链路追踪",
+        default=True,
+    )
+    config["with_profiling"] = Confirm.ask(
+        "  启用 Profiling (火焰图/阻塞检测)",
+        default=False,
+    )
+
     # 6. 开发工具
     console.print()
     config["with_dev"] = Confirm.ask(
@@ -589,6 +601,12 @@ def _build_dependency_list(config: dict) -> list[str]:
     if config.get("with_admin_console", True):
         extras.add("admin")
 
+    # 监控
+    if config.get("with_otel", True):
+        extras.add("otel")
+    if config.get("with_profiling", False):
+        extras.add("profiling")
+
     # 开发工具
     if config.get("with_dev"):
         extras.add("dev")
@@ -616,6 +634,8 @@ def _show_config_summary(config: dict) -> None:
         ("服务模式", config.get("service_mode", "api")),
         ("管理后台", "是" if config.get("with_admin_console", True) else "否"),
         ("可选功能", ", ".join(config.get("features", [])) or "无"),
+        ("OpenTelemetry", "是" if config.get("with_otel", True) else "否"),
+        ("Profiling", "是" if config.get("with_profiling", False) else "否"),
         ("开发工具", "是" if config.get("with_dev") else "否"),
         ("Docker", "是" if config.get("with_docker") else "否"),
     ]

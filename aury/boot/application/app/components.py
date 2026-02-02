@@ -320,11 +320,24 @@ class SchedulerComponent(Component):
             url = scheduler_config.jobstore_url
             if url.startswith("redis://"):
                 try:
+                    from urllib.parse import urlparse
                     from apscheduler.jobstores.redis import RedisJobStore
-                    scheduler_kwargs["jobstores"] = {
-                        "default": RedisJobStore.from_url(url)
+                    
+                    # 解析 Redis URL
+                    parsed = urlparse(url)
+                    redis_kwargs: dict = {
+                        "host": parsed.hostname or "localhost",
+                        "port": parsed.port or 6379,
                     }
-                    logger.info(f"调度器使用 Redis 存储: {url.split('@')[-1]}")
+                    if parsed.password:
+                        redis_kwargs["password"] = parsed.password
+                    if parsed.path and parsed.path != "/":
+                        redis_kwargs["db"] = int(parsed.path.lstrip("/") or 0)
+                    
+                    scheduler_kwargs["jobstores"] = {
+                        "default": RedisJobStore(**redis_kwargs)
+                    }
+                    logger.info(f"调度器使用 Redis 存储: {parsed.hostname}:{parsed.port}")
                 except ImportError:
                     logger.warning("Redis jobstore 需要安装 redis: pip install redis")
             else:
@@ -766,6 +779,70 @@ class AlertComponent(Component):
         pass
 
 
+class ProfilingComponent(Component):
+    """Profiling 组件。
+    
+    提供持续性能分析和事件循环阻塞检测：
+    - Pyroscope：持续采样生成火焰图
+    - 阻塞检测：检测同步代码阻塞事件循环
+    """
+
+    name = "profiling"
+    enabled = True
+    depends_on: ClassVar[list[str]] = ["alert"]  # 告警依赖
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """当启用 Pyroscope 或阻塞检测时启用。"""
+        return self.enabled and (
+            config.profiling.enabled or config.profiling.blocking_detector_enabled
+        )
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """初始化 Profiling 组件。"""
+        try:
+            from aury.boot.infrastructure.monitoring.profiling import (
+                ProfilingConfig,
+                ProfilingManager,
+            )
+            
+            profiling_config = ProfilingConfig(
+                enabled=config.profiling.enabled,
+                pyroscope_endpoint=config.profiling.pyroscope_endpoint,
+                pyroscope_auth_token=config.profiling.pyroscope_auth_token,
+                service_name=config.service.name,
+                environment=config.service.environment,
+                blocking_detector_enabled=config.profiling.blocking_detector_enabled,
+                blocking_check_interval_ms=config.profiling.blocking_check_interval_ms,
+                blocking_threshold_ms=config.profiling.blocking_threshold_ms,
+                blocking_severe_threshold_ms=config.profiling.blocking_severe_threshold_ms,
+                blocking_alert_enabled=config.profiling.blocking_alert_enabled,
+                blocking_alert_cooldown_seconds=config.profiling.blocking_alert_cooldown_seconds,
+                blocking_max_history=config.profiling.blocking_max_history,
+                tags=config.profiling.pyroscope_tags,
+            )
+            
+            manager = ProfilingManager.get_instance()
+            manager.configure(profiling_config)
+            await manager.start()
+            
+            # 保存到 app.state
+            app.state.profiling_manager = manager
+            
+        except ImportError as e:
+            logger.warning(f"Profiling 依赖未安装，跳过初始化: {e}")
+        except Exception as e:
+            logger.warning(f"Profiling 初始化失败（非关键）: {e}")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """停止 Profiling 组件。"""
+        try:
+            manager = getattr(app.state, "profiling_manager", None)
+            if manager:
+                await manager.stop()
+        except Exception as e:
+            logger.warning(f"Profiling 关闭失败: {e}")
+
+
 class EventBusComponent(Component):
     """事件总线组件。
     
@@ -815,6 +892,7 @@ FoundationApp.plugins = [
 # 设置默认组件
 FoundationApp.components = [
     AlertComponent,  # 最先初始化告警管理器
+    ProfilingComponent,  # Profiling 依赖告警
     DatabaseComponent,
     MigrationComponent,
     AdminConsoleComponent,
@@ -837,6 +915,7 @@ __all__ = [
     "EventBusComponent",
     "MessageQueueComponent",
     "MigrationComponent",
+    "ProfilingComponent",
     "SchedulerComponent",
     "StorageComponent",
     "TaskComponent",

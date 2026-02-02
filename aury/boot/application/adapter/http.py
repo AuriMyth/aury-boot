@@ -25,10 +25,14 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
-
 from aury.boot.common.logging import get_trace_id, logger
-from aury.boot.toolkit.http import HttpClient, RetryConfig
+from aury.boot.toolkit.http import (
+    HttpClient,
+    HttpNetworkError,
+    HttpStatusError,
+    HttpTimeoutError,
+    RetryConfig,
+)
 
 from .base import BaseAdapter
 from .config import AdapterSettings
@@ -185,7 +189,7 @@ class HttpAdapter(BaseAdapter):
             json: JSON 请求体
             data: 表单数据
             files: 上传文件
-            **kwargs: 其他 httpx 参数
+            **kwargs: 其他 aiohttp 参数
             
         Returns:
             dict: 响应 JSON
@@ -228,7 +232,7 @@ class HttpAdapter(BaseAdapter):
                     "content": response.text,
                 }
         
-        except httpx.TimeoutException as exc:
+        except HttpTimeoutError as exc:
             raise AdapterTimeoutError(
                 f"请求超时: {method} {path}",
                 adapter_name=self.name,
@@ -236,7 +240,7 @@ class HttpAdapter(BaseAdapter):
                 cause=exc,
             ) from exc
         
-        except httpx.HTTPStatusError as exc:
+        except HttpStatusError as exc:
             # HTTP 错误状态码
             response = exc.response
             try:
@@ -252,6 +256,13 @@ class HttpAdapter(BaseAdapter):
                 adapter_name=self.name,
                 third_party_code=third_party_code,
                 third_party_message=third_party_message,
+                cause=exc,
+            ) from exc
+        
+        except HttpNetworkError as exc:
+            raise AdapterError(
+                f"网络错误: {method} {path} - {exc}",
+                adapter_name=self.name,
                 cause=exc,
             ) from exc
         

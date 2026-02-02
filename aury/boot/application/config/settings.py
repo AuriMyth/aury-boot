@@ -401,6 +401,14 @@ class LogSettings(BaseModel):
         default=False,
         description="是否记录 WebSocket 消息内容（注意性能和敏感数据）"
     )
+    enqueue: bool = Field(
+        default=False,
+        description=(
+            "是否启用多进程安全队列。"
+            "启用后日志通过 multiprocessing.Queue 传输，"
+            "可能导致事件循环阻塞。建议在 asyncio 应用中保持 False"
+        )
+    )
 
 
 class ServiceSettings(BaseModel):
@@ -741,6 +749,70 @@ class AlertSettings(BaseModel):
         return self._notifiers
 
 
+class ProfilingSettings(BaseModel):
+    """Profiling 配置。
+    
+    环境变量格式: PROFILING__{FIELD}
+    示例: PROFILING__ENABLED, PROFILING__PYROSCOPE_ENDPOINT
+    
+    功能说明：
+    - Pyroscope：持续采样生成火焰图（需安装 pyroscope-io）
+    - 阻塞检测：检测同步代码阻塞事件循环（需安装 psutil）
+    """
+    
+    # Pyroscope 持续 Profiling
+    enabled: bool = Field(
+        default=False,
+        description="是否启用 Pyroscope 持续 profiling"
+    )
+    pyroscope_endpoint: str | None = Field(
+        default=None,
+        description="Pyroscope 服务端点（如 http://pyroscope:4040）"
+    )
+    pyroscope_auth_token: str | None = Field(
+        default=None,
+        description="Pyroscope 认证 token（可选）"
+    )
+    pyroscope_sample_rate: int = Field(
+        default=100,
+        description="Pyroscope 采样率 (Hz)，降低可减少开销"
+    )
+    pyroscope_tags: dict[str, str] = Field(
+        default_factory=dict,
+        description="Pyroscope 自定义标签"
+    )
+    
+    # 事件循环阻塞检测
+    blocking_detector_enabled: bool = Field(
+        default=False,
+        description="是否启用事件循环阻塞检测"
+    )
+    blocking_check_interval_ms: float = Field(
+        default=100,
+        description="阻塞检测间隔 (ms)"
+    )
+    blocking_threshold_ms: float = Field(
+        default=100,
+        description="阻塞阈值 (ms)，超过此时间记录阻塞事件"
+    )
+    blocking_severe_threshold_ms: float = Field(
+        default=500,
+        description="严重阻塞阈值 (ms)，超过此时间触发严重告警"
+    )
+    blocking_alert_enabled: bool = Field(
+        default=True,
+        description="检测到阻塞时是否发送告警"
+    )
+    blocking_alert_cooldown_seconds: float = Field(
+        default=60,
+        description="阻塞告警冷却时间 (秒)，避免告警风暴"
+    )
+    blocking_max_history: int = Field(
+        default=50,
+        description="保留的阻塞事件历史数量"
+    )
+
+
 class MigrationSettings(BaseModel):
     """数据库迁移配置。
     
@@ -1014,6 +1086,7 @@ class BaseConfig(BaseSettings):
     # ========== 监控告警 ==========
     telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
     alert: AlertSettings = Field(default_factory=AlertSettings)
+    profiling: ProfilingSettings = Field(default_factory=ProfilingSettings)
     
     model_config = SettingsConfigDict(
         case_sensitive=False,

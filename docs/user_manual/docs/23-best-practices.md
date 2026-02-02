@@ -279,6 +279,59 @@ async def slow_operation():
     await expensive_query()
 ```
 
+### 监控配置最佳实践
+
+不同环境的监控策略：
+
+| 功能 | 开发 | 测试/灰度 | 生产 |
+|------|------|----------|------|
+| OpenTelemetry | ✅ 可开 | ✅ 必开 | ✅ 必开 (采样 10%) |
+| 告警 | ❌ 关闭 | ✅ 开启 | ✅ 必开 |
+| Pyroscope | ❌ 关闭 | ✅ 开启 | ⚠️ 按需 |
+| 阻塞检测 | ✅ 开启 | ✅ 开启 | ⚠️ 按需 |
+
+```bash
+# 开发环境
+TELEMETRY__ENABLED=false
+ALERT__ENABLED=false
+PROFILING__BLOCKING_DETECTOR_ENABLED=true  # 早期发现阻塞问题
+
+# 生产环境
+TELEMETRY__ENABLED=true
+TELEMETRY__SAMPLING_RATE=0.1  # 10% 采样减少开销
+ALERT__ENABLED=true
+PROFILING__ENABLED=false  # 出问题时临时开启
+PROFILING__BLOCKING_DETECTOR_ENABLED=false
+```
+
+### 火焰图和性能分析
+
+使用 Pyroscope 生成火焰图：
+
+```bash
+# 安装
+pip install pyroscope-io
+
+# 配置
+PROFILING__ENABLED=true
+PROFILING__PYROSCOPE_ENDPOINT=http://pyroscope:4040
+```
+
+### 事件循环阻塞检测
+
+检测同步代码阻塞 asyncio 事件循环：
+
+```bash
+# 安装
+pip install psutil
+
+# 配置
+PROFILING__BLOCKING_DETECTOR_ENABLED=true
+PROFILING__BLOCKING_THRESHOLD_MS=100  # 超过 100ms 记录阻塞
+```
+
+阻塞时自动捕获主线程调用栈，直接定位问题代码。
+
 ## 7. 测试最佳实践
 
 ### 单元测试

@@ -179,6 +179,12 @@ class SchedulerManager:
             if timezone:
                 scheduler_kwargs["timezone"] = timezone
             
+            # 默认使用 AsyncIOExecutor 避免信号量泄漏
+            # ThreadPoolExecutor 在 uvicorn reload/多进程模式下会导致信号量泄漏
+            if "executors" not in scheduler_kwargs:
+                from apscheduler.executors.asyncio import AsyncIOExecutor
+                scheduler_kwargs["executors"] = {"default": AsyncIOExecutor()}
+            
             instance._scheduler = AsyncIOScheduler(**scheduler_kwargs)
             instance._initialized = True
             cls._instances[name] = instance
@@ -529,10 +535,16 @@ class SchedulerManager:
         else:
             logger.info("调度器已启动，无定时任务")
     
-    def shutdown(self) -> None:
-        """关闭调度器。"""
+    def shutdown(self, wait: bool = True) -> None:
+        """关闭调度器。
+        
+        Args:
+            wait: 是否等待所有正在执行的任务完成。
+                  默认 True，确保资源正确释放，避免信号量泄漏。
+        """
         if self._scheduler and self._scheduler.running:
-            self._scheduler.shutdown()
+            self._scheduler.shutdown(wait=wait)
+            self._started = False
             logger.info("调度器已关闭")
     
     def pause(self) -> None:

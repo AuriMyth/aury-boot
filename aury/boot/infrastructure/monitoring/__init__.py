@@ -5,12 +5,18 @@
 
 from __future__ import annotations
 
+import traceback
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
 import time
 
 from aury.boot.common.logging import logger
+
+
+def _format_exception_stacktrace(exc: Exception) -> str:
+    """格式化异常堆栈为字符串。"""
+    return "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
 
 
 class MonitorContext:
@@ -262,6 +268,7 @@ async def _emit_http_exception_alert(
             method=method,
             error_type=type(exception).__name__,
             error_message=str(exception),
+            stacktrace=_format_exception_stacktrace(exception),
         )
     except ImportError:
         pass
@@ -369,8 +376,9 @@ class ErrorReporterComponent(MonitorComponent):
                 source="service",
                 duration=context.duration,
                 service=context.service_name,
-                exception_type=type(context.exception).__name__,
-                exception_message=str(context.exception),
+                error_type=type(context.exception).__name__,
+                error_message=str(context.exception),
+                stacktrace=_format_exception_stacktrace(context.exception),
             )
         except ImportError:
             pass  # alerting 模块未加载
