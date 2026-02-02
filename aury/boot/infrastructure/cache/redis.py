@@ -96,15 +96,21 @@ class RedisCache(ICache):
         self._is_cluster = False
     
     async def _init_cluster(self) -> None:
-        """初始化 Redis Cluster。
+        """初始化 Redis Cluster（使用 coredis）。
         
         支持 URL 格式:
         - redis-cluster://password@host:port （密码在用户名位置）
         - redis-cluster://:password@host:port （标准格式）
         - redis-cluster://username:password@host:port （ACL 模式）
         """
-        from redis.asyncio.cluster import RedisCluster
+        try:
+            from coredis import RedisCluster
+        except ImportError as exc:
+            raise ImportError(
+                "Redis Cluster 需要安装 coredis: pip install coredis"
+            ) from exc
         
+        # 解析 URL
         parsed_url = self._url.replace("redis-cluster://", "redis://")
         parsed = urlparse(parsed_url)
         
@@ -112,7 +118,7 @@ class RedisCache(ICache):
         username = parsed.username
         password = parsed.password
         
-        # 处理 password@host 格式（密码在用户名位置）
+        # 处理 password@host 格式
         if username and not password:
             password = username
             username = None
@@ -122,8 +128,6 @@ class RedisCache(ICache):
             "host": parsed.hostname or "localhost",
             "port": parsed.port or 6379,
             "decode_responses": False,
-            "socket_connect_timeout": 5,
-            "socket_timeout": 5,
         }
         
         if username:
@@ -250,10 +254,8 @@ class RedisCache(ICache):
     async def close(self) -> None:
         """关闭连接（仅当自己拥有连接时）。"""
         if self._redis and self._owns_connection:
-            if self._is_cluster:
-                await self._redis.aclose()
-            else:
-                await self._redis.close()
+            # coredis 和 redis-py 都使用 close() 方法
+            await self._redis.close()
             logger.info("Redis连接已关闭")
         self._redis = None
     
