@@ -225,6 +225,8 @@ class RedisClient:
         self._redis = RedisCluster.from_url(
             redis_url,
             decode_responses=self._config.decode_responses,
+            socket_connect_timeout=self._config.socket_connect_timeout or 30,
+            socket_timeout=self._config.socket_timeout or 30,
         )
         self._is_cluster = True
     

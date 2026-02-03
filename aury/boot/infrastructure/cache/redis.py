@@ -120,6 +120,8 @@ class RedisCache(ICache):
         self._redis = RedisCluster.from_url(
             redis_url,
             decode_responses=False,
+            socket_connect_timeout=30,
+            socket_timeout=30,
         )
         self._is_cluster = True
     

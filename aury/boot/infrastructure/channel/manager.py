@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from urllib.parse import urlparse
 
 from aury.boot.common.logging import logger
 
@@ -113,6 +114,13 @@ class ChannelManager:
         broadcast_url = url
         if url.startswith("redis-cluster://"):
             broadcast_url = url.replace("redis-cluster://", "redis://")
+            # 处理 password@host 格式（转换为标准 :password@host 格式）
+            parsed = urlparse(broadcast_url)
+            if parsed.username and not parsed.password:
+                broadcast_url = broadcast_url.replace(
+                    f"redis://{parsed.username}@",
+                    f"redis://:{parsed.username}@"
+                )
             logger.info(f"通道管理器 [{self.name}] Redis Cluster 使用普通 Pub/Sub 模式")
 
         self._backend_type = backend
