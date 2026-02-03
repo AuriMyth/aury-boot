@@ -153,8 +153,15 @@ def create_console_sink(colorize: bool = True):
     return sink
 
 
-def _escape_tags(s: str) -> str:
+# 日志消息最大长度（避免超长消息导致转义耗时）
+_LOG_MSG_MAX_LEN = 10000
+
+
+def _escape_tags(s: str, max_len: int = _LOG_MSG_MAX_LEN) -> str:
     """转义 loguru 格式特殊字符，避免解析错误。"""
+    # 截断超长消息
+    if len(s) > max_len:
+        s = s[:max_len] + f"... (截断，原长 {len(s)} 字符)"
     # 转义 { } 避免被当作 format 字段
     s = s.replace("{", "{{").replace("}", "}}")
     # 转义 < 避免被当作颜色标签

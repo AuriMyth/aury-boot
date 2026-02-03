@@ -105,6 +105,9 @@ def log_request[T](func: Callable[..., T]) -> Callable[..., T]:
 
 # 请求/响应体最大记录长度
 MAX_BODY_LOG_SIZE = 2000
+
+# 预热 uuid/os.urandom，避免首次调用时的初始化开销
+_ = uuid.uuid4()
 # 不记录 body 的 Content-Type
 SKIP_BODY_CONTENT_TYPES = (
     "multipart/form-data",

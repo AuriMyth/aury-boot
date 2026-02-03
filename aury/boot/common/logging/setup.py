@@ -165,7 +165,7 @@ def setup_logging(
     rotation_size: str = "50 MB",
     enable_console: bool = True,
     logger_levels: list[tuple[str, str]] | None = None,
-    enqueue: bool = False,
+    enqueue: bool = True,
 ) -> None:
     """设置日志配置。
 
@@ -190,9 +190,9 @@ def setup_logging(
         enable_console: 是否输出到控制台
         logger_levels: 需要设置特定级别的 logger 列表，格式: [("name", "LEVEL"), ...]
             例如: [("sse_starlette", "WARNING"), ("httpx", "INFO")]
-        enqueue: 是否启用多进程安全队列（默认 False）。
-            启用后日志通过 multiprocessing.Queue 传输，
-            可能导致事件循环阻塞。建议在 asyncio 应用中保持 False。
+        enqueue: 是否启用后台线程写入（默认 True）。
+            启用后日志在单独线程写入文件，避免阻塞事件循环。
+            asyncio 应用必须设为 True，否则文件 I/O 会阻塞事件循环。
     """
     log_level = log_level.upper()
     log_dir = log_dir or "logs"
