@@ -11,8 +11,6 @@ import hmac
 import time
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
-
 from aury.boot.common.logging import logger
 
 from .base import AlertNotifier
@@ -197,6 +195,8 @@ class FeishuNotifier(AlertNotifier):
     async def send(self, notification: "AlertNotification") -> bool:
         """发送飞书通知。"""
         try:
+            import httpx
+            
             # 构建消息
             message = self._build_message(notification)
             
@@ -207,17 +207,16 @@ class FeishuNotifier(AlertNotifier):
                 message["sign"] = self._generate_sign(timestamp)
             
             # 发送请求
-            timeout = aiohttp.ClientTimeout(total=10)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.post(self.webhook, json=message) as response:
-                    result = await response.json()
-                    
-                    if result.get("code") == 0 or result.get("StatusCode") == 0:
-                        logger.debug(f"飞书通知发送成功: {notification.title}")
-                        return True
-                    else:
-                        logger.error(f"飞书通知发送失败: {result}")
-                        return False
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(self.webhook, json=message)
+                result = response.json()
+                
+                if result.get("code") == 0 or result.get("StatusCode") == 0:
+                    logger.debug(f"飞书通知发送成功: {notification.title}")
+                    return True
+                else:
+                    logger.error(f"飞书通知发送失败: {result}")
+                    return False
         except Exception as e:
             logger.error(f"飞书通知发送异常: {e}")
             return False

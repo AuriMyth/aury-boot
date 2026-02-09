@@ -111,9 +111,11 @@ class MQManager:
             return self
 
         # 使用配置对象时，从配置中提取参数
+        max_connections: int = 1000  # 默认值，支持高并发 SSE
         if config is not None:
             backend = config.backend
             url = config.url
+            max_connections = getattr(config, "max_connections", 100)
 
         # 处理字符串类型的 backend
         if isinstance(backend, str):
@@ -129,7 +131,12 @@ class MQManager:
         if backend == MQBackend.REDIS:
             self._backend = RedisMQ(url=url, redis_client=redis_client, prefix=prefix)
         elif backend == MQBackend.REDIS_STREAM:
-            self._backend = RedisStreamMQ(url=url, redis_client=redis_client, prefix=prefix)
+            self._backend = RedisStreamMQ(
+                url=url, 
+                redis_client=redis_client, 
+                prefix=prefix,
+                max_connections=max_connections,
+            )
         elif backend == MQBackend.RABBITMQ:
             self._backend = RabbitMQ(url=url)
         else:

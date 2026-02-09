@@ -40,6 +40,7 @@ class RedisStreamMQ(IMQ):
         consumer_group: str = "default",
         consumer_name: str | None = None,
         max_len: int | None = None,
+        max_connections: int = 1000,
     ) -> None:
         """初始化 Redis Stream 消息队列。
 
@@ -50,6 +51,7 @@ class RedisStreamMQ(IMQ):
             consumer_group: 消费者组名称
             consumer_name: 消费者名称（默认自动生成）
             max_len: Stream 最大长度（可选，用于自动裁剪）
+            max_connections: Redis 连接池最大连接数（高并发 SSE 场景建议 200+）
         
         Raises:
             ValueError: 当 url 和 redis_client 都为 None 时
@@ -63,6 +65,7 @@ class RedisStreamMQ(IMQ):
         self._consumer_group = consumer_group
         self._consumer_name = consumer_name or f"consumer-{id(self)}"
         self._max_len = max_len
+        self._max_connections = max_connections
         self._consuming = False
         self._owns_client = False
         self._log_sample_counter = 0  # 日志采样计数器
@@ -76,9 +79,11 @@ class RedisStreamMQ(IMQ):
             from aury.boot.infrastructure.clients.redis import RedisClient
             # 创建独立实例（不使用 get_instance 避免和全局实例冲突）
             self._client = RedisClient(name=f"mq-{id(self)}")
-            self._client.configure(url=self._url)
+            # 使用配置的连接池大小
+            self._client.configure(url=self._url, max_connections=self._max_connections)
             await self._client.initialize()
             self._owns_client = True
+            logger.info(f"RedisStreamMQ: 创建连接池，max_connections={self._max_connections}")
 
     def _stream_key(self, queue: str) -> str:
         """获取 Stream 的 Redis key。"""

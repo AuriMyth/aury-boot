@@ -149,6 +149,7 @@ class MQInstanceConfig(MultiInstanceSettings):
     示例:
         MQ__DEFAULT__BACKEND=redis_stream
         MQ__DEFAULT__URL=redis://localhost:6379/4
+        MQ__DEFAULT__MAX_CONNECTIONS=1000
     """
     
     backend: str = Field(
@@ -158,6 +159,10 @@ class MQInstanceConfig(MultiInstanceSettings):
     url: str | None = Field(
         default=None,
         description="连接 URL"
+    )
+    max_connections: int = Field(
+        default=1000,
+        description="Redis 连接池最大连接数"
     )
 
 
