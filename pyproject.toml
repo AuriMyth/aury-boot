@@ -85,6 +85,11 @@ profiling = [
     "psutil>=7.0.0",        # 事件循环阻塞检测 + 进程资源监控
 ]
 
+# ============ Prometheus Metrics ============
+metrics = [
+    "prometheus-fastapi-instrumentator>=7.0.0",
+]
+
 # ============ 管理后台（SQLAdmin） ============
 admin = [
     "sqladmin>=0.16.0",
@@ -106,6 +111,7 @@ recommended = [
     "opentelemetry-instrumentation-fastapi>=0.46b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
     "opentelemetry-instrumentation-aiohttp-client>=0.46b0",
+    "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 # 完整：所有可选依赖
 all = [
@@ -120,6 +126,8 @@ all = [
     # Profiling
     "pyroscope-io>=0.8.7",
     "psutil>=7.0.0",
+    # Metrics
+    "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 
 [project.scripts]

@@ -777,6 +777,61 @@ class AlertSettings(BaseModel):
         return self._notifiers
 
 
+class PrometheusMetricsSettings(BaseModel):
+    """Prometheus Metrics 配置。
+    
+    环境变量格式: PROMETHEUS_METRICS__{FIELD}
+    示例: PROMETHEUS_METRICS__ENABLED, PROMETHEUS_METRICS__PATH
+    
+    功能说明：
+    - 启用后自动暴露 /metrics 端点供 Prometheus 抓取
+    - 统计 HTTP 请求数、延迟、活跃连接数等指标
+    - 需要安装: prometheus-fastapi-instrumentator
+    """
+    
+    enabled: bool = Field(
+        default=False,
+        description="是否启用 Prometheus Metrics"
+    )
+    path: str = Field(
+        default="/api/metrics",
+        description="Metrics 端点路径"
+    )
+    include_in_schema: bool = Field(
+        default=False,
+        description="是否在 OpenAPI schema 中显示 /metrics 端点"
+    )
+    # 指标配置
+    should_group_status_codes: bool = Field(
+        default=True,
+        description="是否按状态码分组 (2xx, 3xx, 4xx, 5xx)"
+    )
+    should_ignore_untemplated: bool = Field(
+        default=False,
+        description="是否忽略没有模板路由的请求"
+    )
+    should_group_untemplated: bool = Field(
+        default=True,
+        description="是否将没有模板路由的请求归为一组"
+    )
+    should_round_latency_decimals: bool = Field(
+        default=False,
+        description="是否四舍五入延迟小数"
+    )
+    should_respect_env_var: bool = Field(
+        default=False,
+        description="是否使用 ENABLE_METRICS 环境变量控制"
+    )
+    should_instrument_requests_inprogress: bool = Field(
+        default=True,
+        description="是否统计进行中的请求数（活跃连接）"
+    )
+    excluded_handlers: list[str] = Field(
+        default_factory=lambda: ["/api/metrics", "/health", "/api/health"],
+        description="排除的路径列表（不统计这些路径的指标）"
+    )
+
+
 class ProfilingSettings(BaseModel):
     """Profiling 配置。
     
@@ -1129,6 +1184,7 @@ class BaseConfig(BaseSettings):
     telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
     alert: AlertSettings = Field(default_factory=AlertSettings)
     profiling: ProfilingSettings = Field(default_factory=ProfilingSettings)
+    prometheus_metrics: PrometheusMetricsSettings = Field(default_factory=PrometheusMetricsSettings)
     
     model_config = SettingsConfigDict(
         case_sensitive=False,

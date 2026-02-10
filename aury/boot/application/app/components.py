@@ -24,6 +24,7 @@ from aury.boot.infrastructure.monitoring.alerting import (
     AlertSeverity,
     emit_alert,
 )
+from aury.boot.infrastructure.monitoring.metrics import PrometheusMetricsPlugin
 from aury.boot.infrastructure.monitoring.tracing import (
     TelemetryConfig,
     TelemetryProvider,
@@ -961,6 +962,7 @@ class EventBusComponent(Component):
 # 设置默认插件
 FoundationApp.plugins = [
     TelemetryPlugin,  # app 创建后立即 instrument
+    PrometheusMetricsPlugin,  # Prometheus Metrics
 ]
 
 # 设置默认组件
@@ -990,6 +992,7 @@ __all__ = [
     "DbConnectionTrackerComponent",
     "EventBusComponent",
     "MessageQueueComponent",
+    "PrometheusMetricsPlugin",
     "MigrationComponent",
     "ProfilingComponent",
     "SchedulerComponent",
