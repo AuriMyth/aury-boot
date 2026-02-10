@@ -479,8 +479,11 @@ class MigrationComponent(Component):
     depends_on: ClassVar[list[str]] = [ComponentName.DATABASE]
 
     def can_enable(self, config: BaseConfig) -> bool:
-        """仅当配置了数据库 URL 时启用。"""
-        return self.enabled and bool(config.database.url)
+        """仅当配置了数据库 URL 且启用自动迁移时启用。"""
+        if not self.enabled or not config.database.url:
+            return False
+        # 检查 auto_upgrade 配置
+        return getattr(config.migration, "auto_upgrade", True)
 
     async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
         """执行数据库迁移。

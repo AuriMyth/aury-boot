@@ -937,6 +937,10 @@ class MigrationSettings(BaseModel):
         default=True,
         description="是否自动创建迁移配置和目录"
     )
+    auto_upgrade: bool = Field(
+        default=True,
+        description="启动时是否自动执行数据库迁移（开发环境可设为 False）"
+    )
 
 
 class RPCClientSettings(BaseModel):
