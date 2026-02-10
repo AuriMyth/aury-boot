@@ -11,6 +11,7 @@ from .commands import (
     make,
     merge,
     show,
+    stamp,
     status,
     up,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "make",
     "merge",
     "show",
+    "stamp",
     "status",
     "up",
 ]

@@ -290,6 +290,35 @@ def history(
         _handle_exception(e, "显示历史")
 
 
+@app.command()
+def stamp(
+    revision: str = typer.Argument(..., help="目标版本（如 head, base, 或具体版本号）"),
+    config: str | None = typer.Option(None, "--config", help="Alembic 配置文件路径（覆盖默认配置）"),
+    purge: bool = typer.Option(False, "--purge", help="清除 alembic_version 表后再标记"),
+) -> None:
+    """标记数据库版本（不执行迁移）。
+    
+    用于修复数据库版本不匹配的问题，例如当迁移文件被删除但数据库
+    已记录该版本时。这个命令只更新 alembic_version 表，不执行
+    任何实际的迁移操作。
+    
+    示例:
+        aury migrate stamp head
+        aury migrate stamp 02826bd0e91c
+        aury migrate stamp base --purge
+    """
+    try:
+        manager = get_manager(config_override=config)
+        
+        async def _stamp():
+            await manager.stamp(revision=revision, purge=purge)
+            typer.echo(f"✅ 数据库版本已标记为: {revision}")
+        
+        asyncio.run(_stamp())
+    except Exception as e:
+        _handle_exception(e, "标记版本")
+
+
 __all__ = [
     "check",
     "down",
@@ -297,6 +326,7 @@ __all__ = [
     "make",
     "merge",
     "show",
+    "stamp",
     "status",
     "up",
 ]

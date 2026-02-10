@@ -676,6 +676,27 @@ class MigrationManager:
         await asyncio.to_thread(_merge)
         logger.info(f"迁移已合并: {message}")
         return f"{self._script_location}/versions/{message.replace(' ', '_')}.py"
+    
+    async def stamp(
+        self,
+        revision: str,
+        purge: bool = False,
+    ) -> None:
+        """标记数据库版本（不执行迁移）。
+        
+        用于修复数据库版本不匹配的问题，例如当迁移文件被删除但数据库
+        已记录该版本时。这个命令只更新 alembic_version 表，不执行
+        任何实际的迁移操作。
+        
+        Args:
+            revision: 目标版本（如 "head", "base", 或具体版本号）
+            purge: 是否清除 alembic_version 表中的所有记录后再标记
+        """
+        def _stamp():
+            command.stamp(self._alembic_cfg, revision, purge=purge)
+        
+        await asyncio.to_thread(_stamp)
+        logger.info(f"数据库版本已标记为: {revision}")
 
 
 __all__ = [
