@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import sys
 import threading
 import time
@@ -374,21 +375,39 @@ class EventLoopBlockingDetector:
         return max(sampled_stacks, key=self._score_stack)
     
     def _capture_process_stats(self) -> dict[str, Any] | None:
-        """捕获当前进程状态。"""
-        if not PSUTIL_AVAILABLE:
-            return None
+        """捕获当前进程状态（含 GC 信息）。"""
+        stats: dict[str, Any] = {}
         
+        # GC 统计（始终可用）
         try:
-            proc = psutil.Process()
-            with proc.oneshot():
-                return {
-                    "cpu_percent": proc.cpu_percent(),
-                    "memory_rss_mb": round(proc.memory_info().rss / 1024**2, 2),
-                    "num_threads": proc.num_threads(),
-                    "num_fds": proc.num_fds() if hasattr(proc, "num_fds") else None,
-                }
+            gc_stats = gc.get_stats()
+            stats["gc"] = {
+                "gen0_collections": gc_stats[0].get("collections", 0),
+                "gen1_collections": gc_stats[1].get("collections", 0),
+                "gen2_collections": gc_stats[2].get("collections", 0),
+                "gen0_collected": gc_stats[0].get("collected", 0),
+                "gen1_collected": gc_stats[1].get("collected", 0),
+                "gen2_collected": gc_stats[2].get("collected", 0),
+            }
+            # 检查是否刚刚进行过 GC
+            gc_count = gc.get_count()
+            stats["gc"]["pending"] = gc_count  # (gen0, gen1, gen2) 待回收对象数
         except Exception:
-            return None
+            pass
+        
+        # 进程统计（需要 psutil）
+        if PSUTIL_AVAILABLE:
+            try:
+                proc = psutil.Process()
+                with proc.oneshot():
+                    stats["cpu_percent"] = proc.cpu_percent()
+                    stats["memory_rss_mb"] = round(proc.memory_info().rss / 1024**2, 2)
+                    stats["num_threads"] = proc.num_threads()
+                    stats["num_fds"] = proc.num_fds() if hasattr(proc, "num_fds") else None
+            except Exception:
+                pass
+        
+        return stats if stats else None
     
     def _format_stack(self, stack: list[dict[str, Any]], limit: int = 5, highlight_user: bool = True) -> str:
         """格式化调用栈为字符串。"""
@@ -444,9 +463,15 @@ class EventLoopBlockingDetector:
         
         # 格式化进程状态
         stats_str = ""
+        gc_str = ""
         if event.process_stats:
             s = event.process_stats
             stats_str = f" | CPU={s.get('cpu_percent', 'N/A')}% RSS={s.get('memory_rss_mb', 'N/A')}MB threads={s.get('num_threads', 'N/A')}"
+            # GC 信息
+            if s.get("gc"):
+                gc_info = s["gc"]
+                pending = gc_info.get("pending", (0, 0, 0))
+                gc_str = f"\nGC: gen0={gc_info.get('gen0_collections', 0)} gen1={gc_info.get('gen1_collections', 0)} gen2={gc_info.get('gen2_collections', 0)} | pending={pending}"
         
         # 检查是否有用户代码
         has_user_code = self._score_stack(event.main_thread_stack) > 0
@@ -475,7 +500,7 @@ class EventLoopBlockingDetector:
             f"事件循环阻塞{'（严重）' if is_severe else ''}: {event.blocked_ms:.0f}ms "
             f"(阈值={self._config.blocking_threshold_ms}ms, "
             f"近{window_minutes}分钟={total_blocks}次, "
-            f"阻塞率={total_blocks / max(total_checks, 1) * 100:.2f}%){stats_str}\n"
+            f"阻塞率={total_blocks / max(total_checks, 1) * 100:.2f}%){stats_str}{gc_str}\n"
             + "\n".join(stack_lines)
         )
     

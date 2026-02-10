@@ -16,7 +16,7 @@ from aury.boot.application.migrations import MigrationManager
 from aury.boot.common.logging import logger
 from aury.boot.infrastructure.cache import CacheManager
 from aury.boot.infrastructure.channel import ChannelManager
-from aury.boot.infrastructure.database import DatabaseManager
+from aury.boot.infrastructure.database import DatabaseManager, setup_connection_tracking
 from aury.boot.infrastructure.events import EventBusManager
 from aury.boot.infrastructure.monitoring.alerting import (
     AlertEventType,
@@ -88,6 +88,56 @@ class DatabaseComponent(Component):
                 await db_manager.cleanup()
         except Exception as e:
             logger.error(f"数据库关闭失败: {e}")
+
+
+class DbConnectionTrackerComponent(Component):
+    """数据库连接追踪组件（对标 HikariCP leakDetectionThreshold）。
+    
+    用于检测连接泄漏，追踪连接的获取来源代码位置。
+    
+    单实例配置（DATABASE__ 前缀）：
+        DATABASE__TRACKER_ENABLED: 是否启用追踪（默认 False）
+        DATABASE__LEAK_DETECTION_THRESHOLD: 泄漏检测阈值（秒）
+    
+    多实例配置（DATABASE__{INSTANCE}__ 前缀）：
+        DATABASE__DEFAULT__TRACKER_ENABLED=true
+        DATABASE__ANALYTICS__TRACKER_ENABLED=false
+    """
+
+    name = "db_connection_tracker"
+    enabled = True
+    depends_on: ClassVar[list[str]] = [ComponentName.DATABASE]
+
+    def can_enable(self, config: BaseConfig) -> bool:
+        """当配置了数据库时启用。"""
+        return self.enabled and bool(config.database.url)
+
+    async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
+        """启动时注册连接追踪（支持多实例）。"""
+        # 从 pyproject.toml 获取应用包名
+        try:
+            from aury.boot.commands.config import get_project_config
+            cfg = get_project_config()
+            app_package = cfg.package if cfg.has_package else "app"
+        except Exception:
+            app_package = "app"
+        
+        # 为所有已初始化的数据库实例注册追踪
+        databases = config.get_databases()
+        for name, db_config in databases.items():
+            db = DatabaseManager.get_instance(name)
+            if db.is_initialized:
+                setup_connection_tracking(
+                    pool=db.engine.sync_engine.pool,
+                    enabled=db_config.tracker_enabled,
+                    app_package=app_package,
+                )
+                if db_config.tracker_enabled:
+                    logger.info(f"数据库实例 [{name}] 已启用连接追踪 (threshold={db_config.leak_detection_threshold}s)")
+
+    async def teardown(self, app: FoundationApp) -> None:
+        """关闭时无需特殊处理。"""
+        pass
 
 
 class CacheComponent(Component):
@@ -810,6 +860,19 @@ class ProfilingComponent(Component):
 
     async def setup(self, app: FoundationApp, config: BaseConfig) -> None:
         """初始化 Profiling 组件。"""
+        import gc
+        
+        # 应用 GC 阈值配置
+        gc_thresholds = (
+            config.profiling.gc_threshold_gen0,
+            config.profiling.gc_threshold_gen1,
+            config.profiling.gc_threshold_gen2,
+        )
+        default_thresholds = (700, 10, 10)
+        if gc_thresholds != default_thresholds:
+            gc.set_threshold(*gc_thresholds)
+            logger.info(f"GC 阈值已调整: {gc_thresholds}")
+        
         try:
             from aury.boot.infrastructure.monitoring.profiling import (
                 ProfilingConfig,
@@ -905,6 +968,7 @@ FoundationApp.components = [
     AlertComponent,  # 最先初始化告警管理器
     ProfilingComponent,  # Profiling 依赖告警
     DatabaseComponent,
+    DbConnectionTrackerComponent,  # 连接追踪（依赖 Database）
     MigrationComponent,
     AdminConsoleComponent,
     CacheComponent,
@@ -923,6 +987,7 @@ __all__ = [
     "CacheComponent",
     "ChannelComponent",
     "DatabaseComponent",
+    "DbConnectionTrackerComponent",
     "EventBusComponent",
     "MessageQueueComponent",
     "MigrationComponent",

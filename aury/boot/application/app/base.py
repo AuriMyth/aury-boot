@@ -281,6 +281,7 @@ class FoundationApp(FastAPI):
         version: str = "1.0.0",
         description: str | None = None,
         logger_levels: list[tuple[str, str]] | None = None,
+        extra_components: list[type[Component] | Component] | None = None,
         **kwargs: Any,
     ) -> None:
         """初始化应用。
@@ -292,6 +293,7 @@ class FoundationApp(FastAPI):
             description: 应用描述
             logger_levels: 需要设置特定级别的 logger 列表，格式: [("name", "LEVEL"), ...]
                 例如: [("sse_starlette", "WARNING"), ("httpx", "INFO")]
+            extra_components: 额外的组件列表，会追加到默认组件之后
             **kwargs: 传递给 FastAPI 的其他参数
         """
         # 加载配置
@@ -324,6 +326,9 @@ class FoundationApp(FastAPI):
         self._plugins: dict[str, Plugin] = {}
         self._components: dict[str, Component] = {}
         self._lifecycle_listeners: dict[str, list[Callable]] = {}
+
+        # 保存额外组件
+        self._extra_components = extra_components or []
 
         # 创建生命周期管理器
         @asynccontextmanager
@@ -405,7 +410,10 @@ class FoundationApp(FastAPI):
         这一步在 super().__init__() 之前执行，只做实例化和过滤，
         不调用任何需要 app 已完成构造的方法。
         """
-        for item in self.components:
+        # 合并默认组件和额外组件
+        all_components = list(self.components) + list(self._extra_components)
+
+        for item in all_components:
             # 支持类或实例
             if isinstance(item, type):
                 component = item()

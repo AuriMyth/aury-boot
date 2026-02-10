@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from aury.boot.common.logging import logger
 
 from .backends.broadcaster import BroadcasterChannel
+from .backends.redis import RedisChannel
 from .base import ChannelBackend, ChannelMessage, IChannel
 
 
@@ -83,20 +84,20 @@ class ChannelManager:
 
     async def initialize(
         self,
-        backend: ChannelBackend | str = ChannelBackend.BROADCASTER,
+        backend: ChannelBackend | str = ChannelBackend.REDIS,
         *,
         url: str = "memory://",
     ) -> ChannelManager:
         """初始化通道（链式调用）。
 
         Args:
-            backend: 后端类型，默认 broadcaster
+            backend: 后端类型，默认 redis（原生实现，解决并发问题）
             url: 连接 URL，支持：
-                - memory:// - 内存后端（单进程，默认）
-                - redis://host:port/db - Redis Pub/Sub
-                - redis-cluster://[password@]host:port - Redis Cluster (普通 Pub/Sub)
-                - kafka://host:port - Apache Kafka
-                - postgres://user:pass@host/db - PostgreSQL
+                - memory:// - 内存后端（单进程，默认，使用 broadcaster）
+                - redis://host:port/db - Redis Pub/Sub（默认使用原生后端）
+                - redis-cluster://[password@]host:port - Redis Cluster
+                - kafka://host:port - Apache Kafka（使用 broadcaster）
+                - postgres://user:pass@host/db - PostgreSQL（使用 broadcaster）
 
         Returns:
             self: 支持链式调用
@@ -108,25 +109,40 @@ class ChannelManager:
         # 根据 URL scheme 自动选择后端
         if isinstance(backend, str):
             backend = ChannelBackend(backend.lower())
-        
-        # redis-cluster:// 转换为 redis://，使用 broadcaster 的普通 Pub/Sub
-        # 普通 Pub/Sub 在 Redis Cluster 中会自动广播到所有节点
-        broadcast_url = url
-        if url.startswith("redis-cluster://"):
-            broadcast_url = url.replace("redis-cluster://", "redis://")
-            # 处理 password@host 格式（转换为标准 :password@host 格式）
-            parsed = urlparse(broadcast_url)
-            if parsed.username and not parsed.password:
-                broadcast_url = broadcast_url.replace(
-                    f"redis://{parsed.username}@",
-                    f"redis://:{parsed.username}@"
-                )
-            logger.info(f"通道管理器 [{self.name}] Redis Cluster 使用普通 Pub/Sub 模式")
 
         self._backend_type = backend
         self._url = url
 
-        if backend == ChannelBackend.BROADCASTER or url.startswith("redis-cluster://"):
+        # 根据后端类型选择实现
+        if backend == ChannelBackend.REDIS:
+            # 原生 Redis 后端（推荐，解决 broadcaster 并发问题）
+            if url.startswith("memory://"):
+                raise ValueError(
+                    f"backend=redis 不支持 memory://，"
+                    f"请使用 backend=broadcaster 或改用 redis:// URL"
+                )
+            redis_url = url
+            if url.startswith("redis-cluster://"):
+                redis_url = url.replace("redis-cluster://", "redis://")
+                # 处理 password@host 格式（转换为标准 :password@host 格式）
+                parsed = urlparse(redis_url)
+                if parsed.username and not parsed.password:
+                    redis_url = redis_url.replace(
+                        f"redis://{parsed.username}@",
+                        f"redis://:{parsed.username}@"
+                    )
+            self._backend = RedisChannel(redis_url)
+        elif backend == ChannelBackend.BROADCASTER:
+            # Broadcaster 后端（支持 memory/redis/kafka/postgres 等）
+            broadcast_url = url
+            if url.startswith("redis-cluster://"):
+                broadcast_url = url.replace("redis-cluster://", "redis://")
+                parsed = urlparse(broadcast_url)
+                if parsed.username and not parsed.password:
+                    broadcast_url = broadcast_url.replace(
+                        f"redis://{parsed.username}@",
+                        f"redis://:{parsed.username}@"
+                    )
             self._backend = BroadcasterChannel(broadcast_url)
         elif backend in (ChannelBackend.RABBITMQ, ChannelBackend.ROCKETMQ):
             raise NotImplementedError(f"{backend.value} 后端暂未实现")

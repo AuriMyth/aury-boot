@@ -70,6 +70,15 @@ class DatabaseInstanceConfig(MultiInstanceSettings):
         default=True,
         description="是否在获取连接前进行 PING"
     )
+    # 连接追踪配置（对标 HikariCP leakDetectionThreshold）
+    tracker_enabled: bool = Field(
+        default=False,
+        description="是否启用连接追踪（生产环境建议关闭）"
+    )
+    leak_detection_threshold: int = Field(
+        default=300,
+        description="泄漏检测阈值（秒），连接持有超过此时间记录警告"
+    )
 
 
 class CacheInstanceConfig(MultiInstanceSettings):
@@ -230,6 +239,15 @@ class DatabaseSettings(BaseModel):
     slow_query_threshold: float = Field(
         default=1.0,
         description="慢查询阈值（秒），超过此时间的查询会记录警告日志"
+    )
+    # 连接追踪配置（对标 HikariCP leakDetectionThreshold）
+    tracker_enabled: bool = Field(
+        default=False,
+        description="是否启用连接追踪（生产环境建议关闭）"
+    )
+    leak_detection_threshold: int = Field(
+        default=300,
+        description="泄漏检测阈值（秒），连接持有超过此时间记录警告"
     )
 
 
@@ -411,11 +429,11 @@ class LogSettings(BaseModel):
         description="是否记录 WebSocket 消息内容（注意性能和敏感数据）"
     )
     enqueue: bool = Field(
-        default=False,
+        default=True,
         description=(
-            "是否启用多进程安全队列。"
-            "启用后日志通过 multiprocessing.Queue 传输，"
-            "可能导致事件循环阻塞。建议在 asyncio 应用中保持 False"
+            "是否启用后台线程写入日志。"
+            "启用后日志在单独线程写入文件，避免阻塞事件循环。"
+            "asyncio 应用必须设为 True，否则文件 I/O 会阻塞事件循环"
         )
     )
 
@@ -820,6 +838,20 @@ class ProfilingSettings(BaseModel):
     blocking_max_history: int = Field(
         default=50,
         description="保留的阻塞事件历史数量"
+    )
+    
+    # GC 调优（高并发流式应用建议启用）
+    gc_threshold_gen0: int = Field(
+        default=700,
+        description="GC gen0 阈值（默认 700）。流式应用建议 2000-3000 减少 GC 频率"
+    )
+    gc_threshold_gen1: int = Field(
+        default=10,
+        description="GC gen1 阈值（默认 10）"
+    )
+    gc_threshold_gen2: int = Field(
+        default=10,
+        description="GC gen2 阈值（默认 10）"
     )
 
 
