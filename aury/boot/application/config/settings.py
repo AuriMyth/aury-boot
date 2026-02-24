@@ -22,9 +22,14 @@ from .multi_instance import (
 )
 
 
-def _load_env_file(env_file: str | Path) -> bool:
-    """加载 .env 文件到环境变量。"""
-    return load_dotenv(env_file, override=True)
+def _load_env_file(env_file: str | Path, override: bool = False) -> bool:
+    """加载 .env 文件到环境变量。
+    
+    Args:
+        env_file: .env 文件路径
+        override: 是否覆盖已存在的环境变量（默认 False，环境变量优先）
+    """
+    return load_dotenv(env_file, override=override)
 
 
 # =============================================================================
@@ -1129,15 +1134,22 @@ class BaseConfig(BaseSettings):
     _mqs: dict[str, MQInstanceConfig] | None = None
     _events: dict[str, EventInstanceConfig] | None = None
     
-    def __init__(self, _env_file: str | Path = ".env", **kwargs) -> None:
+    def __init__(
+        self, 
+        _env_file: str | Path = ".env", 
+        _env_file_override: bool = False,
+        **kwargs,
+    ) -> None:
         """初始化配置。
         
         Args:
             _env_file: .env 文件路径，默认为当前目录下的 .env
+            _env_file_override: 是否用 .env 文件覆盖环境变量（默认 False，环境变量优先）
             **kwargs: 其他配置参数
         """
         # 在 pydantic-settings 初始化之前加载 .env 文件
-        _load_env_file(_env_file)
+        # 默认 override=False，环境变量优先于 .env 文件
+        _load_env_file(_env_file, override=_env_file_override)
         super().__init__(**kwargs)
     
     # ========== 服务器与网络 ==========
