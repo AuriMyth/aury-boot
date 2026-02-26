@@ -102,21 +102,58 @@ def run_scheduler(
         if config is None:
             raise RuntimeError("应用缺少 _config，无法初始化调度器")
 
-        from aury.boot.application.app.components import SchedulerComponent
+        from aury.boot.application.app.components import (
+            CacheComponent,
+            ChannelComponent,
+            DatabaseComponent,
+            DbConnectionTrackerComponent,
+            EventBusComponent,
+            MessageQueueComponent,
+            SchedulerComponent,
+            StorageComponent,
+        )
         from aury.boot.infrastructure.scheduler import SchedulerManager
+        from aury.boot.infrastructure.tasks import TaskManager
+        from aury.boot.infrastructure.tasks.constants import TaskRunMode
 
         scheduler_component = SchedulerComponent()
         scheduler_kwargs = scheduler_component._build_scheduler_config(config)
         scheduler = SchedulerManager.get_instance("default", **scheduler_kwargs)
         scheduler_component._autodiscover_schedules(application, config)
-
-        console.print("[bold green]✅ 调度器启动成功[/bold green]")
-        console.print("[dim]按 Ctrl+C 停止[/dim]")
+        infra_components = [
+            DatabaseComponent(),
+            DbConnectionTrackerComponent(),
+            CacheComponent(),
+            StorageComponent(),
+            MessageQueueComponent(),
+            ChannelComponent(),
+            EventBusComponent(),
+        ]
 
         # 运行调度器
         async def _run():
+            started_components = []
+            task_manager = None
+            for component in infra_components:
+                if component.can_enable(config):
+                    await component.setup(application, config)
+                    started_components.append(component)
+
+            # 独立调度器按 producer 模式初始化任务队列，
+            # 使定时任务中可安全发送异步任务消息。
+            broker_url = getattr(getattr(config, "task", None), "broker_url", None)
+            if broker_url:
+                task_manager = TaskManager.get_instance()
+                if not task_manager.is_initialized():
+                    await task_manager.initialize(
+                        run_mode=TaskRunMode.PRODUCER,
+                        broker_url=broker_url,
+                    )
+
             await scheduler.initialize()
             scheduler.start()
+            console.print("[bold green]✅ 调度器启动成功[/bold green]")
+            console.print("[dim]按 Ctrl+C 停止[/dim]")
             try:
                 # 保持运行
                 while True:
@@ -125,6 +162,13 @@ def run_scheduler(
                 pass
             finally:
                 scheduler.shutdown()
+                if task_manager and task_manager.is_initialized():
+                    await task_manager.cleanup()
+                for component in reversed(started_components):
+                    try:
+                        await component.teardown(application)
+                    except Exception:
+                        pass
 
         asyncio.run(_run())
 
