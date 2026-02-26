@@ -97,9 +97,18 @@ def run_scheduler(
             service_type="scheduler",
         )
 
-        # 获取调度器
+        # 构建调度器配置并自动发现定时任务（与应用内嵌调度器保持一致）
+        config = getattr(application, "_config", None)
+        if config is None:
+            raise RuntimeError("应用缺少 _config，无法初始化调度器")
+
+        from aury.boot.application.app.components import SchedulerComponent
         from aury.boot.infrastructure.scheduler import SchedulerManager
-        scheduler = SchedulerManager.get_instance()
+
+        scheduler_component = SchedulerComponent()
+        scheduler_kwargs = scheduler_component._build_scheduler_config(config)
+        scheduler = SchedulerManager.get_instance("default", **scheduler_kwargs)
+        scheduler_component._autodiscover_schedules(application, config)
 
         console.print("[bold green]✅ 调度器启动成功[/bold green]")
         console.print("[dim]按 Ctrl+C 停止[/dim]")
