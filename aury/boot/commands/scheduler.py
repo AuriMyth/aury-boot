@@ -38,7 +38,13 @@ def _detect_app_module() -> str:
             import tomllib
             with open(pyproject_path, "rb") as f:
                 data = tomllib.load(f)
-            if package := data.get("tool", {}).get("aury", {}).get("package"):
+            aury_cfg = data.get("tool", {}).get("aury", {})
+
+            # 优先使用显式 app 配置，避免 package=app 时误推断为 app.main:app
+            if app := aury_cfg.get("app"):
+                return app
+
+            if package := aury_cfg.get("package"):
                 return f"{package}.main:app"
         except Exception:
             pass
