@@ -150,6 +150,14 @@ class StorageManager:
     ) -> bytes:
         return await self.backend.download_file(object_name, bucket_name=bucket_name)
 
+    async def list_objects(
+        self,
+        prefix: str = "",
+        *,
+        bucket_name: str | None = None,
+    ) -> list[str]:
+        return await self.backend.list_objects(prefix, bucket_name=bucket_name)
+
     async def cleanup(self) -> None:
         if self._backend:
             # SDK 的 IStorage 可能没有 close() 方法

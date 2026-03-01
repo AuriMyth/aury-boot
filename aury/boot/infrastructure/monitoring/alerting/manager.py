@@ -12,6 +12,8 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import aiofiles
+
 from aury.boot.common.logging import logger
 
 from .aggregator import AlertAggregator
@@ -171,8 +173,9 @@ class AlertManager:
         
         try:
             import yaml
-            with open(rules_path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            async with aiofiles.open(rules_path, encoding="utf-8") as f:
+                content = await f.read()
+            data = yaml.safe_load(content)
             
             if data:
                 defaults, rules = load_rules_from_dict(data)
