@@ -393,10 +393,12 @@ aum scheduler --app mypackage.main:app
 aum worker [OPTIONS]
 
 Options:
-  -a, --app TEXT        应用模块路径（默认自动检测）
-  -c, --concurrency INT 并发 worker 数量（默认: 4）
-  -q, --queues TEXT     要处理的队列名称（逗号分隔）
-  --help                显示帮助信息
+  -a, --app TEXT         应用模块路径（默认自动检测）
+  -p, --processes INT    Dramatiq 进程数（默认: 1）
+  -t, --threads INT      每进程线程数（默认: 4）
+  -c, --concurrency INT  兼容旧参数，等同 --threads
+  -q, --queues TEXT      要处理的队列名称（逗号分隔）
+  --help                 显示帮助信息
 ```
 
 Worker 会消费任务队列中的异步任务并执行。
@@ -405,7 +407,10 @@ Worker 会消费任务队列中的异步任务并执行。
 # 基本用法
 aum worker
 
-# 指定并发数
+# 100 并发槽位（2x50）
+aum worker -p 2 -t 50
+
+# 兼容旧参数
 aum worker -c 8
 
 # 只处理指定队列

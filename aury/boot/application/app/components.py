@@ -234,10 +234,14 @@ class TaskComponent(Component):
     depends_on: ClassVar[list[str]] = []
 
     def can_enable(self, config: BaseConfig) -> bool:
-        """仅当是 Worker 模式且配置了 broker URL 时启用。"""
+        """配置了 broker URL 时启用。
+
+        说明：
+        - Worker 模式需要消费任务（run_mode=worker）
+        - API/Scheduler 模式也需要初始化 producer broker 才能正确发送任务
+        """
         return (
             self.enabled
-            and config.service.service_type == ServiceType.WORKER.value
             and bool(config.task.broker_url)
         )
 
@@ -1003,4 +1007,3 @@ __all__ = [
     "TaskComponent",
     "TelemetryPlugin",
 ]
-

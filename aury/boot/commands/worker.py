@@ -3,13 +3,15 @@
 使用示例：
     aury worker                  # 运行 worker
     aury worker --app main:app   # 指定应用模块
-    aury worker -c 4             # 指定并发数
+    aury worker -p 2 -t 50       # 2 进程 x 50 线程 = 100 并发槽位
+    aury worker -c 50            # 兼容旧参数：等同 --threads 50
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 import sys
+import asyncio
 
 from rich.console import Console
 import typer
@@ -56,11 +58,26 @@ def run_worker(
         "-a",
         help="应用模块路径（默认自动检测，如 main:app）",
     ),
-    concurrency: int = typer.Option(
+    processes: int = typer.Option(
+        1,
+        "--processes",
+        "-p",
+        min=1,
+        help="Dramatiq 进程数",
+    ),
+    threads: int = typer.Option(
         4,
+        "--threads",
+        "-t",
+        min=1,
+        help="每进程线程数",
+    ),
+    concurrency: int | None = typer.Option(
+        None,
         "--concurrency",
         "-c",
-        help="并发 worker 数量",
+        min=1,
+        help="兼容旧参数，等同 --threads",
     ),
     queues: str | None = typer.Option(
         None,
@@ -76,11 +93,15 @@ def run_worker(
     示例：
         aury worker                       # 默认配置
         aury worker --app main:app        # 指定应用模块
-        aury worker -c 8                  # 8 个并发
+        aury worker -p 2 -t 50            # 100 并发槽位
+        aury worker -c 8                  # 兼容旧参数（等同 --threads 8）
         aury worker -q high,default       # 只处理指定队列
     """
     if ctx.invoked_subcommand is not None:
         return
+
+    if concurrency is not None:
+        threads = concurrency
 
     # 确保当前目录在 Python 路径中
     cwd = str(Path.cwd())
@@ -90,7 +111,9 @@ def run_worker(
     app_module = app_path or _detect_app_module()
     console.print("[bold cyan]⚙️  启动 Worker[/bold cyan]")
     console.print(f"   应用: [green]{app_module}[/green]")
-    console.print(f"   并发: [green]{concurrency}[/green]")
+    console.print(f"   进程: [green]{processes}[/green]")
+    console.print(f"   线程: [green]{threads}[/green]")
+    console.print(f"   总并发槽位: [green]{processes * threads}[/green]")
     if queues:
         console.print(f"   队列: [green]{queues}[/green]")
 
@@ -100,10 +123,28 @@ def run_worker(
         module = __import__(module_path, fromlist=[app_name])
         application = getattr(module, app_name)
 
+        # Ensure task broker/middleware are initialized for worker mode.
+        # `aury worker` does not run full app startup, so TaskComponent.setup is not triggered.
+        from aury.boot.infrastructure.tasks import TaskManager
+        from aury.boot.infrastructure.tasks.constants import TaskRunMode
+        broker_url = getattr(getattr(application, "_config", None), "task", None)
+        broker_url = getattr(broker_url, "broker_url", None)
+        if broker_url:
+            try:
+                asyncio.run(
+                    TaskManager.get_instance().initialize(
+                        run_mode=TaskRunMode.WORKER,
+                        broker_url=broker_url,
+                    )
+                )
+            except Exception:
+                # Let dramatiq continue; it will surface startup errors if broker is unusable.
+                pass
+
         # 设置日志（必须在其他操作之前）
         from aury.boot.common.logging import setup_logging
         setup_logging(
-            log_level=getattr(application, "_config", None) and application._config.log.level or "INFO",
+            log_level=(getattr(application, "_config", None) and application._config.log.level) or "INFO",
             service_type="worker",
         )
 
@@ -122,8 +163,10 @@ def run_worker(
         # 构建 dramatiq 参数
         args = [
             module_path,  # 模块路径
-            "--processes", "1",
-            "--threads", str(concurrency),
+            "--processes",
+            str(processes),
+            "--threads",
+            str(threads),
         ]
         if queues:
             args.extend(["--queues", queues])

@@ -120,8 +120,17 @@ class TaskProxy:
         Returns:
             Message | None: 发送的消息对象
         """
-        if not self._broker:
+        # 优先使用当前全局 broker，避免装饰阶段缓存到默认 StubBroker。
+        broker = None
+        try:
+            broker = dramatiq.get_broker()
+        except Exception:
+            broker = None
+        if broker is None:
+            broker = self._broker
+        if broker is None:
             raise RuntimeError("Broker 未初始化，无法发送任务")
+        self._broker = broker
         
         # 使用 dramatiq 的 Message 类创建消息
         # actor_name 必须是 worker 中注册的完整函数路径
@@ -136,7 +145,7 @@ class TaskProxy:
             },
         )
         
-        result = self._broker.enqueue(message)
+        result = broker.enqueue(message)
         logger.debug(f"任务消息已发送: {self.actor_name}")
         return result
     
@@ -485,6 +494,8 @@ def conditional_task(
         )
     
     def decorator(f: Callable) -> Any:
+        actor_name = kwargs.pop("actor_name", None)
+
         # 处理 run_mode 参数，默认为 WORKER
         if run_mode is None:
             mode = TaskRunMode.WORKER
@@ -499,13 +510,15 @@ def conditional_task(
         
         if mode == TaskRunMode.WORKER:
             # Worker 模式下正常注册（执行者）
+            if actor_name:
+                return dramatiq.actor(queue_name=queue_name, actor_name=actor_name, **kwargs)(f)
             return dramatiq.actor(queue_name=queue_name, **kwargs)(f)
         else:
             # Producer 模式下返回代理对象，不注册但可以发送消息
-            # 获取函数的完整模块路径作为 actor_name
+            # actor_name 优先使用显式配置，否则回退完整模块路径。
             module_name = f.__module__
             func_name = f.__name__
-            full_actor_name = f"{module_name}.{func_name}"
+            full_actor_name = actor_name or f"{module_name}.{func_name}"
             
             # 获取全局 broker（如果已设置）
             broker = dramatiq.get_broker() if hasattr(dramatiq, "get_broker") else None
@@ -529,4 +542,3 @@ __all__ = [
     "TaskProxy",
     "conditional_task",
 ]
-
