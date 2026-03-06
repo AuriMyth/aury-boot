@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import importlib
 import inspect
 from pathlib import Path
@@ -395,11 +395,25 @@ class MigrationManager:
             issues = []
             warnings = []
             
+            def _normalize_down_revisions(down_revision: Any) -> tuple[str, ...]:
+                if down_revision is None:
+                    return ()
+                if isinstance(down_revision, str):
+                    return (down_revision,)
+                if isinstance(down_revision, Sequence):
+                    return tuple(str(rev) for rev in down_revision if rev is not None)
+                return (str(down_revision),)
+            
             # 检查是否有孤立的迁移
             revision_map = {rev.revision: rev for rev in revisions}
             for rev in revisions:
-                if rev.down_revision and rev.down_revision not in revision_map:
-                    issues.append(f"迁移 {rev.revision} 的父版本 {rev.down_revision} 不存在")
+                missing_parents = [
+                    parent
+                    for parent in _normalize_down_revisions(rev.down_revision)
+                    if parent not in revision_map
+                ]
+                if missing_parents:
+                    issues.append(f"迁移 {rev.revision} 的父版本 {missing_parents} 不存在")
             
             # 检查是否有多个 head（冲突）
             heads = script.get_revisions("heads")
@@ -703,4 +717,3 @@ __all__ = [
     "MigrationManager",
     "load_all_models",
 ]
-
