@@ -233,6 +233,8 @@ def run(
                 reload=True,
                 reload_dirs=reload_dirs,
                 log_level="debug" if debug else "info",
+                # 优雅关闭超时，确保 WS/SSE 连接有时间关闭
+                timeout_graceful_shutdown=5,
             )
         else:
             # 非热重载模式：使用 ApplicationServer
@@ -426,6 +428,8 @@ def dev(
             reload_includes=reload_includes,
             reload_excludes=reload_excludes,
             log_level="info",
+            # 优雅关闭超时，确保 WS/SSE 连接有时间关闭
+            timeout_graceful_shutdown=5,
         )
     except KeyboardInterrupt:
         typer.echo("\n👋 服务器已停止")

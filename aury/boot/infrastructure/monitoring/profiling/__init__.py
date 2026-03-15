@@ -17,14 +17,15 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime
 import gc
+from pathlib import Path
 import sys
 import threading
 import time
 import traceback
-from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from aury.boot.common.logging import logger
@@ -179,6 +180,7 @@ class EventLoopBlockingDetector:
         self._running = False
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._workspace_root = Path.cwd().resolve()
         self._blocking_events: list[BlockingEvent] = []
         self._lock = threading.Lock()
         # 滑动窗口统计：记录时间戳 (timestamp, is_block)
@@ -338,12 +340,22 @@ class EventLoopBlockingDetector:
         """判断是否为用户代码（非标准库/非三方库）。"""
         if not filename:
             return False
+        try:
+            file_path = Path(filename).resolve()
+        except (OSError, RuntimeError):
+            file_path = Path(filename)
+
+        try:
+            in_workspace = file_path.is_relative_to(self._workspace_root)
+        except ValueError:
+            in_workspace = False
+
         is_stdlib = any(p in filename for p in (
             "/lib/python", "/Lib/Python", "/opt/homebrew/Cellar/python",
             "/.pyenv/", "/Python.framework/"
         ))
         is_site_packages = "site-packages" in filename or "dist-packages" in filename
-        return not is_stdlib and not is_site_packages
+        return in_workspace and not is_stdlib and not is_site_packages
     
     def _score_stack(self, stack: list[dict[str, Any]]) -> int:
         """评分堆栈：用户代码帧越多分数越高。"""
@@ -373,6 +385,58 @@ class EventLoopBlockingDetector:
         if not sampled_stacks:
             return []
         return max(sampled_stacks, key=self._score_stack)
+
+    def _looks_like_async_wait(self, stack: list[dict[str, Any]]) -> bool:
+        """判断当前堆栈是否更像异步 I/O 等待点，而不是阻塞根因。"""
+        if not stack:
+            return False
+
+        recent_frames = stack[-4:]
+        if not recent_frames:
+            return False
+
+        wait_file_markers = (
+            "/redis/asyncio/",
+            "/asyncio/",
+            "/asyncpg/",
+            "/uvloop/",
+            "/selectors.py",
+            "/socket.py",
+        )
+        wait_functions = {
+            "get_message",
+            "parse_response",
+            "_execute",
+            "read_response",
+            "__aexit__",
+            "select",
+            "poll",
+            "recv",
+            "recv_into",
+        }
+        wait_code_markers = (
+            "await self._pubsub.get_message",
+            "await self.parse_response",
+            "await self._execute",
+            "await conn.retry.call_with_retry",
+            "async with async_timeout",
+            "selector.select(",
+        )
+
+        return all(not self._is_user_code(frame.get("file", "")) for frame in recent_frames) and any(
+            any(marker in frame.get("file", "") for marker in wait_file_markers)
+            or frame.get("function", "") in wait_functions
+            or any(marker in (frame.get("code") or "") for marker in wait_code_markers)
+            for frame in recent_frames
+        )
+
+    def _describe_stack(self, stack: list[dict[str, Any]]) -> tuple[str, bool]:
+        """返回堆栈标题以及是否高亮用户代码。"""
+        if self._looks_like_async_wait(stack):
+            return "调用栈快照（当前更像异步 I/O 等待点，不一定是阻塞根因）:", False
+        if self._score_stack(stack) > 0:
+            return "调用栈 (→ 标记用户代码):", True
+        return "调用栈 (无用户代码，可能是三方库/框架内部阻塞):", False
     
     def _capture_process_stats(self) -> dict[str, Any] | None:
         """捕获当前进程状态（含 GC 信息）。"""
@@ -473,28 +537,26 @@ class EventLoopBlockingDetector:
                 pending = gc_info.get("pending", (0, 0, 0))
                 gc_str = f"\nGC: gen0={gc_info.get('gen0_collections', 0)} gen1={gc_info.get('gen1_collections', 0)} gen2={gc_info.get('gen2_collections', 0)} | pending={pending}"
         
-        # 检查是否有用户代码
-        has_user_code = self._score_stack(event.main_thread_stack) > 0
-        
+        stack_title, highlight_user = self._describe_stack(event.main_thread_stack)
+
         # 构建堆栈信息
         stack_lines = []
-        
-        if has_user_code:
-            # 有用户代码，显示主堆栈
-            stack_lines.append("调用栈 (→ 标记用户代码):")
-            stack_lines.append(self._format_stack(event.main_thread_stack, limit=8))
-        else:
-            # 没有用户代码，可能是框架内部阻塞
-            stack_lines.append("调用栈 (无用户代码，可能是三方库/框架内部阻塞):")
-            stack_lines.append(self._format_stack(event.main_thread_stack, limit=5, highlight_user=False))
-            
-            # 显示所有不同的采样堆栈
-            if len(event.all_sampled_stacks) > 1:
-                stack_lines.append(f"\n共采样到 {len(event.all_sampled_stacks)} 个不同堆栈:")
-                for i, stack in enumerate(event.all_sampled_stacks[:3], 1):  # 最多显示3个
-                    if stack != event.main_thread_stack:
-                        stack_lines.append(f"--- 采样 #{i} ---")
-                        stack_lines.append(self._format_stack(stack, limit=3, highlight_user=False))
+
+        stack_lines.append(stack_title)
+        stack_lines.append(
+            self._format_stack(
+                event.main_thread_stack,
+                limit=8 if highlight_user else 5,
+                highlight_user=highlight_user,
+            )
+        )
+
+        if not highlight_user and len(event.all_sampled_stacks) > 1:
+            stack_lines.append(f"\n共采样到 {len(event.all_sampled_stacks)} 个不同堆栈:")
+            for i, stack in enumerate(event.all_sampled_stacks[:3], 1):  # 最多显示3个
+                if stack != event.main_thread_stack:
+                    stack_lines.append(f"--- 采样 #{i} ---")
+                    stack_lines.append(self._format_stack(stack, limit=3, highlight_user=False))
         
         log_fn(
             f"事件循环阻塞{'（严重）' if is_severe else ''}: {event.blocked_ms:.0f}ms "
@@ -678,12 +740,12 @@ def get_profiling_manager() -> ProfilingManager:
 
 
 __all__ = [
+    "PSUTIL_AVAILABLE",
+    "PYROSCOPE_AVAILABLE",
     "BlockingEvent",
     "EventLoopBlockingDetector",
     "ProfilingConfig",
     "ProfilingManager",
     "PyroscopeProfiler",
     "get_profiling_manager",
-    "PSUTIL_AVAILABLE",
-    "PYROSCOPE_AVAILABLE",
 ]

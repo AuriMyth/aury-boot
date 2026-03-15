@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -191,35 +192,36 @@ class FeishuNotifier(AlertNotifier):
         }
         
         return card
-    
-    async def send(self, notification: "AlertNotification") -> bool:
-        """发送飞书通知。"""
+
+    def _send_sync(self, notification: "AlertNotification") -> bool:
+        """在线程中同步发送飞书通知，避免阻塞主事件循环。"""
         try:
             import httpx
-            
-            # 构建消息
+
             message = self._build_message(notification)
-            
-            # 添加签名（如果配置了）
+
             if self.secret:
                 timestamp = int(time.time())
                 message["timestamp"] = str(timestamp)
                 message["sign"] = self._generate_sign(timestamp)
-            
-            # 发送请求
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(self.webhook, json=message)
+
+            with httpx.Client(timeout=10.0) as client:
+                response = client.post(self.webhook, json=message)
                 result = response.json()
-                
-                if result.get("code") == 0 or result.get("StatusCode") == 0:
-                    logger.debug(f"飞书通知发送成功: {notification.title}")
-                    return True
-                else:
-                    logger.error(f"飞书通知发送失败: {result}")
-                    return False
+
+            if result.get("code") == 0 or result.get("StatusCode") == 0:
+                logger.debug(f"飞书通知发送成功: {notification.title}")
+                return True
+
+            logger.error(f"飞书通知发送失败: {result}")
+            return False
         except Exception as e:
             logger.error(f"飞书通知发送异常: {e}")
             return False
+    
+    async def send(self, notification: "AlertNotification") -> bool:
+        """发送飞书通知。"""
+        return await asyncio.to_thread(self._send_sync, notification)
 
 
 __all__ = ["FeishuNotifier"]

@@ -9,9 +9,11 @@
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import suppress
+import os
 from pathlib import Path
 import sys
-import asyncio
 
 from rich.console import Console
 import typer
@@ -118,6 +120,11 @@ def run_worker(
         console.print(f"   队列: [green]{queues}[/green]")
 
     try:
+        from aury.boot.application.constants.service import ServiceType
+
+        # Worker 命令启动时强制覆盖 service type，避免与共享 .env 冲突。
+        os.environ["SERVICE__SERVICE_TYPE"] = ServiceType.WORKER.value
+
         # 导入应用（确保任务被注册）
         module_path, app_name = app_module.rsplit(":", 1)
         module = __import__(module_path, fromlist=[app_name])
@@ -130,16 +137,13 @@ def run_worker(
         broker_url = getattr(getattr(application, "_config", None), "task", None)
         broker_url = getattr(broker_url, "broker_url", None)
         if broker_url:
-            try:
+            with suppress(Exception):
                 asyncio.run(
                     TaskManager.get_instance().initialize(
                         run_mode=TaskRunMode.WORKER,
                         broker_url=broker_url,
                     )
                 )
-            except Exception:
-                # Let dramatiq continue; it will surface startup errors if broker is unusable.
-                pass
 
         # 设置日志（必须在其他操作之前）
         from aury.boot.common.logging import setup_logging
