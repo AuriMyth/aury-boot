@@ -70,6 +70,17 @@ def _create_broker(url: str, middleware_list: list) -> Any:
     raise ValueError(f"不支持的任务队列 URL: {url}")
 
 
+def _resolve_actor_name(func: Callable, actor_name: str | None = None) -> str:
+    """解析 actor 名称。
+
+    默认使用完整模块路径，保证 producer 和 worker 侧名称一致，
+    避免跨进程发送任务时出现 ActorNotFound。
+    """
+    if actor_name:
+        return actor_name
+    return f"{func.__module__}.{func.__name__}"
+
+
 class TaskProxy:
     """任务代理类，用于在 API 模式下发送消息而不注册任务。
     
@@ -394,36 +405,32 @@ class TaskManager:
         def decorator(f: Callable) -> Any:
             # 从配置获取运行模式，默认为 API
             run_mode = self._run_mode
+            resolved_actor_name = _resolve_actor_name(f, actor_name)
             
             if run_mode == TaskRunMode.WORKER:
                 # Worker 模式下正常注册（执行者）
                 actor = dramatiq.actor(
                     f,
-                    actor_name=actor_name or f.__name__,
+                    actor_name=resolved_actor_name,
                     max_retries=max_retries,
                     time_limit=time_limit,
                     queue_name=queue_name,
                     **kwargs,
                 )
-                logger.debug(f"任务已注册（worker 模式）: {actor_name or f.__name__}")
+                logger.debug(f"任务已注册（worker 模式）: {resolved_actor_name}")
                 return actor
             else:
                 # Producer 模式下返回代理对象，不注册但可以发送消息
-                # 获取函数的完整模块路径作为 actor_name
-                module_name = f.__module__
-                func_name = f.__name__
-                full_actor_name = actor_name or f"{module_name}.{func_name}"
-                
                 proxy = TaskProxy(
                     func=f,
                     queue_name=queue_name,
-                    actor_name=full_actor_name,
+                    actor_name=resolved_actor_name,
                     broker=self._broker,
                     max_retries=max_retries,
                     time_limit=time_limit,
                     **kwargs,
                 )
-                logger.debug(f"任务代理已创建（producer 模式）: {full_actor_name}")
+                logger.debug(f"任务代理已创建（producer 模式）: {resolved_actor_name}")
                 return proxy
         
         if func is None:
@@ -495,6 +502,7 @@ def conditional_task(
     
     def decorator(f: Callable) -> Any:
         actor_name = kwargs.pop("actor_name", None)
+        resolved_actor_name = _resolve_actor_name(f, actor_name)
 
         # 处理 run_mode 参数，默认为 WORKER
         if run_mode is None:
@@ -510,23 +518,20 @@ def conditional_task(
         
         if mode == TaskRunMode.WORKER:
             # Worker 模式下正常注册（执行者）
-            if actor_name:
-                return dramatiq.actor(queue_name=queue_name, actor_name=actor_name, **kwargs)(f)
-            return dramatiq.actor(queue_name=queue_name, **kwargs)(f)
+            return dramatiq.actor(
+                queue_name=queue_name,
+                actor_name=resolved_actor_name,
+                **kwargs,
+            )(f)
         else:
             # Producer 模式下返回代理对象，不注册但可以发送消息
-            # actor_name 优先使用显式配置，否则回退完整模块路径。
-            module_name = f.__module__
-            func_name = f.__name__
-            full_actor_name = actor_name or f"{module_name}.{func_name}"
-            
             # 获取全局 broker（如果已设置）
             broker = dramatiq.get_broker() if hasattr(dramatiq, "get_broker") else None
             
             return TaskProxy(
                 func=f,
                 queue_name=queue_name,
-                actor_name=full_actor_name,
+                actor_name=resolved_actor_name,
                 broker=broker,
                 **kwargs,
             )
