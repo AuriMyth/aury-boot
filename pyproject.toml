@@ -70,14 +70,14 @@ scheduler = ["apscheduler>=3.11.1"]
 
 # ============ OpenTelemetry ============
 otel = [
-    "opentelemetry-api==1.39.1",
-    "opentelemetry-sdk==1.39.1",
-    "opentelemetry-instrumentation-fastapi==0.60b1",
-    "opentelemetry-instrumentation-sqlalchemy==0.60b1",
-    "opentelemetry-instrumentation-aiohttp-client==0.60b1",
+    "opentelemetry-api>=1.40.0",
+    "opentelemetry-sdk>=1.40.0",
+    "opentelemetry-instrumentation-fastapi>=0.61b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.61b0",
+    "opentelemetry-instrumentation-aiohttp-client>=0.61b0",
 ]
 otel-exporter = [
-    "opentelemetry-exporter-otlp==1.39.1",
+    "opentelemetry-exporter-otlp>=1.40.0",
 ]
 
 # ============ Profiling ============
@@ -107,11 +107,11 @@ recommended = [
     "aury-sdk-storage[aws]>=0.0.1",
     "aiosqlite>=0.21.0",
     # OpenTelemetry
-    "opentelemetry-api==1.39.1",
-    "opentelemetry-sdk==1.39.1",
-    "opentelemetry-instrumentation-fastapi==0.60b1",
-    "opentelemetry-instrumentation-sqlalchemy==0.60b1",
-    "opentelemetry-instrumentation-aiohttp-client==0.60b1",
+    "opentelemetry-api>=1.40.0",
+    "opentelemetry-sdk>=1.40.0",
+    "opentelemetry-instrumentation-fastapi>=0.61b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.61b0",
+    "opentelemetry-instrumentation-aiohttp-client>=0.61b0",
     "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 # 完整：所有可选依赖

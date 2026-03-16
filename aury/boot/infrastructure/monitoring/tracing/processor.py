@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 import fnmatch
+import inspect
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -18,6 +19,11 @@ except ImportError:
     OTelSpanKind = None  # type: ignore[assignment, misc]
     StatusCode = None  # type: ignore[assignment, misc]
 
+try:
+    from opentelemetry.sdk.trace import SpanProcessor as OTelSpanProcessor
+except ImportError:
+    OTelSpanProcessor = object  # type: ignore[assignment, misc]
+
 if TYPE_CHECKING:
     from asyncio import Task
 
@@ -27,7 +33,7 @@ if TYPE_CHECKING:
 AlertCallback = Callable[[str, str], Awaitable[None]] | Callable[..., Awaitable[None]]
 
 
-class AlertingSpanProcessor:
+class AlertingSpanProcessor(OTelSpanProcessor):
     """告警 SpanProcessor。
     
     在 span 结束时检测：
@@ -81,12 +87,23 @@ class AlertingSpanProcessor:
     def on_start(self, span: "Span", parent_context: object = None) -> None:
         """span 开始时调用（不做处理）。"""
         pass
+
+    def _on_ending(self, span: "Span") -> None:
+        pass
     
     def on_end(self, span: "ReadableSpan") -> None:
         """span 结束时调用，检测并触发告警。"""
         if StatusCode is None:
             return
-        
+
+        # SpanProcessor 钩子不应向外抛异常，避免 tracing 反向影响主流程。
+        try:
+            self._process_span_end(span)
+        except Exception as e:
+            logger.warning(f"AlertingSpanProcessor 处理 span 失败: {e}")
+
+    def _process_span_end(self, span: "ReadableSpan") -> None:
+        """处理 span 结束后的告警检测。"""
         # 获取 span 信息
         name = span.name
         duration_ns = (span.end_time or 0) - (span.start_time or 0)
@@ -193,11 +210,10 @@ class AlertingSpanProcessor:
                 if part.startswith("/"):
                     paths_to_check.append(part)
         
-        for p in paths_to_check:
-            if any(regex.fullmatch(p) for regex in self._exclude_regexes):
-                return True
-        
-        return False
+        return any(
+            any(regex.fullmatch(p) for regex in self._exclude_regexes)
+            for p in paths_to_check
+        )
     
     def _emit_slow_alert(
         self,
@@ -211,24 +227,18 @@ class AlertingSpanProcessor:
         """发送慢 span 告警。"""
         if not self._alert_callback:
             return
-        
-        try:
-            task = asyncio.create_task(
-                self._alert_callback(
-                    _get_event_type_for_slow(span_kind),
-                    f"慢 {span_kind}: {name}",
-                    severity="warning",
-                    trace_id=trace_id,
-                    source=span_kind,
-                    duration=duration,
-                    threshold=threshold,
-                    **_extract_alert_context(attributes),
-                )
-            )
-            self._background_tasks.add(task)
-            task.add_done_callback(self._background_tasks.discard)
-        except RuntimeError:
-            logger.debug(f"无法发送慢 span 告警（无事件循环）: {name}")
+
+        self._schedule_alert(
+            _get_event_type_for_slow(span_kind),
+            f"慢 {span_kind}: {name}",
+            log_label=f"慢 span 告警: {name}",
+            severity="warning",
+            trace_id=trace_id,
+            source=span_kind,
+            duration=duration,
+            threshold=threshold,
+            **_extract_alert_context(attributes),
+        )
     
     def _emit_error_alert(
         self,
@@ -252,23 +262,36 @@ class AlertingSpanProcessor:
             if exception_info.get("stacktrace"):
                 extra_context["stacktrace"] = exception_info["stacktrace"]
         
+        self._schedule_alert(
+            "exception",
+            f"异常: {error_message}",
+            log_label=f"异常 span 告警: {name}",
+            severity="error",
+            trace_id=trace_id,
+            source=span_kind,
+            duration=duration,
+            error_message=error_message,
+            **extra_context,
+        )
+
+    def _schedule_alert(self, event_type: str, message: str, *, log_label: str, **metadata: Any) -> None:
+        """后台调度告警发送，并隔离回调失败。"""
+        if not self._alert_callback:
+            return
+
         try:
-            task = asyncio.create_task(
-                self._alert_callback(
-                    "exception",
-                    f"异常: {error_message}",
-                    severity="error",
-                    trace_id=trace_id,
-                    source=span_kind,
-                    duration=duration,
-                    error_message=error_message,
-                    **extra_context,
-                )
-            )
+            result = self._alert_callback(event_type, message, **metadata)
+            if not inspect.isawaitable(result):
+                logger.warning(f"告警回调必须返回 awaitable，已忽略 {log_label}")
+                return
+
+            task = asyncio.create_task(result)
             self._background_tasks.add(task)
             task.add_done_callback(self._background_tasks.discard)
         except RuntimeError:
-            logger.debug(f"无法发送异常 span 告警（无事件循环）: {name}")
+            logger.debug(f"无法发送 {log_label}（无事件循环）")
+        except Exception as e:
+            logger.warning(f"无法调度 {log_label}: {e}")
 
 
 def _get_span_kind(span: "ReadableSpan") -> str:
