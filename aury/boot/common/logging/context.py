@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from enum import Enum
+import os
 import uuid
 
 
@@ -17,8 +18,27 @@ class ServiceContext(str, Enum):
     WORKER = "worker"
 
 
+def _resolve_default_service_context() -> ServiceContext:
+    """从环境变量推断默认服务上下文。
+
+    worker 进程里的新线程/新上下文如果没有显式 set_service_context，
+    也应该继承当前服务类型，而不是总是回退到 api。
+    """
+
+    raw = (os.getenv("SERVICE__SERVICE_TYPE") or "").strip().lower()
+    if raw == "app":
+        raw = ServiceContext.API.value
+    try:
+        return ServiceContext(raw)
+    except ValueError:
+        return ServiceContext.API
+
+
 # 当前服务上下文（用于决定日志写入哪个文件）
-_service_context: ContextVar[ServiceContext] = ContextVar("service_context", default=ServiceContext.API)
+_service_context: ContextVar[ServiceContext] = ContextVar(
+    "service_context",
+    default=_resolve_default_service_context(),
+)
 
 # 链路追踪 ID
 _trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
@@ -27,7 +47,12 @@ _trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
 
 def get_service_context() -> ServiceContext:
     """获取当前服务上下文。"""
-    return _service_context.get()
+    current = _service_context.get()
+    if current is ServiceContext.API:
+        env_context = _resolve_default_service_context()
+        if env_context is not ServiceContext.API:
+            return env_context
+    return current
 
 
 def _to_service_context(ctx: ServiceContext | str) -> ServiceContext:
