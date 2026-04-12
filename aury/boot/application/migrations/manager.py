@@ -26,6 +26,18 @@ from aury.boot.common.logging import logger
 from aury.boot.domain.models import Base
 
 
+def _escape_for_alembic_config(value: str) -> str:
+    """为 Alembic 的 ConfigParser 转义百分号。
+
+    Alembic 底层使用 ConfigParser 保存 ``sqlalchemy.url``，其中 ``%`` 会被视为
+    插值语法。数据库密码中的 URL 编码（例如 ``%40``）如果不先转义，会在
+    ``set_main_option`` 阶段直接抛出异常。
+
+    这里仅对写入 Alembic 配置的值做转义，真实数据库连接仍然使用原始 URL。
+    """
+    return value.replace("%", "%%")
+
+
 def load_all_models(model_modules: list[str]) -> None:
     """加载所有模型模块，确保 Alembic 可以检测到它们。
     
@@ -256,7 +268,10 @@ class MigrationManager:
         
         self._alembic_cfg = Config(str(self._config_path))
         self._alembic_cfg.set_main_option("script_location", self._script_location)
-        self._alembic_cfg.set_main_option("sqlalchemy.url", self._database_url)
+        self._alembic_cfg.set_main_option(
+            "sqlalchemy.url",
+            _escape_for_alembic_config(self._database_url),
+        )
         
         # 迁移钩子
         self._before_upgrade_hooks: list[Callable[[str], None]] = []
