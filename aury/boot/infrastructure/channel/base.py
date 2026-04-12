@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import deque
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+import threading
 from typing import Any
 
 
@@ -34,6 +36,13 @@ class ChannelMessage:
     id: str | None = None
     channel: str | None = None
     timestamp: datetime = field(default_factory=datetime.now)
+
+    def delivery_latency_ms(self, now: datetime | None = None) -> float:
+        """计算从 publish 到当前消费点的端到端延迟。"""
+        reference = now or (
+            datetime.now(self.timestamp.tzinfo) if self.timestamp.tzinfo else datetime.now()
+        )
+        return max((reference - self.timestamp).total_seconds() * 1000, 0.0)
 
     def to_sse(self) -> str:
         """转换为 SSE 格式。
@@ -108,9 +117,86 @@ class IChannel(ABC):
         """关闭通道连接。"""
         ...
 
+    def get_stats(self) -> dict[str, Any]:
+        """获取通道运行指标。"""
+        return {}
+
+
+class ChannelStatsTracker:
+    """轻量级通道统计器。"""
+
+    def __init__(self, max_samples: int = 2048) -> None:
+        self._max_samples = max_samples
+        self._latency_samples: deque[float] = deque(maxlen=max_samples)
+        self._published_count = 0
+        self._delivered_count = 0
+        self._dropped_count = 0
+        self._lock = threading.Lock()
+
+    def record_published(self, count: int = 1) -> None:
+        with self._lock:
+            self._published_count += count
+
+    def record_delivered(self, latency_ms: float, count: int = 1) -> None:
+        sample = round(latency_ms, 3)
+        with self._lock:
+            self._delivered_count += count
+            self._latency_samples.append(sample)
+
+    def record_dropped(self, count: int = 1) -> None:
+        with self._lock:
+            self._dropped_count += count
+
+    def _percentile(self, values: list[float], percentile: float) -> float | None:
+        if not values:
+            return None
+        ordered = sorted(values)
+        index = max(0, min(len(ordered) - 1, round((len(ordered) - 1) * percentile)))
+        return round(ordered[index], 3)
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            samples = list(self._latency_samples)
+            published_count = self._published_count
+            delivered_count = self._delivered_count
+            dropped_count = self._dropped_count
+
+        if not samples:
+            latency = {
+                "sample_count": 0,
+                "min_ms": None,
+                "p50_ms": None,
+                "p95_ms": None,
+                "p99_ms": None,
+                "max_ms": None,
+                "over_20ms": 0,
+                "over_50ms": 0,
+                "over_100ms": 0,
+            }
+        else:
+            latency = {
+                "sample_count": len(samples),
+                "min_ms": round(min(samples), 3),
+                "p50_ms": self._percentile(samples, 0.50),
+                "p95_ms": self._percentile(samples, 0.95),
+                "p99_ms": self._percentile(samples, 0.99),
+                "max_ms": round(max(samples), 3),
+                "over_20ms": sum(1 for item in samples if item >= 20),
+                "over_50ms": sum(1 for item in samples if item >= 50),
+                "over_100ms": sum(1 for item in samples if item >= 100),
+            }
+
+        return {
+            "published_count": published_count,
+            "delivered_count": delivered_count,
+            "dropped_count": dropped_count,
+            "delivery_latency_ms": latency,
+        }
+
 
 __all__ = [
     "ChannelBackend",
     "ChannelMessage",
+    "ChannelStatsTracker",
     "IChannel",
 ]

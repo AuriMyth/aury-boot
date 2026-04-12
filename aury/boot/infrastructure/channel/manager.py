@@ -82,6 +82,11 @@ class ChannelManager:
         elif name in cls._instances:
             del cls._instances[name]
 
+    @classmethod
+    def list_instances(cls) -> list[str]:
+        """返回当前已创建的实例名。"""
+        return sorted(cls._instances.keys())
+
     async def initialize(
         self,
         backend: ChannelBackend | str = ChannelBackend.REDIS,
@@ -118,8 +123,8 @@ class ChannelManager:
             # 原生 Redis 后端（推荐，解决 broadcaster 并发问题）
             if url.startswith("memory://"):
                 raise ValueError(
-                    f"backend=redis 不支持 memory://，"
-                    f"请使用 backend=broadcaster 或改用 redis:// URL"
+                    "backend=redis 不支持 memory://，"
+                    "请使用 backend=broadcaster 或改用 redis:// URL"
                 )
             redis_url = url
             if url.startswith("redis-cluster://"):
@@ -256,6 +261,17 @@ class ChannelManager:
             self._backend = None
         self._initialized = False
         logger.info(f"通道管理器 [{self.name}] 已关闭")
+
+    def get_stats(self) -> dict:
+        """获取当前通道管理器运行指标。"""
+        backend_stats = self.backend.get_stats() if self._backend is not None else {}
+        return {
+            "name": self.name,
+            "backend_type": self.backend_type,
+            "initialized": self._initialized,
+            "url": self._mask_url(self._url or ""),
+            "backend_stats": backend_stats,
+        }
 
     def __repr__(self) -> str:
         """字符串表示。"""

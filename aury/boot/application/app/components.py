@@ -31,6 +31,14 @@ from aury.boot.infrastructure.monitoring.tracing import (
     setup_otel_logging,
 )
 from aury.boot.infrastructure.mq import MQManager
+from aury.boot.infrastructure.redis_sentinel import (
+    PrefixedCache,
+    PrefixedChannel,
+    SentinelRedisChannel,
+    SentinelRedisClientAdapter,
+    instance_prefix,
+    parse_sentinel_nodes,
+)
 from aury.boot.infrastructure.scheduler import SchedulerManager
 from aury.boot.infrastructure.storage import StorageManager
 from aury.boot.infrastructure.tasks import TaskManager
@@ -132,6 +140,7 @@ class DbConnectionTrackerComponent(Component):
                     pool=db.engine.sync_engine.pool,
                     enabled=db_config.tracker_enabled,
                     app_package=app_package,
+                    database_name=name,
                 )
                 if db_config.tracker_enabled:
                     logger.info(f"数据库实例 [{name}] 已启用连接追踪 (threshold={db_config.leak_detection_threshold}s)")
@@ -157,6 +166,39 @@ class CacheComponent(Component):
         try:
             cache_manager = CacheManager.get_instance()
             if not cache_manager.is_initialized:
+                sentinel = config.cache.sentinel
+                if sentinel.enabled:
+                    from aury.boot.infrastructure.cache.redis import RedisCache
+
+                    adapter = SentinelRedisClientAdapter(
+                        name=f"{config.service.name}-cache",
+                        sentinels=parse_sentinel_nodes(sentinel.nodes),
+                        master_name=sentinel.master_name,
+                        redis_password=sentinel.password,
+                        sentinel_password=sentinel.sentinel_password,
+                        db=sentinel.db,
+                        decode_responses=False,
+                        socket_timeout=sentinel.socket_timeout,
+                        max_connections=sentinel.max_connections,
+                    )
+                    await adapter.initialize()
+
+                    backend = RedisCache(redis_client=adapter, serializer="json")
+                    await backend.initialize()
+                    prefixed = PrefixedCache(backend, prefix=sentinel.prefix, close_callback=adapter.cleanup)
+
+                    cache_manager._backend = prefixed
+                    cache_manager._config = {
+                        "CACHE_TYPE": "redis-sentinel",
+                        "CACHE_URL": f"redis-sentinel://{sentinel.master_name}/{sentinel.db}",
+                        "CACHE_PREFIX": sentinel.prefix,
+                    }
+                    logger.info(
+                        "缓存管理器 [default] 初始化完成: redis-sentinel, "
+                        f"prefix={sentinel.prefix or '<none>'}"
+                    )
+                    return
+
                 await cache_manager.initialize(
                     backend=config.cache.cache_type,
                     url=config.cache.url,
@@ -387,6 +429,7 @@ class SchedulerComponent(Component):
             elif url.startswith("redis://"):
                 try:
                     from urllib.parse import urlparse
+
                     from apscheduler.jobstores.redis import RedisJobStore
                     
                     # 解析 Redis URL
@@ -583,6 +626,10 @@ class MessageQueueComponent(Component):
     enabled = True
     depends_on: ClassVar[list[str]] = []
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._sentinel_adapters: list[SentinelRedisClientAdapter] = []
+
     def can_enable(self, config: BaseConfig) -> bool:
         """当配置了 MQ 实例时启用。"""
         return self.enabled and bool(config.get_mqs())
@@ -600,8 +647,51 @@ class MessageQueueComponent(Component):
         for name, mq_config in mq_configs.items():
             try:
                 mq_manager = MQManager.get_instance(name)
-                if not mq_manager.is_initialized:
+                if mq_manager.is_initialized:
+                    continue
+
+                sentinel = mq_config.sentinel
+                backend_name = str(mq_config.backend).lower()
+                if not sentinel.enabled or backend_name not in {"redis", "redis_stream"}:
                     await mq_manager.initialize(config=mq_config)
+                    continue
+
+                from aury.boot.infrastructure.mq.backends.redis import RedisMQ
+                from aury.boot.infrastructure.mq.backends.redis_stream import RedisStreamMQ
+                from aury.boot.infrastructure.mq.base import MQBackend
+
+                adapter = SentinelRedisClientAdapter(
+                    name=f"{config.service.name}-mq-{name}",
+                    sentinels=parse_sentinel_nodes(sentinel.nodes),
+                    master_name=sentinel.master_name,
+                    redis_password=sentinel.password,
+                    sentinel_password=sentinel.sentinel_password,
+                    db=sentinel.db,
+                    decode_responses=False,
+                    socket_timeout=sentinel.socket_timeout,
+                    max_connections=max(sentinel.max_connections, getattr(mq_config, "max_connections", 100)),
+                )
+                await adapter.initialize()
+                self._sentinel_adapters.append(adapter)
+
+                prefix = instance_prefix(sentinel.prefix, name)
+                if backend_name == MQBackend.REDIS.value:
+                    backend = RedisMQ(redis_client=adapter, prefix=prefix)
+                    backend_type = MQBackend.REDIS
+                else:
+                    backend = RedisStreamMQ(
+                        redis_client=adapter,
+                        prefix=prefix,
+                        max_connections=getattr(mq_config, "max_connections", sentinel.max_connections),
+                    )
+                    backend_type = MQBackend.REDIS_STREAM
+
+                mq_manager._backend = backend
+                mq_manager._backend_type = backend_type
+                mq_manager._initialized = True
+                logger.info(
+                    f"消息队列 [{name}] 初始化完成: redis-sentinel, prefix={prefix or '<none>'}"
+                )
             except Exception as e:
                 logger.warning(f"消息队列 [{name}] 初始化失败（非关键）: {e}")
 
@@ -614,6 +704,12 @@ class MessageQueueComponent(Component):
                     await mq_manager.cleanup()
             except Exception as e:
                 logger.warning(f"消息队列 [{name}] 关闭失败: {e}")
+        for adapter in self._sentinel_adapters:
+            try:
+                await adapter.cleanup()
+            except Exception as e:
+                logger.warning(f"Sentinel MQ 连接关闭失败: {e}")
+        self._sentinel_adapters.clear()
 
 
 class ChannelComponent(Component):
@@ -640,11 +736,42 @@ class ChannelComponent(Component):
         for name, ch_config in channel_configs.items():
             try:
                 channel_manager = ChannelManager.get_instance(name)
-                if not channel_manager.is_initialized:
-                    await channel_manager.initialize(
-                        backend=ch_config.backend,
-                        url=ch_config.url,
+                if channel_manager.is_initialized:
+                    continue
+
+                sentinel = ch_config.sentinel
+                if sentinel.enabled:
+                    from aury.boot.infrastructure.channel.base import ChannelBackend
+
+                    adapter = SentinelRedisClientAdapter(
+                        name=f"{config.service.name}-channel-{name}",
+                        sentinels=parse_sentinel_nodes(sentinel.nodes),
+                        master_name=sentinel.master_name,
+                        redis_password=sentinel.password,
+                        sentinel_password=sentinel.sentinel_password,
+                        db=sentinel.db,
+                        decode_responses=True,
+                        socket_timeout=sentinel.socket_timeout,
+                        max_connections=sentinel.max_connections,
                     )
+                    backend = PrefixedChannel(
+                        SentinelRedisChannel(adapter),
+                        prefix=instance_prefix(sentinel.prefix, name),
+                    )
+                    channel_manager._backend = backend
+                    channel_manager._backend_type = ChannelBackend.REDIS
+                    channel_manager._initialized = True
+                    channel_manager._url = f"redis-sentinel://{sentinel.master_name}/{sentinel.db}"
+                    logger.info(
+                        f"通道 [{name}] 初始化完成: redis-sentinel, "
+                        f"prefix={instance_prefix(sentinel.prefix, name) or '<none>'}"
+                    )
+                    continue
+
+                await channel_manager.initialize(
+                    backend=ch_config.backend,
+                    url=ch_config.url,
+                )
             except Exception as e:
                 logger.warning(f"通道 [{name}] 初始化失败（非关键）: {e}")
 
@@ -999,9 +1126,9 @@ __all__ = [
     "DbConnectionTrackerComponent",
     "EventBusComponent",
     "MessageQueueComponent",
-    "PrometheusMetricsPlugin",
     "MigrationComponent",
     "ProfilingComponent",
+    "PrometheusMetricsPlugin",
     "SchedulerComponent",
     "StorageComponent",
     "TaskComponent",

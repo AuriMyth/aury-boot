@@ -142,10 +142,18 @@ class DatabaseManager:
                 "2. 设置环境变量 DATABASE_URL"
             )
         db_echo = echo if echo is not None else os.getenv("DB_ECHO", "false").lower() == "true"
-        db_pool_size = pool_size or int(os.getenv("DB_POOL_SIZE", "5"))
-        db_max_overflow = max_overflow or int(os.getenv("DB_MAX_OVERFLOW", "10"))
-        db_pool_timeout = pool_timeout or int(os.getenv("DB_POOL_TIMEOUT", "30"))
-        db_pool_recycle = pool_recycle or int(os.getenv("DB_POOL_RECYCLE", "1800"))
+        db_pool_size = (
+            pool_size if pool_size is not None else int(os.getenv("DB_POOL_SIZE", "5"))
+        )
+        db_max_overflow = (
+            max_overflow if max_overflow is not None else int(os.getenv("DB_MAX_OVERFLOW", "10"))
+        )
+        db_pool_timeout = (
+            pool_timeout if pool_timeout is not None else int(os.getenv("DB_POOL_TIMEOUT", "30"))
+        )
+        db_pool_recycle = (
+            pool_recycle if pool_recycle is not None else int(os.getenv("DB_POOL_RECYCLE", "1800"))
+        )
         db_isolation_level = isolation_level or os.getenv("DATABASE_ISOLATION_LEVEL")
         
         # 构建引擎参数
@@ -300,4 +308,3 @@ class DatabaseManager:
 __all__ = [
     "DatabaseManager",
 ]
-

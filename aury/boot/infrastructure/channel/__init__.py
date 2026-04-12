@@ -11,13 +11,14 @@
 """
 
 from .backends import BroadcasterChannel
-from .base import ChannelBackend, ChannelMessage, IChannel
+from .base import ChannelBackend, ChannelMessage, ChannelStatsTracker, IChannel
 from .manager import ChannelManager
 
 __all__ = [
     # 接口和类型
     "ChannelBackend",
     "ChannelMessage",
+    "ChannelStatsTracker",
     "IChannel",
     # 管理器
     "ChannelManager",

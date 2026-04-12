@@ -8,11 +8,12 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Literal
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .multi_instance import (
@@ -86,6 +87,82 @@ class DatabaseInstanceConfig(MultiInstanceSettings):
     )
 
 
+class RedisSentinelSettings(BaseModel):
+    """Redis Sentinel 配置。
+
+    单实例示例:
+        CACHE__SENTINEL__ENABLED=true
+        CACHE__SENTINEL__NODES=["10.0.0.1:26379","10.0.0.2:26379"]
+        CACHE__SENTINEL__MASTER_NAME=mymaster
+        CACHE__SENTINEL__DB=12
+        CACHE__SENTINEL__PREFIX=my-service:cache:
+
+    多实例示例:
+        MQ__DEFAULT__SENTINEL__ENABLED=true
+        MQ__DEFAULT__SENTINEL__NODES=10.0.0.1:26379,10.0.0.2:26379
+        MQ__DEFAULT__SENTINEL__DB=13
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="是否启用 Redis Sentinel"
+    )
+    nodes: list[str] = Field(
+        default_factory=list,
+        description="Sentinel 节点列表，支持 JSON 数组或逗号分隔"
+    )
+    master_name: str = Field(
+        default="mymaster",
+        description="Sentinel 主节点名称"
+    )
+    password: str = Field(
+        default="",
+        description="Redis 主节点密码"
+    )
+    sentinel_password: str = Field(
+        default="",
+        description="Sentinel 密码（可选）"
+    )
+    db: int = Field(
+        default=0,
+        description="Redis DB"
+    )
+    prefix: str = Field(
+        default="",
+        description="命名空间前缀（键/频道/队列）"
+    )
+    socket_timeout: float = Field(
+        default=5.0,
+        description="套接字超时（秒）"
+    )
+    max_connections: int = Field(
+        default=200,
+        description="最大连接数"
+    )
+
+    @field_validator("nodes", mode="before")
+    @classmethod
+    def _parse_nodes(cls, value: object) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            if text.startswith("["):
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    parsed = [item.strip() for item in text.split(",")]
+            else:
+                parsed = [item.strip() for item in text.replace("\n", ",").split(",")]
+        elif isinstance(value, list):
+            parsed = value
+        else:
+            return []
+        return [str(item).strip() for item in parsed if str(item).strip()]
+
+
 class CacheInstanceConfig(MultiInstanceSettings):
     """缓存实例配置。
     
@@ -108,6 +185,10 @@ class CacheInstanceConfig(MultiInstanceSettings):
     max_size: int = Field(
         default=1000,
         description="内存缓存最大大小"
+    )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
     )
 
 
@@ -154,6 +235,10 @@ class ChannelInstanceConfig(MultiInstanceSettings):
         default=None,
         description="Redis URL（当 backend=redis 时需要）"
     )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
+    )
 
 
 class MQInstanceConfig(MultiInstanceSettings):
@@ -177,6 +262,10 @@ class MQInstanceConfig(MultiInstanceSettings):
     max_connections: int = Field(
         default=1000,
         description="Redis 连接池最大连接数"
+    )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
     )
 
 
@@ -280,6 +369,10 @@ class CacheSettings(BaseModel):
         default=1000,
         description="内存缓存最大大小"
     )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
+    )
 
 
 class ChannelSettings(BaseModel):
@@ -304,6 +397,10 @@ class ChannelSettings(BaseModel):
     url: str | None = Field(
         default=None,
         description="连接 URL（redis://... 或 redis-cluster://...）"
+    )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
     )
 
 
@@ -602,6 +699,10 @@ class MessageQueueSettings(BaseModel):
     prefetch_count: int = Field(
         default=1,
         description="预取消息数量"
+    )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel 配置（启用后优先于 url）"
     )
 
 
@@ -1135,8 +1236,8 @@ class BaseConfig(BaseSettings):
     _events: dict[str, EventInstanceConfig] | None = None
     
     def __init__(
-        self, 
-        _env_file: str | Path = ".env", 
+        self,
+        _env_file: str | Path = ".env",
         _env_file_override: bool = False,
         **kwargs,
     ) -> None:
@@ -1229,6 +1330,8 @@ class BaseConfig(BaseSettings):
                         pool_recycle=self.database.pool_recycle,
                         pool_timeout=self.database.pool_timeout,
                         pool_pre_ping=self.database.pool_pre_ping,
+                        tracker_enabled=self.database.tracker_enabled,
+                        leak_detection_threshold=self.database.leak_detection_threshold,
                     )
                 }
         return self._databases
@@ -1248,6 +1351,7 @@ class BaseConfig(BaseSettings):
                         backend=self.cache.cache_type,
                         url=self.cache.url,
                         max_size=self.cache.max_size,
+                        sentinel=self.cache.sentinel,
                     )
                 }
         return self._caches
@@ -1289,6 +1393,7 @@ class BaseConfig(BaseSettings):
                     "default": ChannelInstanceConfig(
                         backend=self.channel.backend,
                         url=self.channel.url,
+                        sentinel=self.channel.sentinel,
                     )
                 }
         return self._channels
@@ -1307,6 +1412,7 @@ class BaseConfig(BaseSettings):
                     "default": MQInstanceConfig(
                         backend=self.mq.backend,
                         url=self.mq.url,
+                        sentinel=self.mq.sentinel,
                     )
                 }
         return self._mqs
@@ -1358,6 +1464,7 @@ __all__ = [
     "MigrationSettings",
     "RPCClientSettings",
     "RPCServiceSettings",
+    "RedisSentinelSettings",
     "SchedulerSettings",
     "ServerSettings",
     "ServiceSettings",
@@ -1365,4 +1472,3 @@ __all__ = [
     "StorageSettings",
     "TaskSettings",
 ]
-

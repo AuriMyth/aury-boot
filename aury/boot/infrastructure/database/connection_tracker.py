@@ -17,11 +17,13 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import asyncio
+from collections import defaultdict, deque
+from dataclasses import dataclass
+import threading
 import time
 import traceback
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import event, text
@@ -42,6 +44,17 @@ class ConnectionTrace:
     stack_trace: str  # 完整调用栈
     code_location: str  # 简化的代码位置
     checkout_task: str | None = None  # asyncio task name
+
+
+@dataclass
+class PoolWaitEvent:
+    """连接池等待事件。"""
+
+    database_name: str
+    wait_ms: float
+    timestamp: float
+    code_location: str
+    task_name: str | None = None
 
 
 class ConnectionTracker:
@@ -66,6 +79,11 @@ class ConnectionTracker:
         self._traces: dict[int, ConnectionTrace] = {}
         self._enabled = enabled
         self._app_package = app_package
+        self._lock = threading.Lock()
+        self._pool_wait_samples: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=2048))
+        self._pool_wait_events: dict[str, list[PoolWaitEvent]] = defaultdict(list)
+        self._pool_wait_warn_threshold_ms = 50.0
+        self._pool_wait_max_events = 50
 
     @classmethod
     def get_instance(cls) -> ConnectionTracker:
@@ -83,6 +101,10 @@ class ConnectionTracker:
     def enabled(self) -> bool:
         return self._enabled
 
+    @property
+    def pool_wait_warn_threshold_ms(self) -> float:
+        return self._pool_wait_warn_threshold_ms
+
     def _extract_code_location(self, stack: str) -> str:
         """从调用栈提取关键代码位置（过滤掉框架代码）。"""
         lines = stack.strip().split("\n")
@@ -91,12 +113,15 @@ class ConnectionTracker:
 
         for i, line in enumerate(lines):
             # 只保留应用目录下的代码
-            if app_pkg in line and "connection_tracker" not in line:
-                if line.strip().startswith("File"):
-                    relevant_lines.append(line.strip())
-                    # 也获取下一行（代码内容）
-                    if i + 1 < len(lines):
-                        relevant_lines.append(lines[i + 1].strip())
+            if (
+                app_pkg in line
+                and "connection_tracker" not in line
+                and line.strip().startswith("File")
+            ):
+                relevant_lines.append(line.strip())
+                # 也获取下一行（代码内容）
+                if i + 1 < len(lines):
+                    relevant_lines.append(lines[i + 1].strip())
 
         return "\n".join(relevant_lines[-6:]) if relevant_lines else "Unknown"
 
@@ -150,6 +175,120 @@ class ConnectionTracker:
         """获取所有追踪信息。"""
         return dict(self._traces)
 
+    def record_pool_wait(
+        self,
+        *,
+        database_name: str,
+        wait_ms: float,
+        stack_trace: str | None = None,
+    ) -> None:
+        """记录一次连接池等待时间。"""
+        if not self._enabled:
+            return
+
+        sample = round(wait_ms, 3)
+        with self._lock:
+            self._pool_wait_samples[database_name].append(sample)
+
+        if sample < self._pool_wait_warn_threshold_ms:
+            return
+
+        task_name = None
+        try:
+            task = asyncio.current_task()
+            if task:
+                task_name = task.get_name()
+        except RuntimeError:
+            pass
+
+        event = PoolWaitEvent(
+            database_name=database_name,
+            wait_ms=sample,
+            timestamp=time.time(),
+            code_location=self._extract_code_location(stack_trace or ""),
+            task_name=task_name,
+        )
+        with self._lock:
+            events = self._pool_wait_events[database_name]
+            events.append(event)
+            if len(events) > self._pool_wait_max_events:
+                del events[0]
+
+    def _percentile(self, values: list[float], percentile: float) -> float | None:
+        """计算百分位。"""
+        if not values:
+            return None
+        ordered = sorted(values)
+        index = max(0, min(len(ordered) - 1, round((len(ordered) - 1) * percentile)))
+        return round(ordered[index], 3)
+
+    def _build_pool_wait_summary(self, database_name: str, samples: list[float]) -> dict[str, Any]:
+        """构建单库连接池等待汇总。"""
+        events = self._pool_wait_events.get(database_name, [])
+        if not samples:
+            return {
+                "database_name": database_name,
+                "sample_count": 0,
+                "min_ms": None,
+                "p50_ms": None,
+                "p95_ms": None,
+                "p99_ms": None,
+                "max_ms": None,
+                "over_10ms": 0,
+                "over_50ms": 0,
+                "over_100ms": 0,
+                "recent_slow_events": [],
+            }
+
+        return {
+            "database_name": database_name,
+            "sample_count": len(samples),
+            "min_ms": round(min(samples), 3),
+            "p50_ms": self._percentile(samples, 0.50),
+            "p95_ms": self._percentile(samples, 0.95),
+            "p99_ms": self._percentile(samples, 0.99),
+            "max_ms": round(max(samples), 3),
+            "over_10ms": sum(1 for item in samples if item >= 10),
+            "over_50ms": sum(1 for item in samples if item >= 50),
+            "over_100ms": sum(1 for item in samples if item >= 100),
+            "recent_slow_events": [
+                {
+                    "timestamp": round(item.timestamp, 3),
+                    "wait_ms": item.wait_ms,
+                    "task_name": item.task_name,
+                    "code_location": item.code_location,
+                }
+                for item in events[-10:]
+            ],
+        }
+
+    def get_pool_wait_stats(self, database_name: str | None = None) -> dict[str, Any]:
+        """获取连接池等待统计。"""
+        with self._lock:
+            samples_by_db = {
+                name: list(values)
+                for name, values in self._pool_wait_samples.items()
+            }
+
+        if database_name is not None:
+            return self._build_pool_wait_summary(
+                database_name,
+                samples_by_db.get(database_name, []),
+            )
+
+        return {
+            "databases": {
+                name: self._build_pool_wait_summary(name, samples)
+                for name, samples in sorted(samples_by_db.items())
+            }
+        }
+
+    def clear_pool_wait_stats(self) -> None:
+        """清空连接池等待统计。"""
+        with self._lock:
+            self._pool_wait_samples.clear()
+            self._pool_wait_events.clear()
+
     def get_long_held_connections(self, threshold_seconds: float = 300) -> list[dict]:
         """
         获取持有时间过长的连接（疑似泄漏）。
@@ -179,7 +318,12 @@ class ConnectionTracker:
         return result
 
 
-def setup_connection_tracking(pool: Pool, enabled: bool = False, app_package: str = "app") -> ConnectionTracker:
+def setup_connection_tracking(
+    pool: Pool,
+    enabled: bool = False,
+    app_package: str = "app",
+    database_name: str = "default",
+) -> ConnectionTracker:
     """
     设置连接追踪。
 
@@ -201,9 +345,44 @@ def setup_connection_tracking(pool: Pool, enabled: bool = False, app_package: st
 
     event.listen(pool, "checkout", tracker.on_checkout)
     event.listen(pool, "checkin", tracker.on_checkin)
+    _setup_pool_wait_tracking(pool, tracker, database_name=database_name)
 
     logger.info("Database connection tracking enabled (like HikariCP leakDetectionThreshold)")
     return tracker
+
+
+def _setup_pool_wait_tracking(
+    pool: Pool,
+    tracker: ConnectionTracker,
+    *,
+    database_name: str = "default",
+) -> None:
+    """对 QueuePool 的 _do_get 做轻量计时，统计 checkout 等待。"""
+    if getattr(pool, "_aury_pool_wait_tracking_enabled", False):
+        return
+
+    original_do_get = getattr(pool, "_do_get", None)
+    if original_do_get is None:
+        return
+
+    def instrumented_do_get(*args: Any, **kwargs: Any) -> Any:
+        start = time.perf_counter()
+        try:
+            return original_do_get(*args, **kwargs)
+        finally:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            stack_trace = None
+            if elapsed_ms >= tracker.pool_wait_warn_threshold_ms:
+                stack_trace = "".join(traceback.format_stack())
+            tracker.record_pool_wait(
+                database_name=database_name,
+                wait_ms=elapsed_ms,
+                stack_trace=stack_trace,
+            )
+
+    pool._aury_pool_wait_tracking_enabled = True
+    pool._aury_pool_wait_tracking_original_do_get = original_do_get
+    pool._do_get = instrumented_do_get
 
 
 # ==================== 多数据库健康检查 ====================
@@ -253,7 +432,7 @@ class PostgreSQLHealthChecker(DbHealthChecker):
     ) -> list[dict]:
         """获取空闲连接列表。"""
         sql = text(f"""
-            SELECT 
+            SELECT
                 pid,
                 usename,
                 application_name,
@@ -275,7 +454,7 @@ class PostgreSQLHealthChecker(DbHealthChecker):
     async def get_connection_by_id(self, session: AsyncSession, conn_id: Any) -> dict | None:
         """根据 PID 获取连接信息。"""
         sql = text("""
-            SELECT 
+            SELECT
                 pid,
                 usename,
                 application_name,
@@ -320,7 +499,7 @@ class MySQLHealthChecker(DbHealthChecker):
     ) -> list[dict]:
         """获取空闲连接列表。"""
         sql = text(f"""
-            SELECT 
+            SELECT
                 ID AS pid,
                 USER AS usename,
                 HOST AS client_addr,
@@ -340,7 +519,7 @@ class MySQLHealthChecker(DbHealthChecker):
     async def get_connection_by_id(self, session: AsyncSession, conn_id: Any) -> dict | None:
         """根据连接 ID 获取连接信息。"""
         sql = text("""
-            SELECT 
+            SELECT
                 ID AS pid,
                 USER AS usename,
                 HOST AS client_addr,
@@ -397,7 +576,7 @@ def get_health_checker(database_url: str) -> DbHealthChecker:
         return SQLiteHealthChecker()
     else:
         # 默认使用 PostgreSQL（最常用）
-        logger.warning(f"Unknown database type in URL, using PostgreSQL health checker")
+        logger.warning("Unknown database type in URL, using PostgreSQL health checker")
         return PostgreSQLHealthChecker()
 
 

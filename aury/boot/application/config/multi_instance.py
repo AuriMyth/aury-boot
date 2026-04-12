@@ -17,9 +17,9 @@
 
 from __future__ import annotations
 
+import json
 import os
-import re
-from typing import Any
+from typing import Any, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -66,25 +66,29 @@ def parse_multi_instance_env(
         
         # 移除前缀后分割
         remainder = key[len(prefix_with_sep):]
-        parts = remainder.split("__", 1)  # 只分割一次：INSTANCE__FIELD
+        parts = remainder.split("__")
         
-        if len(parts) != 2:
+        if len(parts) < 2:
             continue
         
         instance_name = parts[0].lower()
-        field_name = parts[1].lower()
-        field_name_upper = parts[1].upper()
+        field_path = [part.lower() for part in parts[1:]]
+        top_level_field = parts[1].upper()
         
         # 如果指定了字段列表，进行过滤
-        if valid_fields and field_name_upper not in valid_fields:
+        if valid_fields and top_level_field not in valid_fields:
             continue
         
         # 类型转换
-        converted_value = _convert_value(value, type_hints.get(field_name))
+        hint_key = ".".join(field_path)
+        converted_value = _convert_value(
+            value,
+            type_hints.get(hint_key) or type_hints.get(field_path[0]),
+        )
         
         if instance_name not in instances:
             instances[instance_name] = {}
-        instances[instance_name][field_name] = converted_value
+        _assign_nested_value(instances[instance_name], field_path, converted_value)
     
     return instances
 
@@ -93,18 +97,44 @@ def _convert_value(value: str, target_type: type | None) -> Any:
     """转换环境变量值到目标类型。"""
     if target_type is None:
         return value
-    
+
+    origin = get_origin(target_type)
+    if origin is not None:
+        target_type = origin
+
     if target_type is bool:
         return value.lower() in ("true", "1", "yes", "on")
-    elif target_type is int:
+    if target_type is int:
         return int(value)
-    elif target_type is float:
+    if target_type is float:
         return float(value)
-    elif target_type is list:
-        # 简单的逗号分隔
-        return [v.strip() for v in value.split(",") if v.strip()]
-    else:
-        return value
+    if target_type in {list, tuple, set}:
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = [item.strip() for item in text.split(",") if item.strip()]
+        else:
+            parsed = [item.strip() for item in text.replace("\n", ",").split(",") if item.strip()]
+        return list(parsed)
+    if target_type is dict:
+        return json.loads(value)
+    return value
+
+
+def _assign_nested_value(target: dict[str, Any], path: list[str], value: Any) -> None:
+    """按路径写入嵌套字典。"""
+    current = target
+    for key in path[:-1]:
+        next_value = current.get(key)
+        if not isinstance(next_value, dict):
+            next_value = {}
+            current[key] = next_value
+        current = next_value
+    current[path[-1]] = value
 
 
 class MultiInstanceSettings(BaseModel):
@@ -121,20 +151,40 @@ class MultiInstanceSettings(BaseModel):
     @classmethod
     def get_type_hints(cls) -> dict[str, type]:
         """获取字段类型提示。"""
-        hints = {}
-        for name, field_info in cls.model_fields.items():
-            annotation = field_info.annotation
-            # 处理 Optional 类型
-            if hasattr(annotation, "__origin__"):
-                # 如 str | None -> str
-                args = getattr(annotation, "__args__", ())
-                for arg in args:
-                    if arg is not type(None):
-                        hints[name] = arg
-                        break
-            else:
-                hints[name] = annotation
-        return hints
+        return _collect_type_hints(cls)
+
+
+def _collect_type_hints(
+    model_class: type[BaseModel],
+    *,
+    prefix: str = "",
+) -> dict[str, type]:
+    """递归收集配置字段类型，支持嵌套 BaseModel。"""
+    hints: dict[str, type] = {}
+
+    for name, field_info in model_class.model_fields.items():
+        annotation = _unwrap_optional(field_info.annotation)
+        key = f"{prefix}.{name}" if prefix else name
+
+        if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+            hints.update(_collect_type_hints(annotation, prefix=key))
+            continue
+
+        hints[key] = annotation
+
+    return hints
+
+
+def _unwrap_optional(annotation: type | Any) -> type | Any:
+    """提取 Optional[T] / T | None 中的实际类型。"""
+    origin = get_origin(annotation)
+    if origin is None:
+        return annotation
+
+    args = [arg for arg in get_args(annotation) if arg is not type(None)]
+    if len(args) == 1:
+        return args[0]
+    return annotation
 
 
 class MultiInstanceConfigLoader:

@@ -11,11 +11,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from collections import defaultdict
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from datetime import datetime
+import json
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 from weakref import WeakSet
@@ -24,7 +24,7 @@ import redis.asyncio as aioredis
 
 from aury.boot.common.logging import logger
 
-from ..base import ChannelMessage, IChannel
+from ..base import ChannelMessage, ChannelStatsTracker, IChannel
 
 
 class RedisChannel(IChannel):
@@ -66,6 +66,7 @@ class RedisChannel(IChannel):
         # 跟踪已订阅的 channels/patterns
         self._subscribed_channels: set[str] = set()
         self._subscribed_patterns: set[str] = set()
+        self._stats = ChannelStatsTracker()
 
     async def _ensure_connected(self) -> None:
         """确保已连接并启动 listener。"""
@@ -200,8 +201,10 @@ class RedisChannel(IChannel):
         for queue in list(queues):
             try:
                 queue.put_nowait(msg)
+                self._stats.record_delivered(msg.delivery_latency_ms())
             except asyncio.QueueFull:
                 logger.warning(f"订阅者队列已满，丢弃消息: channel={channel}")
+                self._stats.record_dropped()
             except Exception:
                 dead_queues.append(queue)
 
@@ -224,6 +227,7 @@ class RedisChannel(IChannel):
             "timestamp": message.timestamp.isoformat(),
         }
         await self._redis.publish(channel, json.dumps(data))
+        self._stats.record_published()
 
     async def subscribe(self, channel: str) -> AsyncIterator[ChannelMessage]:
         """订阅通道。
@@ -348,6 +352,19 @@ class RedisChannel(IChannel):
         self._pattern_subscribers.clear()
 
         logger.debug("Redis 通道已关闭")
+
+    def get_stats(self) -> dict[str, Any]:
+        """获取通道运行统计。"""
+        stats = self._stats.snapshot()
+        stats.update(
+            {
+                "backend": "redis",
+                "connected": self._connected,
+                "subscribed_channels": len(self._subscribed_channels),
+                "subscribed_patterns": len(self._subscribed_patterns),
+            }
+        )
+        return stats
 
 
 __all__ = ["RedisChannel"]
