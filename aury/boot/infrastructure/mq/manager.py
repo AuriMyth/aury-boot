@@ -13,7 +13,7 @@ from aury.boot.common.logging import logger
 from .backends.rabbitmq import RabbitMQ
 from .backends.redis import RedisMQ
 from .backends.redis_stream import RedisStreamMQ
-from .base import IMQ, MQBackend, MQMessage
+from .base import IMQ, MQBackend, MQMessage, MQPosition, MQPublishResult, MQReceivedMessage
 
 if TYPE_CHECKING:
     from aury.boot.application.config import MQInstanceConfig
@@ -132,8 +132,8 @@ class MQManager:
             self._backend = RedisMQ(url=url, redis_client=redis_client, prefix=prefix)
         elif backend == MQBackend.REDIS_STREAM:
             self._backend = RedisStreamMQ(
-                url=url, 
-                redis_client=redis_client, 
+                url=url,
+                redis_client=redis_client,
                 prefix=prefix,
                 max_connections=max_connections,
             )
@@ -172,7 +172,7 @@ class MQManager:
         message: MQMessage | dict | Any,
         *,
         headers: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> MQPublishResult:
         """发送消息到队列。
 
         Args:
@@ -181,7 +181,7 @@ class MQManager:
             headers: 消息头
 
         Returns:
-            str: 消息 ID
+            MQPublishResult: 发布结果
         """
         if isinstance(message, MQMessage):
             msg = message
@@ -196,7 +196,7 @@ class MQManager:
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从队列接收消息。
 
         Args:
@@ -204,22 +204,22 @@ class MQManager:
             timeout: 超时时间（秒）
 
         Returns:
-            MQMessage | None: 消息对象
+            MQReceivedMessage | None: 消息对象和 broker 位置
         """
         return await self.backend.receive(queue, timeout)
 
-    async def ack(self, message: MQMessage) -> None:
+    async def ack(self, received: MQReceivedMessage | MQPosition) -> None:
         """确认消息已处理。"""
-        await self.backend.ack(message)
+        await self.backend.ack(received)
 
-    async def nack(self, message: MQMessage, requeue: bool = True) -> None:
+    async def nack(self, received: MQReceivedMessage | MQPosition, requeue: bool = True) -> None:
         """拒绝消息。"""
-        await self.backend.nack(message, requeue)
+        await self.backend.nack(received, requeue)
 
     async def consume(
         self,
         queue: str,
-        handler: Callable[[MQMessage], Any],
+        handler: Callable[[MQReceivedMessage], Any],
         *,
         prefetch: int = 1,
     ) -> None:

@@ -12,7 +12,7 @@ from typing import Any
 
 from aury.boot.common.logging import logger
 
-from ..base import IMQ, MQMessage
+from ..base import IMQ, MQBackend, MQMessage, MQPosition, MQPublishResult, MQReceivedMessage
 
 # 延迟导入 aio-pika（可选依赖）
 try:
@@ -70,7 +70,7 @@ class RabbitMQ(IMQ):
             )
         return self._queues[queue]
 
-    async def send(self, queue: str, message: MQMessage) -> str:
+    async def send(self, queue: str, message: MQMessage) -> MQPublishResult:
         """发送消息到队列。"""
         await self._ensure_connection()
         message.queue = queue
@@ -85,13 +85,21 @@ class RabbitMQ(IMQ):
             aio_message,
             routing_key=queue,
         )
-        return message.id
+        return MQPublishResult(
+            message_id=message.id,
+            position=MQPosition(
+                backend=MQBackend.RABBITMQ,
+                queue=queue,
+                id=message.id,
+                metadata={"routing_key": queue},
+            ),
+        )
 
     async def receive(
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从队列接收消息。"""
         queue_obj = await self._get_queue(queue)
 
@@ -109,9 +117,15 @@ class RabbitMQ(IMQ):
 
             data = json.loads(incoming.body.decode())
             message = MQMessage.from_dict(data)
-            # 存储原始消息用于 ack/nack
-            message.headers["_raw_message"] = incoming
-            return message
+            return MQReceivedMessage(
+                message=message,
+                position=MQPosition(
+                    backend=MQBackend.RABBITMQ,
+                    queue=queue,
+                    id=getattr(incoming, "delivery_tag", message.id),
+                    metadata={"raw_message": incoming},
+                ),
+            )
 
         except TimeoutError:
             return None
@@ -119,22 +133,30 @@ class RabbitMQ(IMQ):
             logger.error(f"接收消息失败: {e}")
             return None
 
-    async def ack(self, message: MQMessage) -> None:
+    async def ack(self, received: MQReceivedMessage | MQPosition) -> None:
         """确认消息已处理。"""
-        raw_message = message.headers.get("_raw_message")
+        raw_message = (
+            received.position.metadata.get("raw_message")
+            if isinstance(received, MQReceivedMessage) and received.position
+            else received.metadata.get("raw_message")
+        )
         if raw_message:
             await raw_message.ack()
 
-    async def nack(self, message: MQMessage, requeue: bool = True) -> None:
+    async def nack(self, received: MQReceivedMessage | MQPosition, requeue: bool = True) -> None:
         """拒绝消息。"""
-        raw_message = message.headers.get("_raw_message")
+        raw_message = (
+            received.position.metadata.get("raw_message")
+            if isinstance(received, MQReceivedMessage) and received.position
+            else received.metadata.get("raw_message")
+        )
         if raw_message:
             await raw_message.nack(requeue=requeue)
 
     async def consume(
         self,
         queue: str,
-        handler: Callable[[MQMessage], Any],
+        handler: Callable[[MQReceivedMessage], Any],
         *,
         prefetch: int = 1,
     ) -> None:
@@ -154,9 +176,17 @@ class RabbitMQ(IMQ):
                 try:
                     data = json.loads(incoming.body.decode())
                     message = MQMessage.from_dict(data)
-                    message.headers["_raw_message"] = incoming
+                    received = MQReceivedMessage(
+                        message=message,
+                        position=MQPosition(
+                            backend=MQBackend.RABBITMQ,
+                            queue=queue,
+                            id=getattr(incoming, "delivery_tag", message.id),
+                            metadata={"raw_message": incoming},
+                        ),
+                    )
 
-                    result = handler(message)
+                    result = handler(received)
                     if asyncio.iscoroutine(result):
                         await result
                     await incoming.ack()

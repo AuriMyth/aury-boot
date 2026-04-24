@@ -8,7 +8,7 @@
 """
 
 from .backends import RabbitMQ, RedisMQ
-from .base import IMQ, MQBackend, MQMessage
+from .base import IMQ, MQBackend, MQMessage, MQPosition, MQPublishResult, MQReceivedMessage
 from .manager import MQManager
 
 __all__ = [
@@ -18,6 +18,9 @@ __all__ = [
     # 管理器
     "MQManager",
     "MQMessage",
+    "MQPosition",
+    "MQPublishResult",
+    "MQReceivedMessage",
     # 后端实现
     "RabbitMQ",
     "RedisMQ",

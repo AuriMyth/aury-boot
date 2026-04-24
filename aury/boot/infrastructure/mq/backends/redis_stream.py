@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from aury.boot.common.logging import logger
 
-from ..base import IMQ, MQMessage
+from ..base import IMQ, MQBackend, MQMessage, MQPosition, MQPublishResult, MQReceivedMessage
 
 if TYPE_CHECKING:
     from aury.boot.infrastructure.clients.redis import RedisClient
@@ -105,7 +105,44 @@ class RedisStreamMQ(IMQ):
             if "BUSYGROUP" not in str(e):
                 raise
 
-    async def send(self, queue: str, message: MQMessage) -> str:
+    @staticmethod
+    def _normalize_stream_id(value: Any) -> str:
+        if isinstance(value, bytes):
+            return value.decode("utf-8")
+        return str(value)
+
+    def _position(self, *, queue: str, stream_key: str, stream_id: Any) -> MQPosition:
+        return MQPosition(
+            backend=MQBackend.REDIS_STREAM,
+            queue=queue,
+            id=self._normalize_stream_id(stream_id),
+            metadata={
+                "stream_key": stream_key,
+                "consumer_group": self._consumer_group,
+                "consumer_name": self._consumer_name,
+            },
+        )
+
+    def _decode_received(
+        self,
+        *,
+        queue: str,
+        stream_key: str,
+        msg_id: Any,
+        data: dict[str | bytes, Any],
+    ) -> MQReceivedMessage:
+        payload = data.get(b"payload") or data.get("payload")
+        if isinstance(payload, bytes):
+            payload = payload.decode()
+        msg_dict = json.loads(payload)
+        message = MQMessage.from_dict(msg_dict)
+        message.queue = queue
+        return MQReceivedMessage(
+            message=message,
+            position=self._position(queue=queue, stream_key=stream_key, stream_id=msg_id),
+        )
+
+    async def send(self, queue: str, message: MQMessage) -> MQPublishResult:
         """发送消息到 Stream。
         
         使用 XADD 命令，支持 MAXLEN 自动裁剪。
@@ -135,13 +172,16 @@ class RedisStreamMQ(IMQ):
         self._log_sample_counter += 1
         if self._log_sample_counter % self.LOG_SAMPLE_RATE == 1:
             logger.debug(f"发送消息到 Stream: {stream_key}, id={msg_id}, count={self._log_sample_counter}")
-        return message.id
+        return MQPublishResult(
+            message_id=message.id,
+            position=self._position(queue=queue, stream_key=stream_key, stream_id=msg_id),
+        )
 
     async def receive(
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从 Stream 接收消息（不使用消费者组）。
         
         用于简单场景，直接 XREAD 读取最新消息。
@@ -161,16 +201,15 @@ class RedisStreamMQ(IMQ):
             return None
         
         # 解析结果: [[stream_key, [(msg_id, data)]]]
-        for stream, messages in result:
+        for _stream, messages in result:
             for msg_id, data in messages:
                 try:
-                    payload = data.get(b"payload") or data.get("payload")
-                    if isinstance(payload, bytes):
-                        payload = payload.decode()
-                    msg_dict = json.loads(payload)
-                    message = MQMessage.from_dict(msg_dict)
-                    message._stream_id = msg_id  # 保存 stream ID 用于 ACK
-                    return message
+                    return self._decode_received(
+                        queue=queue,
+                        stream_key=stream_key,
+                        msg_id=msg_id,
+                        data=data,
+                    )
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.error(f"解析消息失败: {e}")
                     return None
@@ -181,7 +220,7 @@ class RedisStreamMQ(IMQ):
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从 Stream 接收消息（使用消费者组）。
         
         使用 XREADGROUP 从消费者组读取，支持多实例消费。
@@ -204,17 +243,15 @@ class RedisStreamMQ(IMQ):
             return None
         
         # 解析结果
-        for stream, messages in result:
+        for _stream, messages in result:
             for msg_id, data in messages:
                 try:
-                    payload = data.get(b"payload") or data.get("payload")
-                    if isinstance(payload, bytes):
-                        payload = payload.decode()
-                    msg_dict = json.loads(payload)
-                    message = MQMessage.from_dict(msg_dict)
-                    message._stream_id = msg_id  # 保存用于 ACK
-                    message.queue = queue
-                    return message
+                    return self._decode_received(
+                        queue=queue,
+                        stream_key=stream_key,
+                        msg_id=msg_id,
+                        data=data,
+                    )
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.error(f"解析消息失败: {e}")
                     # ACK 损坏的消息，防止阻塞
@@ -225,45 +262,39 @@ class RedisStreamMQ(IMQ):
         
         return None
 
-    async def ack(self, message: MQMessage) -> None:
+    async def ack(self, received: MQReceivedMessage | MQPosition) -> None:
         """确认消息已处理。"""
-        if not message.queue:
-            return
-        
-        stream_id = getattr(message, "_stream_id", None)
-        if stream_id:
-            stream_key = self._stream_key(message.queue)
-            await self._client.connection.xack(
-                stream_key, self._consumer_group, stream_id
-            )
-            logger.debug(f"ACK 消息: {stream_id}")
+        position = received.position if isinstance(received, MQReceivedMessage) else received
+        stream_id = position.id
+        stream_key = str(position.metadata.get("stream_key") or self._stream_key(position.queue))
+        await self._client.connection.xack(
+            stream_key, self._consumer_group, stream_id
+        )
+        logger.debug(f"ACK 消息: {stream_id}")
 
-    async def nack(self, message: MQMessage, requeue: bool = True) -> None:
+    async def nack(self, received: MQReceivedMessage | MQPosition, requeue: bool = True) -> None:
         """拒绝消息。
         
         Redis Stream 没有原生 NACK，通过重新发送实现。
         """
-        if not message.queue:
+        position = received.position if isinstance(received, MQReceivedMessage) else received
+        stream_id = position.id
+        stream_key = str(position.metadata.get("stream_key") or self._stream_key(position.queue))
+        await self._client.connection.xack(
+            stream_key, self._consumer_group, stream_id
+        )
+        if not isinstance(received, MQReceivedMessage):
             return
-        
-        stream_id = getattr(message, "_stream_id", None)
-        if stream_id:
-            stream_key = self._stream_key(message.queue)
-            # 先 ACK 原消息
-            await self._client.connection.xack(
-                stream_key, self._consumer_group, stream_id
-            )
-            
-            if requeue and message.retry_count < message.max_retries:
-                # 重新发送
-                message.retry_count += 1
-                await self.send(message.queue, message)
-                logger.debug(f"NACK 重新入队: {message.id}, retry={message.retry_count}")
+        message = received.message
+        if requeue and message.retry_count < message.max_retries:
+            message.retry_count += 1
+            await self.send(position.queue, message)
+            logger.debug(f"NACK 重新入队: {message.id}, retry={message.retry_count}")
 
     async def consume(
         self,
         queue: str,
-        handler: Callable[[MQMessage], Any],
+        handler: Callable[[MQReceivedMessage], Any],
         *,
         prefetch: int = 1,
     ) -> None:
@@ -274,18 +305,18 @@ class RedisStreamMQ(IMQ):
 
         while self._consuming:
             try:
-                message = await self.receive_group(queue, timeout=1.0)
-                if message is None:
+                received = await self.receive_group(queue, timeout=1.0)
+                if received is None:
                     continue
 
                 try:
-                    result = handler(message)
+                    result = handler(received)
                     if asyncio.iscoroutine(result):
                         await result
-                    await self.ack(message)
+                    await self.ack(received)
                 except Exception as e:
                     logger.error(f"处理消息失败: {e}")
-                    await self.nack(message, requeue=True)
+                    await self.nack(received, requeue=True)
 
             except Exception as e:
                 logger.error(f"消费消息异常: {e}")
@@ -297,7 +328,7 @@ class RedisStreamMQ(IMQ):
         start: str = "-",
         end: str = "+",
         count: int | None = None,
-    ) -> list[MQMessage]:
+    ) -> list[MQReceivedMessage]:
         """读取 Stream 中的所有消息（用于 compaction）。
         
         使用 XRANGE 读取指定范围的消息。
@@ -324,13 +355,14 @@ class RedisStreamMQ(IMQ):
         messages = []
         for msg_id, data in result:
             try:
-                payload = data.get(b"payload") or data.get("payload")
-                if isinstance(payload, bytes):
-                    payload = payload.decode()
-                msg_dict = json.loads(payload)
-                message = MQMessage.from_dict(msg_dict)
-                message._stream_id = msg_id
-                messages.append(message)
+                messages.append(
+                    self._decode_received(
+                        queue=queue,
+                        stream_key=stream_key,
+                        msg_id=msg_id,
+                        data=data,
+                    )
+                )
             except (json.JSONDecodeError, KeyError) as e:
                 logger.warning(f"跳过损坏的消息 {msg_id}: {e}")
         
@@ -342,7 +374,7 @@ class RedisStreamMQ(IMQ):
         last_id: str = "$",
         count: int = 10,
         block_ms: int = 100,
-    ) -> list[MQMessage]:
+    ) -> list[MQReceivedMessage]:
         """阻塞读取 Stream 中的新消息（使用 XREAD BLOCK）。
         
         Args:
@@ -367,16 +399,17 @@ class RedisStreamMQ(IMQ):
             return []
         
         messages = []
-        for stream, stream_messages in result:
+        for _stream, stream_messages in result:
             for msg_id, data in stream_messages:
                 try:
-                    payload = data.get(b"payload") or data.get("payload")
-                    if isinstance(payload, bytes):
-                        payload = payload.decode()
-                    msg_dict = json.loads(payload)
-                    message = MQMessage.from_dict(msg_dict)
-                    message._stream_id = msg_id
-                    messages.append(message)
+                    messages.append(
+                        self._decode_received(
+                            queue=queue,
+                            stream_key=stream_key,
+                            msg_id=msg_id,
+                            data=data,
+                        )
+                    )
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.warning(f"跳过损坏的消息 {msg_id}: {e}")
         

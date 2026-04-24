@@ -62,6 +62,9 @@ from .mq import (
     MQBackend,
     MQManager,
     MQMessage,
+    MQPosition,
+    MQPublishResult,
+    MQReceivedMessage,
     RabbitMQ,
     RedisMQ,
 )
@@ -96,12 +99,13 @@ except ImportError:
 __all__ = [
     # 消息队列
     "IMQ",
+    # 通道
+    "BroadcasterChannel",
+    "BroadcasterEventBus",
     # 缓存
     "CacheBackend",
     "CacheFactory",
     "CacheManager",
-    # 通道
-    "BroadcasterChannel",
     "ChannelBackend",
     "ChannelManager",
     "ChannelMessage",
@@ -125,6 +129,9 @@ __all__ = [
     "MQBackend",
     "MQManager",
     "MQMessage",
+    "MQPosition",
+    "MQPublishResult",
+    "MQReceivedMessage",
     "MemcachedCache",
     "MemoryCache",
     "RabbitMQ",
@@ -132,7 +139,6 @@ __all__ = [
     "RabbitMQClient",
     "RabbitMQConfig",
     "RabbitMQEventBus",
-    "BroadcasterEventBus",
     "RedisCache",
     # Redis 客户端
     "RedisClient",
@@ -154,4 +160,3 @@ __all__ = [
     "UploadResult",
     "conditional_task",
 ]
-

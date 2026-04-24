@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from aury.boot.common.logging import logger
 
-from ..base import IMQ, MQMessage
+from ..base import IMQ, MQBackend, MQMessage, MQPosition, MQPublishResult, MQReceivedMessage
 
 if TYPE_CHECKING:
     from aury.boot.infrastructure.clients.redis import RedisClient
@@ -66,19 +66,27 @@ class RedisMQ(IMQ):
         """获取处理中队列的 Redis key。"""
         return f"{self._prefix}{queue}:processing"
 
-    async def send(self, queue: str, message: MQMessage) -> str:
+    async def send(self, queue: str, message: MQMessage) -> MQPublishResult:
         """发送消息到队列。"""
         await self._ensure_client()
         message.queue = queue
         data = json.dumps(message.to_dict())
         await self._client.connection.lpush(self._queue_key(queue), data)
-        return message.id
+        return MQPublishResult(
+            message_id=message.id,
+            position=MQPosition(
+                backend=MQBackend.REDIS,
+                queue=queue,
+                id=message.id,
+                metadata={"queue_key": self._queue_key(queue)},
+            ),
+        )
 
     async def receive(
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从队列接收消息。"""
         await self._ensure_client()
         timeout_int = int(timeout) if timeout else 0
@@ -99,36 +107,50 @@ class RedisMQ(IMQ):
                 message.id,
                 data,
             )
-            return message
+            return MQReceivedMessage(
+                message=message,
+                position=MQPosition(
+                    backend=MQBackend.REDIS,
+                    queue=queue,
+                    id=message.id,
+                    metadata={
+                        "queue_key": self._queue_key(queue),
+                        "processing_key": self._processing_key(queue),
+                    },
+                ),
+            )
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"解析消息失败: {e}")
             return None
 
-    async def ack(self, message: MQMessage) -> None:
+    async def ack(self, received: MQReceivedMessage | MQPosition) -> None:
         """确认消息已处理。"""
-        if message.queue:
-            await self._client.connection.hdel(
-                self._processing_key(message.queue),
-                message.id,
-            )
+        queue = received.position.queue if isinstance(received, MQReceivedMessage) and received.position else received.queue
+        message_id = received.message.id if isinstance(received, MQReceivedMessage) else str(received.id)
+        await self._client.connection.hdel(
+            self._processing_key(queue),
+            message_id,
+        )
 
-    async def nack(self, message: MQMessage, requeue: bool = True) -> None:
+    async def nack(self, received: MQReceivedMessage | MQPosition, requeue: bool = True) -> None:
         """拒绝消息。"""
-        if message.queue:
-            # 从处理中队列移除
-            await self._client.connection.hdel(
-                self._processing_key(message.queue),
-                message.id,
-            )
-            if requeue and message.retry_count < message.max_retries:
-                # 重新入队
-                message.retry_count += 1
-                await self.send(message.queue, message)
+        queue = received.position.queue if isinstance(received, MQReceivedMessage) and received.position else received.queue
+        message_id = received.message.id if isinstance(received, MQReceivedMessage) else str(received.id)
+        await self._client.connection.hdel(
+            self._processing_key(queue),
+            message_id,
+        )
+        if not isinstance(received, MQReceivedMessage):
+            return
+        message = received.message
+        if requeue and message.retry_count < message.max_retries:
+            message.retry_count += 1
+            await self.send(queue, message)
 
     async def consume(
         self,
         queue: str,
-        handler: Callable[[MQMessage], Any],
+        handler: Callable[[MQReceivedMessage], Any],
         *,
         prefetch: int = 1,
     ) -> None:
@@ -138,18 +160,18 @@ class RedisMQ(IMQ):
 
         while self._consuming:
             try:
-                message = await self.receive(queue, timeout=1.0)
-                if message is None:
+                received = await self.receive(queue, timeout=1.0)
+                if received is None:
                     continue
 
                 try:
-                    result = handler(message)
+                    result = handler(received)
                     if asyncio.iscoroutine(result):
                         await result
-                    await self.ack(message)
+                    await self.ack(received)
                 except Exception as e:
                     logger.error(f"处理消息失败: {e}")
-                    await self.nack(message, requeue=True)
+                    await self.nack(received, requeue=True)
 
             except Exception as e:
                 logger.error(f"消费消息异常: {e}")

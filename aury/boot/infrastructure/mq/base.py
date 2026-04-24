@@ -62,11 +62,37 @@ class MQMessage:
         )
 
 
+@dataclass(frozen=True)
+class MQPosition:
+    """Broker-assigned message position/cursor."""
+
+    backend: MQBackend
+    queue: str
+    id: str | int
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class MQPublishResult:
+    """Result returned after publishing a message."""
+
+    message_id: str
+    position: MQPosition | None = None
+
+
+@dataclass(frozen=True)
+class MQReceivedMessage:
+    """Message received from a broker together with its broker position."""
+
+    message: MQMessage
+    position: MQPosition | None = None
+
+
 class IMQ(ABC):
     """消息队列接口。"""
 
     @abstractmethod
-    async def send(self, queue: str, message: MQMessage) -> str:
+    async def send(self, queue: str, message: MQMessage) -> MQPublishResult:
         """发送消息到队列。
 
         Args:
@@ -74,7 +100,7 @@ class IMQ(ABC):
             message: 消息对象
 
         Returns:
-            str: 消息 ID
+            MQPublishResult: 发布结果
         """
         ...
 
@@ -83,7 +109,7 @@ class IMQ(ABC):
         self,
         queue: str,
         timeout: float | None = None,
-    ) -> MQMessage | None:
+    ) -> MQReceivedMessage | None:
         """从队列接收消息。
 
         Args:
@@ -91,25 +117,25 @@ class IMQ(ABC):
             timeout: 超时时间（秒），None 表示阻塞等待
 
         Returns:
-            MQMessage | None: 消息对象，超时返回 None
+            MQReceivedMessage | None: 消息对象和 broker 位置，超时返回 None
         """
         ...
 
     @abstractmethod
-    async def ack(self, message: MQMessage) -> None:
+    async def ack(self, received: MQReceivedMessage | MQPosition) -> None:
         """确认消息已处理。
 
         Args:
-            message: 消息对象
+            received: 接收到的消息或 broker 位置
         """
         ...
 
     @abstractmethod
-    async def nack(self, message: MQMessage, requeue: bool = True) -> None:
+    async def nack(self, received: MQReceivedMessage | MQPosition, requeue: bool = True) -> None:
         """拒绝消息。
 
         Args:
-            message: 消息对象
+            received: 接收到的消息或 broker 位置
             requeue: 是否重新入队
         """
         ...
@@ -118,7 +144,7 @@ class IMQ(ABC):
     async def consume(
         self,
         queue: str,
-        handler: Callable[[MQMessage], Any],
+        handler: Callable[[MQReceivedMessage], Any],
         *,
         prefetch: int = 1,
     ) -> None:
@@ -141,4 +167,7 @@ __all__ = [
     "IMQ",
     "MQBackend",
     "MQMessage",
+    "MQPosition",
+    "MQPublishResult",
+    "MQReceivedMessage",
 ]
