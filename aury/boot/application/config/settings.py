@@ -436,6 +436,13 @@ class StorageSettings(BaseModel):
     # local
     base_path: str = Field(default="./storage", description="本地存储基础目录")
 
+    # 通用路径前缀:object_key 与 STS allow_path 的统一前缀,用于多环境隔离
+    # （如 dev/test/prod 共用同 bucket 时通过前缀分隔）。
+    path_prefix: str = Field(
+        default="uploads",
+        description="对象键统一前缀（dev/test/prod 隔离:STORAGE__PATH_PREFIX=...）",
+    )
+
 
 class ServerSettings(BaseModel):
     """服务器配置。
