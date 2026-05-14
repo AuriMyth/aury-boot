@@ -378,9 +378,36 @@ cleanup_scheduler = SchedulerManager.get_instance("cleanup")
 ### 支持的存储后端
 
 - **Redis**：`redis://localhost:6379/0`
+- **Redis Sentinel**：通过 `SCHEDULER__SENTINEL__*` 配置，优先级高于 `SCHEDULER__JOBSTORE_URL`
 - **SQLite**：`sqlite:///jobs.db`
 - **PostgreSQL**：`postgresql://user:pass@host/db`
 - **MySQL**：`mysql://user:pass@host/db`
+
+### Redis Sentinel JobStore
+
+当调度器需要在 Redis Sentinel 环境下持久化任务时，推荐使用 Sentinel JobStore，而不是手写普通 Redis URL。启用 Sentinel 后，框架会通过 Sentinel 发现当前 master，并把 APScheduler 任务写入 master 节点。
+
+```bash
+SCHEDULER__SENTINEL__ENABLED=true
+SCHEDULER__SENTINEL__NODES='["redis-sentinel-0:26379","redis-sentinel-1:26379","redis-sentinel-2:26379"]'
+SCHEDULER__SENTINEL__MASTER_NAME=mymaster
+SCHEDULER__SENTINEL__DB=14
+SCHEDULER__SENTINEL__PREFIX=frontis-workbench:scheduler:
+
+# Redis master 密码
+SCHEDULER__SENTINEL__PASSWORD=<redis-master-password>
+
+# 仅当 Sentinel 节点自身开启 AUTH 时才配置；否则必须留空
+SCHEDULER__SENTINEL__SENTINEL_PASSWORD=
+```
+
+注意：
+
+- `SCHEDULER__SENTINEL__PASSWORD` 是 Redis master 的密码，会传给 `master_for(...)` 返回的 Redis 客户端。
+- `SCHEDULER__SENTINEL__SENTINEL_PASSWORD` 是 Sentinel 节点的密码，只在 Sentinel 自身要求 `AUTH` 时配置。
+- 有些 Kubernetes/云上 Redis Sentinel 部署是“Sentinel 不鉴权、Redis master 鉴权”。这种情况下只配置 `SCHEDULER__SENTINEL__PASSWORD`，不要配置 `SCHEDULER__SENTINEL__SENTINEL_PASSWORD`；否则 Sentinel 发现 master 时会因为多余的 `AUTH` 失败。
+- 如果同时配置了 `SCHEDULER__JOBSTORE_URL` 和 `SCHEDULER__SENTINEL__ENABLED=true`，框架优先使用 Sentinel JobStore。
+- 建议为 scheduler 单独使用 Redis DB 或专用 `PREFIX`，避免和业务缓存、MQ、Channel 的 key 混在一起。
 
 ### 代码方式配置（高级）
 
