@@ -20,7 +20,7 @@ dependencies = [
     "rich>=14.2.0",
     "babel>=2.17.0",
     "faker>=38.2.0",
-    "aury-sdk-storage[aws]>=0.0.6",
+    "aury-sdk-storage[aws]>=0.0.13",
     "broadcaster[redis]>=0.3.1",
 ]
 
@@ -54,7 +54,7 @@ redis = ["redis>=7.1.0"]
 broadcaster = ["broadcaster[redis]>=0.3.1"]
 
 # ============ 对象存储 ============
-s3 = ["aury-sdk-storage[aws]>=0.0.1"]
+s3 = ["aury-sdk-storage[aws]>=0.0.13"]
 
 # ============ 任务队列 ============
 tasks = [
@@ -104,7 +104,7 @@ recommended = [
     "redis>=7.1.0",
     "dramatiq>=1.18.0",
     "apscheduler>=3.11.1",
-    "aury-sdk-storage[aws]>=0.0.1",
+    "aury-sdk-storage[aws]>=0.0.13",
     "aiosqlite>=0.21.0",
     # OpenTelemetry
     "opentelemetry-api>=1.40.0",
@@ -120,7 +120,7 @@ all = [
     "aiomysql>=0.3.2",
     "aiosqlite>=0.21.0",
     "redis>=7.1.0",
-    "aury-sdk-storage[aws]>=0.0.1",
+    "aury-sdk-storage[aws]>=0.0.13",
     "dramatiq>=1.18.0",
     "pika>=1.3.2",  # RabbitMQ
     "apscheduler>=3.11.1",

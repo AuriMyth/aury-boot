@@ -412,8 +412,31 @@ class SchedulerComponent(Component):
         scheduler_kwargs: dict = {}
         scheduler_config = config.scheduler
         
-        # jobstores: 根据 URL 自动选择存储后端
-        if scheduler_config.jobstore_url:
+        # jobstores: Sentinel 优先；若启用，不能被普通 jobstore_url 绕过。
+        sentinel = scheduler_config.sentinel
+        if sentinel.enabled:
+            try:
+                from aury.boot.infrastructure.scheduler.jobstores import RedisSentinelJobStore
+
+                scheduler_kwargs["jobstores"] = {
+                    "default": RedisSentinelJobStore(
+                        sentinels=parse_sentinel_nodes(sentinel.nodes),
+                        master_name=sentinel.master_name,
+                        redis_password=sentinel.password,
+                        sentinel_password=sentinel.sentinel_password,
+                        db=sentinel.db,
+                        prefix=sentinel.prefix,
+                        socket_timeout=sentinel.socket_timeout,
+                        max_connections=sentinel.max_connections,
+                    )
+                }
+                logger.info(
+                    "调度器使用 Redis Sentinel 存储: "
+                    f"master={sentinel.master_name}, db={sentinel.db}, prefix={sentinel.prefix or '<none>'}"
+                )
+            except ImportError:
+                logger.warning("Redis Sentinel jobstore 需要安装 redis: pip install redis")
+        elif scheduler_config.jobstore_url:
             url = scheduler_config.jobstore_url
             if url.startswith("redis-cluster://"):
                 # Redis Cluster 模式

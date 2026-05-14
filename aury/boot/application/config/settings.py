@@ -593,6 +593,7 @@ class SchedulerSettings(BaseModel):
     分布式调度：
     - 配置 SCHEDULER__JOBSTORE_URL 使用 Redis/SQLAlchemy 存储
     - 多节点部署时共享任务状态
+    - Redis Sentinel 环境可配置 SCHEDULER__SENTINEL__*
     """
     
     enabled: bool = Field(
@@ -612,8 +613,13 @@ class SchedulerSettings(BaseModel):
             "- redis://localhost:6379/0（Redis 存储）\n"
             "- sqlite:///jobs.db（SQLite 存储）\n"
             "- postgresql://user:pass@host/db（PostgreSQL 存储）\n"
+            "- 若 SCHEDULER__SENTINEL__ENABLED=true，则优先使用 Sentinel jobstore\n"
             "- 不配置则使用内存存储"
         )
+    )
+    sentinel: RedisSentinelSettings = Field(
+        default_factory=RedisSentinelSettings,
+        description="Redis Sentinel JobStore 配置（启用后优先于 jobstore_url）",
     )
     timezone: str | None = Field(
         default=None,

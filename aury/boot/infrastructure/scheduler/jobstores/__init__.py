@@ -4,7 +4,9 @@
 """
 
 from .redis_cluster import RedisClusterJobStore
+from .redis_sentinel import RedisSentinelJobStore
 
 __all__ = [
     "RedisClusterJobStore",
+    "RedisSentinelJobStore",
 ]

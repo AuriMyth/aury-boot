@@ -437,10 +437,10 @@ requires-dist = [
     { name = "asyncpg", marker = "extra == 'all'", specifier = ">=0.31.0" },
     { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.31.0" },
     { name = "asyncpg", marker = "extra == 'recommended'", specifier = ">=0.31.0" },
-    { name = "aury-sdk-storage", extras = ["aws"], specifier = ">=0.0.6" },
-    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 'all'", specifier = ">=0.0.1" },
-    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 'recommended'", specifier = ">=0.0.1" },
-    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 's3'", specifier = ">=0.0.1" },
+    { name = "aury-sdk-storage", extras = ["aws"], specifier = ">=0.0.13" },
+    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 'all'", specifier = ">=0.0.13" },
+    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 'recommended'", specifier = ">=0.0.13" },
+    { name = "aury-sdk-storage", extras = ["aws"], marker = "extra == 's3'", specifier = ">=0.0.13" },
     { name = "babel", specifier = ">=2.17.0" },
     { name = "broadcaster", extras = ["redis"], specifier = ">=0.3.1" },
     { name = "broadcaster", extras = ["redis"], marker = "extra == 'broadcaster'", specifier = ">=0.3.1" },
@@ -512,15 +512,16 @@ docs = [
 
 [[package]]
 name = "aury-sdk-storage"
-version = "0.0.6"
+version = "0.0.13"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 dependencies = [
-    { name = "aioboto3" },
-    { name = "httpx" },
+    { name = "aiofiles" },
+    { name = "aiohttp" },
     { name = "pydantic" },
 ]
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/47/bc/edd4a049f53e4930b034ef2a184e20cf9d037577b9b543c446fbf358dd60/aury_sdk_storage-0.0.13.tar.gz", hash = "sha256:a6337146f21f77ad1622f2736457e1a95b6cd024d5787631fa2ca522bdb35f3a", size = 26539 }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/90/bf/18c71c5b38b7d4ade5347be0f86251bcda6275b46a4e638df4920123843d/aury_sdk_storage-0.0.6-py3-none-any.whl", hash = "sha256:5a945cbbe450cb7b9d618f2f445f4288bff792960efb4a179ea340896ddfe98a", size = 23019 },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/52/f9/8975157720e365754a70d64c79c4c2ab5fe36b9014f943def319d22e0056/aury_sdk_storage-0.0.13-py3-none-any.whl", hash = "sha256:e6ccbc04f0ce37392367f94fc97e1f5c914ff1603ddbdef7c7afc9d34c65ed96", size = 39377 },
 ]
 
 [package.optional-dependencies]
