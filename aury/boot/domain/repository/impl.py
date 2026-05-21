@@ -12,11 +12,13 @@ import time
 from typing import TYPE_CHECKING, Any, Union, cast
 
 from sqlalchemy import Select, delete, func, select
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import StaleDataError, UnmappedColumnError
 
 from aury.boot.common.logging import logger
 from aury.boot.domain.exceptions import VersionConflictError
-from aury.boot.domain.models import GUID, Base
+from aury.boot.domain.models import GUID, Base, VersionMixin
 from aury.boot.domain.pagination import (
     CursorPaginationParams,
     CursorPaginationResult,
@@ -43,6 +45,48 @@ def _get_model_attr(model_class: type, attr_name: str) -> Any:
         属性值（如果存在），否则返回 None
     """
     return cast(Any, getattr(model_class, attr_name, None))
+
+
+def _is_optimistic_locked_entity(entity: object) -> bool:
+    """Return whether the entity explicitly enables SQLAlchemy optimistic locking."""
+    if isinstance(entity, VersionMixin):
+        return True
+    return _is_optimistic_locked_model(type(entity))
+
+
+def _is_optimistic_locked_model(model_class: type) -> bool:
+    """Return whether the model explicitly enables SQLAlchemy optimistic locking."""
+    if issubclass(model_class, VersionMixin):
+        return True
+    mapper = sa_inspect(model_class, raiseerr=False)
+    if mapper is None:
+        return False
+    version_id_col = getattr(mapper, "version_id_col", None)
+    return version_id_col is not None and not isinstance(version_id_col, str)
+
+
+def _get_optimistic_lock_key_from_model(model_class: type) -> str | None:
+    """Return the mapped attribute key for a model's optimistic lock column."""
+    if issubclass(model_class, VersionMixin):
+        fallback_key = "version"
+    else:
+        fallback_key = None
+    mapper = sa_inspect(model_class, raiseerr=False)
+    if mapper is None:
+        return fallback_key
+    version_id_col = getattr(mapper, "version_id_col", None)
+    if version_id_col is None or isinstance(version_id_col, str):
+        return fallback_key
+    try:
+        return str(mapper.get_property_by_column(version_id_col).key)
+    except UnmappedColumnError:
+        pass
+    return str(getattr(version_id_col, "key", None) or getattr(version_id_col, "name", None) or "") or fallback_key
+
+
+def _get_optimistic_lock_key(entity: object) -> str | None:
+    """Return the mapped attribute key for the optimistic lock column."""
+    return _get_optimistic_lock_key_from_model(type(entity))
 
 
 class BaseRepository[ModelType: Base](IRepository[ModelType]):
@@ -144,6 +188,17 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         if self._force_commit or self._auto_commit:
             await self._session.commit()
             logger.debug("Repository 自动提交")
+    
+    async def _flush_and_commit(self, entity_to_refresh: ModelType | None = None) -> None:
+        try:
+            await self._session.flush()
+            if entity_to_refresh is not None:
+                await self._session.refresh(entity_to_refresh)
+            await self._maybe_commit()
+        except StaleDataError as exc:
+            if _transaction_depth.get() == 0 and (self._force_commit or self._auto_commit):
+                await self._session.rollback()
+            raise VersionConflictError(message="数据已被其他操作修改，请刷新后重试") from exc
     
     def query(self) -> QueryBuilder[ModelType]:
         builder = QueryBuilder(self._model_class)
@@ -530,26 +585,14 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
         return await self.add(entity)
     
     async def update(self, entity: ModelType, data: dict[str, Any] | None = None) -> ModelType:
-        if hasattr(entity, "version"):
-            entity_any = cast(Any, entity)
-            current_version = entity_any.version
-            await self._session.refresh(entity, ["version"])
-            if entity_any.version != current_version:
-                raise VersionConflictError(
-                    message="数据已被其他操作修改，请刷新后重试",
-                    current_version=entity_any.version,
-                    expected_version=current_version,
-                )
-            entity_any.version = entity_any.version + 1
+        optimistic_lock_key = _get_optimistic_lock_key(entity) if _is_optimistic_locked_entity(entity) else None
         
         if data:
             for key, value in data.items():
-                if hasattr(entity, key) and key != "version":
+                if hasattr(entity, key) and key != optimistic_lock_key:
                     setattr(entity, key, value)
         
-        await self._session.flush()
-        await self._session.refresh(entity)
-        await self._maybe_commit()
+        await self._flush_and_commit(entity)
         logger.debug(f"更新实体: {entity}")
         return entity
     
@@ -558,23 +601,19 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
             if hasattr(entity, "deleted_at"):
                 # 使用 setattr 因为类型检查器不知道动态属性
                 setattr(entity, "deleted_at", int(time.time()))  # noqa: B010
-                await self._session.flush()
-                await self._maybe_commit()
+                await self._flush_and_commit()
                 logger.debug(f"软删除实体: {entity}")
             elif hasattr(entity, "mark_deleted"):
                 entity.mark_deleted()
-                await self._session.flush()
-                await self._maybe_commit()
+                await self._flush_and_commit()
                 logger.debug(f"软删除实体（使用方法）: {entity}")
             else:
                 await self._session.delete(entity)
-                await self._session.flush()
-                await self._maybe_commit()
+                await self._flush_and_commit()
                 logger.debug(f"硬删除实体（无软删除字段）: {entity}")
         else:
             await self._session.delete(entity)
-            await self._session.flush()
-            await self._maybe_commit()
+            await self._flush_and_commit()
             logger.debug(f"硬删除实体: {entity}")
     
     async def mark_deleted(self, entity: ModelType) -> None:
@@ -617,13 +656,29 @@ class BaseRepository[ModelType: Base](IRepository[ModelType]):
             return
         if index_elements is None:
             index_elements = ["id"]
+        optimistic_lock_key = (
+            _get_optimistic_lock_key_from_model(self._model_class)
+            if _is_optimistic_locked_model(self._model_class)
+            else None
+        )
         for data in data_list:
             for field in index_elements:
                 if field not in data:
                     raise ValueError(f"批量更新数据缺少索引字段: {field}")
-        await self._session.bulk_update_mappings(self._model_class, data_list)
-        await self._session.flush()
-        await self._maybe_commit()
+            if optimistic_lock_key is not None and optimistic_lock_key not in data:
+                raise ValueError(f"乐观锁模型批量更新数据缺少版本字段: {optimistic_lock_key}")
+        try:
+            await self._session.run_sync(
+                lambda sync_session: sync_session.bulk_update_mappings(self._model_class, data_list)
+            )
+            await self._flush_and_commit()
+        except StaleDataError as exc:
+            if _transaction_depth.get() == 0 and (self._force_commit or self._auto_commit):
+                await self._session.rollback()
+            raise VersionConflictError(message="数据已被其他操作修改，请刷新后重试") from exc
+        except KeyError as exc:
+            missing_key = exc.args[0] if exc.args else optimistic_lock_key
+            raise ValueError(f"批量更新数据缺少字段: {missing_key}") from exc
         logger.debug(f"批量更新 {len(data_list)} 条记录")
     
     async def bulk_delete(self, filters: dict[str, Any] | None = None) -> int:

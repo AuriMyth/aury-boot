@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from datetime import datetime
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import uuid
 
 from sqlalchemy import BigInteger, DateTime, Integer, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 from sqlalchemy.types import Uuid as SQLAlchemyUuid
 
 if TYPE_CHECKING:
@@ -176,7 +176,8 @@ class VersionMixin:
         comment="乐观锁版本号",
     )
 
-    __mapper_args__ = {
-        "version_id_col": "version"  # SQLAlchemy 自动处理乐观锁逻辑
-    }
-
+    @declared_attr.directive
+    def __mapper_args__(cls) -> dict[str, Any]:  # noqa: N805
+        return {
+            "version_id_col": cls.version,  # SQLAlchemy 自动处理乐观锁逻辑
+        }
