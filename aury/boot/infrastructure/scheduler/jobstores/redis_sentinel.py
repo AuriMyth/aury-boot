@@ -33,7 +33,9 @@ class RedisSentinelJobStore(BaseJobStore):
         *,
         sentinels: list[str] | list[tuple[str, int]],
         master_name: str = "mymaster",
+        redis_username: str | None = None,
         redis_password: str | None = None,
+        sentinel_username: str | None = None,
         sentinel_password: str | None = None,
         db: int = 0,
         prefix: str = "",
@@ -61,6 +63,8 @@ class RedisSentinelJobStore(BaseJobStore):
 
         self.pickle_protocol = pickle_protocol
         sentinel_kwargs: dict[str, Any] = {}
+        if sentinel_username:
+            sentinel_kwargs["username"] = sentinel_username
         if sentinel_password:
             sentinel_kwargs["password"] = sentinel_password
         self._sentinel = Sentinel(
@@ -74,6 +78,8 @@ class RedisSentinelJobStore(BaseJobStore):
             "socket_timeout": socket_timeout,
             "max_connections": max_connections,
         }
+        if redis_username:
+            redis_kwargs["username"] = redis_username
         if redis_password:
             redis_kwargs["password"] = redis_password
         self.redis = self._sentinel.master_for(master_name, **redis_kwargs)

@@ -115,9 +115,17 @@ class RedisSentinelSettings(BaseModel):
         default="mymaster",
         description="Sentinel 主节点名称"
     )
+    username: str = Field(
+        default="",
+        description="Redis 主节点用户名（ACL，可选）"
+    )
     password: str = Field(
         default="",
         description="Redis 主节点密码"
+    )
+    sentinel_username: str = Field(
+        default="",
+        description="Sentinel 用户名（ACL，可选）"
     )
     sentinel_password: str = Field(
         default="",

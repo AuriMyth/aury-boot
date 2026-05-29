@@ -70,6 +70,9 @@ def parse_multi_instance_env(
         
         if len(parts) < 2:
             continue
+
+        if valid_fields and parts[0].upper() in valid_fields:
+            continue
         
         instance_name = parts[0].lower()
         field_path = [part.lower() for part in parts[1:]]

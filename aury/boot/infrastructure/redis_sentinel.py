@@ -63,7 +63,9 @@ class SentinelRedisClientAdapter:
         name: str,
         sentinels: list[tuple[str, int]],
         master_name: str,
+        redis_username: str | None,
         redis_password: str | None,
+        sentinel_username: str | None,
         sentinel_password: str | None,
         db: int,
         decode_responses: bool,
@@ -73,7 +75,9 @@ class SentinelRedisClientAdapter:
         self.name = name
         self._sentinels = sentinels
         self._master_name = master_name
+        self._redis_username = redis_username or None
         self._redis_password = redis_password or None
+        self._sentinel_username = sentinel_username or None
         self._sentinel_password = sentinel_password or None
         self._db = db
         self._decode_responses = decode_responses
@@ -98,6 +102,8 @@ class SentinelRedisClientAdapter:
             return
 
         sentinel_kwargs: dict[str, Any] = {}
+        if self._sentinel_username:
+            sentinel_kwargs["username"] = self._sentinel_username
         if self._sentinel_password:
             sentinel_kwargs["password"] = self._sentinel_password
 
@@ -108,6 +114,7 @@ class SentinelRedisClientAdapter:
         )
         self._redis = self._sentinel.master_for(
             service_name=self._master_name,
+            username=self._redis_username,
             password=self._redis_password,
             db=self._db,
             decode_responses=self._decode_responses,

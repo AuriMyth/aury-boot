@@ -49,7 +49,9 @@ def test_redis_sentinel_jobstore_builds_master_client(monkeypatch: pytest.Monkey
     store = RedisSentinelJobStore(
         sentinels=["10.0.0.1:26379", "10.0.0.2:26379"],
         master_name="mymaster",
+        redis_username="frontis_redis_rw",
         redis_password="redis-password",
+        sentinel_username="sentinel-user",
         sentinel_password="sentinel-password",
         db=14,
         prefix="frontis-workbench:scheduler:",
@@ -59,13 +61,17 @@ def test_redis_sentinel_jobstore_builds_master_client(monkeypatch: pytest.Monkey
 
     fake_sentinel = FakeSentinel.instances[0]
     assert fake_sentinel.sentinels == [("10.0.0.1", 26379), ("10.0.0.2", 26379)]
-    assert fake_sentinel.kwargs["sentinel_kwargs"] == {"password": "sentinel-password"}
+    assert fake_sentinel.kwargs["sentinel_kwargs"] == {
+        "username": "sentinel-user",
+        "password": "sentinel-password",
+    }
     assert fake_sentinel.kwargs["socket_timeout"] == 3.0
     assert fake_sentinel.master_name == "mymaster"
     assert fake_sentinel.master_kwargs == {
         "db": 14,
         "socket_timeout": 3.0,
         "max_connections": 50,
+        "username": "frontis_redis_rw",
         "password": "redis-password",
     }
     assert store.redis is fake_sentinel.redis
@@ -83,6 +89,7 @@ def test_scheduler_component_prefers_sentinel_jobstore(
     monkeypatch.setenv("SCHEDULER__SENTINEL__ENABLED", "true")
     monkeypatch.setenv("SCHEDULER__SENTINEL__NODES", '["10.0.0.1:26379","10.0.0.2:26379"]')
     monkeypatch.setenv("SCHEDULER__SENTINEL__MASTER_NAME", "mymaster")
+    monkeypatch.setenv("SCHEDULER__SENTINEL__USERNAME", "frontis_redis_rw")
     monkeypatch.setenv("SCHEDULER__SENTINEL__DB", "14")
     monkeypatch.setenv("SCHEDULER__SENTINEL__PREFIX", "frontis-workbench:scheduler:")
 
@@ -93,5 +100,6 @@ def test_scheduler_component_prefers_sentinel_jobstore(
     assert jobstore is FakeSentinelJobStore.instances[0]
     assert jobstore.kwargs["sentinels"] == [("10.0.0.1", 26379), ("10.0.0.2", 26379)]
     assert jobstore.kwargs["master_name"] == "mymaster"
+    assert jobstore.kwargs["redis_username"] == "frontis_redis_rw"
     assert jobstore.kwargs["db"] == 14
     assert jobstore.kwargs["prefix"] == "frontis-workbench:scheduler:"
