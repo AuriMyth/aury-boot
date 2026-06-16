@@ -22,6 +22,47 @@ app = typer.Typer(
 )
 
 
+def _is_truthy(value: str | None) -> bool:
+    """Return whether an environment-style string means true."""
+    return (value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _enable_otel_sitecustomize_if_requested(enabled: bool) -> None:
+    """Inject Aury's OTel sitecustomize hook into child Python workers.
+
+    ``opentelemetry-instrument aury server prod`` instruments the parent CLI
+    process, but uvicorn multi-worker mode starts new Python worker processes.
+    OTel's own auto-instrumentation intentionally removes its sitecustomize path
+    after the parent initializes, so those workers can miss instrumentation.
+
+    This helper adds an Aury-owned sitecustomize directory to PYTHONPATH before
+    uvicorn creates workers. Each worker then initializes OTel on Python startup.
+    """
+    requested = enabled or _is_truthy(os.environ.get("AURY_OTEL_SITECUSTOMIZE"))
+    if not requested:
+        return
+
+    from aury.boot.infrastructure.monitoring import otel_sitecustomize
+
+    sitecustomize_dir = str(Path(otel_sitecustomize.__file__).resolve().parent)
+    cwd = os.getcwd()
+    paths = [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]
+
+    for path in reversed([sitecustomize_dir, cwd]):
+        if path not in paths:
+            paths.insert(0, path)
+
+    os.environ["PYTHONPATH"] = os.pathsep.join(paths)
+    os.environ["AURY_OTEL_SITECUSTOMIZE"] = "true"
+
+    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        typer.echo(
+            "⚠️  OTel sitecustomize 已启用，但未设置 OTEL_EXPORTER_OTLP_ENDPOINT，"
+            "worker 将跳过 OTel 初始化",
+            err=True,
+        )
+
+
 def _detect_app_module() -> str:
     """自动检测应用模块路径。
 
@@ -180,6 +221,13 @@ def run(
         "--no-access-log",
         help="禁用访问日志",
     ),
+    otel_sitecustomize: bool = typer.Option(
+        False,
+        "--otel-sitecustomize",
+        "--sitecustomize",
+        envvar="AURY_OTEL_SITECUSTOMIZE",
+        help="通过 Aury sitecustomize 在子 worker 中启用 OpenTelemetry 零代码自动注入",
+    ),
 ) -> None:
     """运行开发/生产服务器。
     
@@ -200,6 +248,8 @@ def run(
         aury server run --ssl-keyfile key.pem --ssl-certfile cert.pem
     """
     from aury.boot.application.server import ApplicationServer
+
+    _enable_otel_sitecustomize_if_requested(otel_sitecustomize)
     
     app_instance = _get_app_instance(app_path)
     
@@ -465,6 +515,13 @@ def prod(
         "-w",
         help="工作进程数（默认使用配置文件中的 SERVER_WORKERS，或 CPU 核心数）",
     ),
+    otel_sitecustomize: bool = typer.Option(
+        False,
+        "--otel-sitecustomize",
+        "--sitecustomize",
+        envvar="AURY_OTEL_SITECUSTOMIZE",
+        help="通过 Aury sitecustomize 在子 worker 中启用 OpenTelemetry 零代码自动注入",
+    ),
 ) -> None:
     """启动生产服务器（多进程）。
     
@@ -480,6 +537,8 @@ def prod(
     import os as os_module
     
     from aury.boot.application.server import ApplicationServer
+
+    _enable_otel_sitecustomize_if_requested(otel_sitecustomize)
     
     app_instance = _get_app_instance(app_path)
     
@@ -494,8 +553,8 @@ def prod(
     server_port = port if port is not None else app_instance.config.server.port
     server_workers = workers if workers is not None else app_instance.config.server.workers
     
-    # 如果配置中 workers 也是默认值 1，则使用 CPU 核心数
-    if server_workers <= 1:
+    # workers < 1 表示自动使用 CPU 核心数；workers=1 应尊重显式单进程配置
+    if server_workers < 1:
         server_workers = os_module.cpu_count() or 4
     
     typer.echo("🚀 启动生产服务器...")
@@ -544,4 +603,3 @@ __all__ = [
     "run",
     "server_cli",
 ]
-
