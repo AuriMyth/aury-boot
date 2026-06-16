@@ -20,7 +20,7 @@ def _is_truthy(value: str | None) -> bool:
 def _should_initialize() -> bool:
     if getattr(builtins, "_aury_otel_sitecustomize_initialized", False):
         return False
-    if not _is_truthy(os.environ.get("AURY_OTEL_SITECUSTOMIZE")):
+    if not _is_truthy(os.environ.get("TELEMETRY__AUTO_INSTRUMENTATION_ENABLED")):
         return False
     if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         return False

@@ -27,6 +27,9 @@ def _is_truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+OTEL_AUTO_INSTRUMENTATION_ENV = "TELEMETRY__AUTO_INSTRUMENTATION_ENABLED"
+
+
 def _enable_otel_sitecustomize_if_requested(enabled: bool) -> None:
     """Inject Aury's OTel sitecustomize hook into child Python workers.
 
@@ -38,7 +41,7 @@ def _enable_otel_sitecustomize_if_requested(enabled: bool) -> None:
     This helper adds an Aury-owned sitecustomize directory to PYTHONPATH before
     uvicorn creates workers. Each worker then initializes OTel on Python startup.
     """
-    requested = enabled or _is_truthy(os.environ.get("AURY_OTEL_SITECUSTOMIZE"))
+    requested = enabled or _is_truthy(os.environ.get(OTEL_AUTO_INSTRUMENTATION_ENV))
     if not requested:
         return
 
@@ -53,7 +56,7 @@ def _enable_otel_sitecustomize_if_requested(enabled: bool) -> None:
             paths.insert(0, path)
 
     os.environ["PYTHONPATH"] = os.pathsep.join(paths)
-    os.environ["AURY_OTEL_SITECUSTOMIZE"] = "true"
+    os.environ[OTEL_AUTO_INSTRUMENTATION_ENV] = "true"
 
     if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         typer.echo(
@@ -225,7 +228,7 @@ def run(
         False,
         "--otel-sitecustomize",
         "--sitecustomize",
-        envvar="AURY_OTEL_SITECUSTOMIZE",
+        envvar=OTEL_AUTO_INSTRUMENTATION_ENV,
         help="通过 Aury sitecustomize 在子 worker 中启用 OpenTelemetry 零代码自动注入",
     ),
 ) -> None:
@@ -519,7 +522,7 @@ def prod(
         False,
         "--otel-sitecustomize",
         "--sitecustomize",
-        envvar="AURY_OTEL_SITECUSTOMIZE",
+        envvar=OTEL_AUTO_INSTRUMENTATION_ENV,
         help="通过 Aury sitecustomize 在子 worker 中启用 OpenTelemetry 零代码自动注入",
     ),
 ) -> None:
