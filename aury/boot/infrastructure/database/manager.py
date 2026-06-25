@@ -14,6 +14,7 @@ from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from aury.boot.common.logging import logger
+from aury.boot.infrastructure.database.postgres_compat import install_postgres_compat
 
 
 class DatabaseManager:
@@ -172,6 +173,7 @@ class DatabaseManager:
             engine_kwargs["isolation_level"] = db_isolation_level
             logger.info(f"事务隔离级别设置为: {db_isolation_level}")
         
+        install_postgres_compat(database_url)
         self._engine = create_async_engine(database_url, **engine_kwargs)
         
         self._session_factory = async_sessionmaker(

@@ -24,6 +24,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from aury.boot.common.logging import logger
 from aury.boot.domain.models import Base
+from aury.boot.infrastructure.database.postgres_compat import install_postgres_compat
 
 
 def _escape_for_alembic_config(value: str) -> str:
@@ -370,6 +371,7 @@ class MigrationManager:
                 return []
             
             # 使用异步引擎
+            install_postgres_compat(self._database_url)
             engine = create_async_engine(self._database_url)
             
             def _sync_detect(conn):
@@ -528,6 +530,7 @@ class MigrationManager:
                 logger.error(f"升级前钩子执行失败: {e}")
         
         def _upgrade():
+            install_postgres_compat(self._database_url)
             command.upgrade(self._alembic_cfg, revision)
         
         await asyncio.to_thread(_upgrade)
@@ -567,6 +570,7 @@ class MigrationManager:
                 logger.error(f"回滚前钩子执行失败: {e}")
         
         def _downgrade():
+            install_postgres_compat(self._database_url)
             command.downgrade(self._alembic_cfg, revision)
         
         await asyncio.to_thread(_downgrade)
@@ -588,6 +592,7 @@ class MigrationManager:
         script = ScriptDirectory.from_config(self._alembic_cfg)
         
         # 使用异步引擎，通过 run_sync 执行同步操作
+        install_postgres_compat(self._database_url)
         engine = create_async_engine(self._database_url)
         current_rev = None
         

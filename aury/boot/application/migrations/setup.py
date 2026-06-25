@@ -68,6 +68,8 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from aury.boot.infrastructure.database.postgres_compat import install_postgres_compat
+
 # 导入模型基类
 from aury.boot.domain.models import Base
 
@@ -153,6 +155,7 @@ def _do_run_migrations(connection) -> None:
 async def _run_async_migrations() -> None:
     configuration = config.get_section(config.config_ini_section, {{}})
     configuration["sqlalchemy.url"] = get_url()
+    install_postgres_compat(configuration["sqlalchemy.url"])
 
     connectable = async_engine_from_config(
         configuration,

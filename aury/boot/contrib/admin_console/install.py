@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from aury.boot.common.logging import logger
+from aury.boot.infrastructure.database.postgres_compat import install_postgres_compat
 
 from .auth import BasicAdminAuthBackend, BearerWhitelistAdminAuthBackend
 from .discovery import load_project_admin_module
@@ -149,6 +150,7 @@ def install_admin_console(app: Any, config: Any | None = None):
         return any(s in url for s in ["+asyncpg", "+aiosqlite", "+aiomysql", "+asyncmy"])
 
     try:
+        install_postgres_compat(str(db_url))
         if _is_async_url(str(db_url)):
             engine = create_async_engine(str(db_url), future=True)
         else:
@@ -168,5 +170,4 @@ def install_admin_console(app: Any, config: Any | None = None):
 
     logger.info(f"✅ 管理后台已启用：{base_url}")
     return admin
-
 
