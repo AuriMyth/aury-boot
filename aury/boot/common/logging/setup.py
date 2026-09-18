@@ -235,6 +235,10 @@ def setup_logging(
             format="{message}",  # 简单格式，避免解析 <module> 等函数名
             level=log_level,
             colorize=False,  # 颜色在 sink 内处理
+            # 控制台此前缺 enqueue，stdout 写出内联阻塞事件循环；文件 sink
+            # 已启用，控制台保持同口径。已知取舍：进程被杀时队列尾部日志
+            # 可能丢失，多进程 fork 场景需在 fork 前完成 logging 配置。
+            enqueue=enqueue,
         )
 
     # 为 app 和 scheduler 分别创建日志文件（通过 ContextVar 区分）
